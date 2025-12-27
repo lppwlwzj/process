@@ -15,6 +15,13 @@
       "style": {
         "navigationBarTitleText": "",
         "navigationStyle": "custom"
+      },
+      {
+        "path": "pages/yipan/yipan",
+        "style": {
+          "navigationBarTitleText": "",
+          "navigationStyle": "custom"
+        }
       }
     }
   ],

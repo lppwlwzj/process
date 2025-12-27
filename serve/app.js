@@ -76,7 +76,7 @@ app.use(express.json());
 
 app.use(
   expressJWT({ secret: config.jwtSecretKey }).unless({
-    path: [/^\/api\/user/, /^\/img/,/^\/api\/zhibao\/query/,/^\/api\/download/,]
+    path: [/^\/api\/user/, /^\/img/,/^\/api\/download/,/^\/api\/customer/]
   })
 );
 
@@ -107,8 +107,6 @@ app.use("/api/upload", uploadController.upload);
 app.use("/api/upload/delete", uploadController.deleteImg);
 
 
-const zhibaoRouter = require("./router/zhibao");
-app.use("/api/zhibao", zhibaoRouter);
 
 // 导入并使用首页路由模块
 // const homeRouter = require('./router/home')
@@ -134,13 +132,13 @@ app.use("/api/service/edit", serviceRouter.submit);
 app.use("/api/service/detail", serviceRouter.detail);
 app.use("/api/preinstall/edit", serviceRouter.editPreinstall);
 app.use("/api/preinstall/detail", serviceRouter.getPreinstall);
-const privateKey = fs.readFileSync('./gdcasa.cn.key', 'utf8');
-const certificate = fs.readFileSync('./gdcasa.cn_bundle.pem', 'utf8');
+// const privateKey = fs.readFileSync('./gdcasa.cn.key', 'utf8');
+// const certificate = fs.readFileSync('./gdcasa.cn_bundle.pem', 'utf8');
 
-const credentials = {
-    key: privateKey,
-    cert: certificate
-};
+// const credentials = {
+//     key: privateKey,
+//     cert: certificate
+// };
 // const httpsServer = https.createServer(credentials, app);
 // httpsServer.listen(port, () => {
 //   console.log(`api serve running at http://${host}:${port}`);

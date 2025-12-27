@@ -62,19 +62,57 @@ exports.login = (req, res) => {
 };
 exports.list = (req, res) => {
   const sql = `select * from user `;
+  console.log("sql=======>", sql)
   // 执行 SQL 语句，查询用户的数据
   db.query(sql, function (err, results) {
     if (err) return res.cc(err);
     res.send({
       code: 0,
       message: "成功！",
-      // 为了方便客户端使用 Token，在服务器端直接拼接上 Bearer 的前缀
-      re: {
-        list: results.map((item) => ({
-          value: item.usercount,
-          text: item.username
-        }))
-      }
+      re: results
+    });
+  });
+};
+
+exports.delete = (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.cc("缺少用户ID！");
+  
+  const sql = `DELETE FROM user WHERE id=?`;
+  db.query(sql, id, function (err, results) {
+    if (err) return res.cc(err);
+    if (results.affectedRows !== 1) return res.cc("删除用户失败！");
+    
+    res.send({
+      code: 0,
+      message: "删除成功！",
+      re: null
+    });
+  });
+};
+
+exports.create = (req, res) => {
+  const { username, usercount, password } = req.body;
+  
+  if (!username || !usercount || !password) {
+    return res.cc("用户名、账号和密码不能为空！");
+  }
+  
+  const checkSql = `SELECT * FROM user WHERE usercount=?`;
+  db.query(checkSql, usercount, function (err, results) {
+    if (err) return res.cc(err);
+    if (results.length > 0) return res.cc("用户账号已存在！");
+    
+    const insertSql = `INSERT INTO user (username, usercount, password) VALUES (?, ?, ?)`;
+    db.query(insertSql, [username, usercount, password], function (err, results) {
+      if (err) return res.cc(err);
+      if (results.affectedRows !== 1) return res.cc("新增用户失败！");
+      
+      res.send({
+        code: 0,
+        message: "新增成功！",
+        re: null
+      });
     });
   });
 };

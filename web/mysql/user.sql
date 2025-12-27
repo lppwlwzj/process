@@ -31,6 +31,14 @@ CREATE TABLE `user` (
 
 /*Data for the table `user` */
 
+INSERT INTO `user` (`id`, `username`, `usercount`, `password`) VALUES 
+(1, '管理员', 'admin', '123456'),
+(2, '张三', 'zhangsan', '123456'),
+(3, '李四', 'lisi', '123456'),
+(4, '王五', 'wangwu', '123456'),
+(5, '赵六', 'zhaoliu', '123456'),
+(6, '测试用户', 'test', '123456');
+
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;

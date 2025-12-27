@@ -9,6 +9,7 @@ CREATE TABLE `customer` (
   `doctor` varchar(50) DEFAULT NULL COMMENT '医生（宇医生、秦医生、蔡医生等）',
   `material` varchar(100) DEFAULT NULL COMMENT '材料（抹光器、璞典姿、威兰德等）',
   `image` varchar(255) DEFAULT NULL COMMENT '图片URL',
+  `qr_code` varchar(255) DEFAULT NULL COMMENT '二维码图片URL',
   `note` varchar(500) DEFAULT NULL COMMENT '备注',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
