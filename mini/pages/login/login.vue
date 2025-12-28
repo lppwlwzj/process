@@ -2,7 +2,7 @@
   <view class="register fc">
     <u--form labelWidth="auto" labelPosition="left" :model="form" ref="uForm" :rules="rules">
       <view class="info fc">
-        <image src="../../static/images/ECO-UI-02.png" mode="widthFix" class="logo"></image>
+        <!-- <image src="../../static/images/ECO-UI-02.png" mode="widthFix" class="logo"></image> -->
 
         <!-- 昵称 -->
         <u-form-item label="账号" prop="usercount">

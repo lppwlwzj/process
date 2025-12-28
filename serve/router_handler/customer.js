@@ -17,7 +17,7 @@ exports.list = (req, res) => {
 exports.create = (req, res) => {
   const { 
     customer_name, 
-    stage, 
+    technician, 
     wear_time, 
     expected_cut_time, 
     doctor, 
@@ -31,8 +31,8 @@ exports.create = (req, res) => {
     return res.cc("客户姓名不能为空！");
   }
   
-  const sql = `INSERT INTO customer (customer_name, stage, wear_time, expected_cut_time, doctor, material, image, qr_code, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  db.query(sql, [customer_name, stage, wear_time, expected_cut_time, doctor, material, image, qr_code, note], function (err, results) {
+  const sql = `INSERT INTO customer (customer_name, technician, wear_time, expected_cut_time, doctor, material, image, qr_code, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  db.query(sql, [customer_name, technician, wear_time, expected_cut_time, doctor, material, image, qr_code, note], function (err, results) {
     if (err) return res.cc(err);
     if (results.affectedRows !== 1) return res.cc("新增客户失败！");
     
@@ -49,7 +49,7 @@ exports.update = (req, res) => {
   const { 
     id,
     customer_name, 
-    stage, 
+    technician, 
     wear_time, 
     expected_cut_time, 
     doctor, 
@@ -62,8 +62,8 @@ exports.update = (req, res) => {
   if (!id) return res.cc("缺少客户ID！");
   if (!customer_name) return res.cc("客户姓名不能为空！");
   
-  const sql = `UPDATE customer SET customer_name=?, stage=?, wear_time=?, expected_cut_time=?, doctor=?, material=?, image=?, qr_code=?, note=? WHERE id=?`;
-  db.query(sql, [customer_name, stage, wear_time, expected_cut_time, doctor, material, image, qr_code, note, id], function (err, results) {
+  const sql = `UPDATE customer SET customer_name=?, technician=?, wear_time=?, expected_cut_time=?, doctor=?, material=?, image=?, qr_code=?, note=? WHERE id=?`;
+  db.query(sql, [customer_name, technician, wear_time, expected_cut_time, doctor, material, image, qr_code, note, id], function (err, results) {
     if (err) return res.cc(err);
     if (results.affectedRows !== 1) return res.cc("更新客户失败！");
     
@@ -110,3 +110,4 @@ exports.detail = (req, res) => {
     });
   });
 };
+

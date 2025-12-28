@@ -76,7 +76,7 @@ app.use(express.json());
 
 app.use(
   expressJWT({ secret: config.jwtSecretKey }).unless({
-    path: [/^\/api\/user/, /^\/img/,/^\/api\/download/,/^\/api\/customer/]
+    path: [/^\/api\/user/, /^\/img/,/^\/api\/download/,/^\/api\/customer/,/^\/api\/process/,/^\/api\/process_history/]
   })
 );
 
@@ -123,15 +123,21 @@ app.use("/api/upload/delete", uploadController.deleteImg);
 const customerRouter = require("./router/customer");
 app.use("/api/customer", customerRouter);
 
+const processRouter = require("./router/process");
+app.use("/api/process", processRouter);
+
+const processHistoryRouter = require("./router/process_history");
+app.use("/api/process_history", processHistoryRouter);
+
 const kehuRouter = require("./router/kehu");
 app.use("/api/kehu", kehuRouter);
 
 
-const serviceRouter = require("./router_handler/service");
-app.use("/api/service/edit", serviceRouter.submit);
-app.use("/api/service/detail", serviceRouter.detail);
-app.use("/api/preinstall/edit", serviceRouter.editPreinstall);
-app.use("/api/preinstall/detail", serviceRouter.getPreinstall);
+// const serviceRouter = require("./router_handler/service");
+// app.use("/api/service/edit", serviceRouter.submit);
+// app.use("/api/service/detail", serviceRouter.detail);
+// app.use("/api/preinstall/edit", serviceRouter.editPreinstall);
+// app.use("/api/preinstall/detail", serviceRouter.getPreinstall);
 // const privateKey = fs.readFileSync('./gdcasa.cn.key', 'utf8');
 // const certificate = fs.readFileSync('./gdcasa.cn_bundle.pem', 'utf8');
 

@@ -9,7 +9,7 @@ import type { FormInstance, FormRules } from "element-plus"
 interface CustomerData {
   id: number
   customer_name: string
-  stage: string
+  technician: string
   wear_time: string
   expected_cut_time: string
   doctor: string
@@ -28,7 +28,7 @@ const tableData = ref<CustomerData[]>([])
 const searchFormRef = ref()
 const searchData = reactive({
   customer_name: "",
-  stage: "",
+  technician: "",
   doctor: ""
 })
 
@@ -38,7 +38,7 @@ const formRef = ref<FormInstance>()
 const formData = reactive<CustomerData>({
   id: 0,
   customer_name: "",
-  stage: "",
+  technician: "",
   wear_time: "",
   expected_cut_time: "",
   doctor: "",
@@ -48,14 +48,25 @@ const formData = reactive<CustomerData>({
   note: ""
 })
 
-const stageOptions = ["未成", "美成", "车装", "石膏溜模", "切割", "CAD设计", "上架"]
+const stageOptions = [
+  { key: "not_started", label: "未开始" },
+  { key: "guan_mo", label: "灌模" },
+  { key: "xiu_mo", label: "修模" },
+  { key: "cad_design", label: "CAD设计" },
+  { key: "qie_xue", label: "切削" },
+  { key: "che_jin", label: "车金" },
+  { key: "shang_ci", label: "上瓷" },
+  { key: "che_ci", label: "车瓷" },
+  { key: "shang_you", label: "上釉" },
+  { key: "completed", label: "已完成" }
+]
 const doctorOptions = ["宇医生", "秦医生", "蔡医生", "王医生"]
 
 const formRules: FormRules = {
   customer_name: [
     { required: true, message: "请输入客户姓名", trigger: "blur" }
   ],
-  stage: [
+  technician: [
     { required: true, message: "请选择阶段进度", trigger: "change" }
   ]
 }
@@ -99,7 +110,7 @@ const handleUpdate = (row: CustomerData) => {
 
 const handleConfirm = async () => {
   if (!formRef.value) return
-  
+
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
@@ -153,7 +164,7 @@ const resetForm = () => {
   formRef.value?.resetFields()
   formData.id = 0
   formData.customer_name = ""
-  formData.stage = ""
+  formData.technician = ""
   formData.wear_time = ""
   formData.expected_cut_time = ""
   formData.doctor = ""
@@ -163,7 +174,7 @@ const resetForm = () => {
   formData.note = ""
 }
 
-const getStageType = (stage: string) => {
+const getStageType = (technician: string) => {
   const typeMap: Record<string, string> = {
     "未成": "info",
     "美成": "success",
@@ -173,7 +184,7 @@ const getStageType = (stage: string) => {
     "CAD设计": "primary",
     "上架": "success"
   }
-  return typeMap[stage] || ""
+  return typeMap[technician] || ""
 }
 
 onMounted(() => {
@@ -188,10 +199,10 @@ onMounted(() => {
         <el-form-item prop="customer_name" label="客户姓名">
           <el-input v-model="searchData.customer_name" placeholder="请输入客户姓名" />
         </el-form-item>
-        <el-form-item prop="stage" label="阶段进度">
-          <el-select v-model="searchData.stage" placeholder="请选择阶段">
+        <el-form-item prop="technician" label="阶段进度">
+          <el-select v-model="searchData.technician" placeholder="请选择阶段">
             <el-option label="全部" value="" />
-            <el-option v-for="item in stageOptions" :key="item" :label="item" :value="item" />
+            <el-option v-for="item in stageOptions" :key="item.key" :label="item.label" :value="item.label" />
           </el-select>
         </el-form-item>
         <el-form-item prop="doctor" label="医生">
@@ -206,19 +217,19 @@ onMounted(() => {
         </el-form-item>
       </el-form>
     </el-card>
-    
+
     <el-card shadow="never">
       <div class="toolbar-wrapper">
         <el-button type="primary" :icon="CirclePlus" @click="handleCreate">新增客户</el-button>
       </div>
-      
+
       <div class="table-wrapper">
         <el-table :data="tableData" v-loading="loading" stripe>
           <el-table-column prop="id" label="ID" width="60" align="center" />
           <el-table-column prop="customer_name" label="客户姓名" width="100" align="center" />
-          <el-table-column prop="stage" label="阶段进度" width="110" align="center">
+          <el-table-column prop="technician" label="阶段进度" width="110" align="center">
             <template #default="{ row }">
-              <el-tag :type="getStageType(row.stage)">{{ row.stage }}</el-tag>
+              <el-tag :type="getStageType(row.technician)">{{ row.technician }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="wear_time" label="戴牙时间" width="110" align="center" />
@@ -234,33 +245,16 @@ onMounted(() => {
           </el-table-column>
         </el-table>
       </div>
-      
+
       <div class="pager-wrapper">
-        <el-pagination
-          background
-          :layout="paginationData.layout"
-          :page-sizes="paginationData.pageSizes"
-          :total="paginationData.total"
-          :page-size="paginationData.pageSize"
-          :currentPage="paginationData.currentPage"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
+        <el-pagination background :layout="paginationData.layout" :page-sizes="paginationData.pageSizes"
+          :total="paginationData.total" :page-size="paginationData.pageSize" :currentPage="paginationData.currentPage"
+          @size-change="handleSizeChange" @current-change="handleCurrentChange" />
       </div>
     </el-card>
 
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="600px"
-      @close="handleCloseDialog"
-    >
-      <el-form
-        ref="formRef"
-        :model="formData"
-        :rules="formRules"
-        label-width="120px"
-      >
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" @close="handleCloseDialog">
+      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="120px">
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="客户姓名" prop="customer_name">
@@ -268,39 +262,29 @@ onMounted(() => {
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="阶段进度" prop="stage">
-              <el-select v-model="formData.stage" placeholder="请选择阶段">
-                <el-option v-for="item in stageOptions" :key="item" :label="item" :value="item" />
+            <el-form-item label="阶段进度" prop="technician">
+              <el-select v-model="formData.technician" placeholder="请选择阶段">
+                <el-option v-for="item in stageOptions" :key="item.key" :label="item.label" :value="item.label" />
               </el-select>
             </el-form-item>
           </el-col>
         </el-row>
-        
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="戴牙时间" prop="wear_time">
-              <el-date-picker
-                v-model="formData.wear_time"
-                type="date"
-                placeholder="选择日期"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
+              <el-date-picker v-model="formData.wear_time" type="date" placeholder="选择日期" value-format="YYYY-MM-DD"
+                style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="预计截牙时间" prop="expected_cut_time">
-              <el-date-picker
-                v-model="formData.expected_cut_time"
-                type="date"
-                placeholder="选择日期"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
+              <el-date-picker v-model="formData.expected_cut_time" type="date" placeholder="选择日期"
+                value-format="YYYY-MM-DD" style="width: 100%" />
             </el-form-item>
           </el-col>
         </el-row>
-        
+
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="医生" prop="doctor">
@@ -315,17 +299,12 @@ onMounted(() => {
             </el-form-item>
           </el-col>
         </el-row>
-        
+
         <el-form-item label="备注" prop="note">
-          <el-input
-            v-model="formData.note"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入备注"
-          />
+          <el-input v-model="formData.note" type="textarea" :rows="3" placeholder="请输入备注" />
         </el-form-item>
       </el-form>
-      
+
       <template #footer>
         <el-button @click="handleCloseDialog">取消</el-button>
         <el-button type="primary" @click="handleConfirm" :loading="loading">确定</el-button>
@@ -338,6 +317,7 @@ onMounted(() => {
 .app-container {
   .search-wrapper {
     margin-bottom: 20px;
+
     :deep(.el-card__body) {
       padding-bottom: 2px;
     }

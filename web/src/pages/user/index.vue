@@ -11,12 +11,14 @@ interface UserData {
   username: string
   usercount: string
   password?: string
+  role?: string
 }
 
 interface UserFormData {
   username: string
   usercount: string
   password: string
+  role: string
 }
 
 const loading = ref(false)
@@ -34,8 +36,11 @@ const formRef = ref<FormInstance>()
 const formData = reactive<UserFormData>({
   username: "",
   usercount: "",
-  password: ""
+  password: "",
+  role: ""
 })
+
+const roleOptions = ["技师", "医生椅旁技师", "其他人员"]
 
 const formRules: FormRules = {
   username: [
@@ -49,6 +54,9 @@ const formRules: FormRules = {
   password: [
     { required: true, message: "请输入密码", trigger: "blur" },
     { min: 6, max: 20, message: "密码长度在 6 到 20 个字符", trigger: "blur" }
+  ],
+  role: [
+    { required: true, message: "请选择角色", trigger: "change" }
   ]
 }
 
@@ -112,7 +120,8 @@ const handleConfirm = async () => {
         await createUserApi({
           username: formData.username,
           usercount: formData.usercount,
-          password: formData.password
+          password: formData.password,
+          role: formData.role
         })
         ElMessage.success("新增成功")
         dialogVisible.value = false
@@ -138,6 +147,7 @@ const resetForm = () => {
   formData.username = ""
   formData.usercount = ""
   formData.password = ""
+  formData.role = ""
 }
 
 const handleUpdate = (row: UserData) => {
@@ -184,6 +194,13 @@ getTableData()
           <el-table-column prop="id" label="ID" width="80" align="center" />
           <el-table-column prop="username" label="用户名" align="center" />
           <el-table-column prop="usercount" label="用户账号" align="center" />
+          <el-table-column prop="role" label="角色" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.role === '技师'" type="success">{{ row.role }}</el-tag>
+              <el-tag v-else-if="row.role === '医生椅旁技师'" type="warning">{{ row.role }}</el-tag>
+              <el-tag v-else type="info">{{ row.role || '其他人员' }}</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column fixed="right" label="操作" width="150" align="center">
             <template #default="{ row }">
               <!-- <el-button type="primary" text size="small" @click="handleUpdate(row)">编辑</el-button> -->
@@ -213,6 +230,11 @@ getTableData()
         </el-form-item>
         <el-form-item label="用户账号" prop="usercount">
           <el-input v-model="formData.usercount" placeholder="请输入用户账号" clearable />
+        </el-form-item>
+        <el-form-item label="角色" prop="role">
+          <el-select v-model="formData.role" placeholder="请选择角色" style="width: 100%">
+            <el-option v-for="item in roleOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
         <el-form-item label="密码" prop="password">
           <el-input v-model="formData.password" type="password" placeholder="请输入密码" show-password clearable />

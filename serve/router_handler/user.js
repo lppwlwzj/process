@@ -92,7 +92,7 @@ exports.delete = (req, res) => {
 };
 
 exports.create = (req, res) => {
-  const { username, usercount, password } = req.body;
+  const { username, usercount, password, role } = req.body;
   
   if (!username || !usercount || !password) {
     return res.cc("用户名、账号和密码不能为空！");
@@ -103,8 +103,8 @@ exports.create = (req, res) => {
     if (err) return res.cc(err);
     if (results.length > 0) return res.cc("用户账号已存在！");
     
-    const insertSql = `INSERT INTO user (username, usercount, password) VALUES (?, ?, ?)`;
-    db.query(insertSql, [username, usercount, password], function (err, results) {
+    const insertSql = `INSERT INTO user (username, usercount, password, role) VALUES (?, ?, ?, ?)`;
+    db.query(insertSql, [username, usercount, password, role || '其他人员'], function (err, results) {
       if (err) return res.cc(err);
       if (results.affectedRows !== 1) return res.cc("新增用户失败！");
       
