@@ -14,9 +14,11 @@ exports.addHistory = (req, res) => {
     return res.cc("缺少必要参数！");
   }
   
-  // 先查询该客户的上一次操作记录
+  // 先查询该客户的上一次操作记录和总操作次数
   const getLastSql = `SELECT progress, technician, start_time FROM customer_process_history 
                       WHERE customer_id=? ORDER BY start_time DESC LIMIT 1`;
+  
+  const getCountSql = `SELECT COUNT(*) as count FROM customer_process_history WHERE customer_id=?`;
   
   db.query(getLastSql, customer_id, (err, results) => {
     if (err) return res.cc(err);
@@ -37,33 +39,69 @@ exports.addHistory = (req, res) => {
       duration_minutes = Math.floor((currentTime - lastTime) / (1000 * 60));
     }
     
-    // 插入新的操作记录
-    const insertSql = `INSERT INTO customer_process_history 
-      (customer_id, customer_name, progress, technician, start_time, duration_minutes, previous_progress, previous_technician) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-    
-    db.query(insertSql, [
-      customer_id,
-      customer_name,
-      progress,
-      technician,
-      start_time,
-      duration_minutes,
-      previous_progress,
-      previous_technician
-    ], (err, results) => {
+    // 查询操作次数
+    db.query(getCountSql, customer_id, (err, countResults) => {
       if (err) return res.cc(err);
-      if (results.affectedRows !== 1) return res.cc("添加操作记录失败！");
       
-      res.send({
-        code: 0,
-        message: "操作记录添加成功！",
-        re: {
-          id: results.insertId,
-          duration_minutes: duration_minutes,
-          previous_progress: previous_progress,
-          previous_technician: previous_technician
+      const operation_count = (countResults[0].count || 0) + 1;
+      
+      // 插入新的操作记录
+      const insertSql = `INSERT INTO customer_process_history 
+        (customer_id, customer_name, progress, technician, operation_count, start_time, duration_minutes, previous_progress, previous_technician) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      
+      db.query(insertSql, [
+        customer_id,
+        customer_name,
+        progress,
+        technician,
+        operation_count,
+        start_time,
+        duration_minutes,
+        previous_progress,
+        previous_technician
+      ], (err, historyResults) => {
+        if (err) {
+          console.error('插入历史记录失败:', err);
+          return res.cc(err);
         }
+        if (historyResults.affectedRows !== 1) return res.cc("添加操作记录失败！");
+        
+        // 更新或插入 customer_process 表
+        const checkProcessSql = `SELECT id FROM customer_process WHERE customer_id=?`;
+        
+        db.query(checkProcessSql, customer_id, (err, processResults) => {
+          if (err) return res.cc(err);
+          
+          let updateProcessSql;
+          let updateParams;
+          
+          if (processResults && processResults.length > 0) {
+            // 如果记录存在，更新
+            updateProcessSql = `UPDATE customer_process SET progress=?, technician=?, updated_at=NOW() WHERE customer_id=?`;
+            updateParams = [progress, technician, customer_id];
+          } else {
+            // 如果记录不存在，插入
+            updateProcessSql = `INSERT INTO customer_process (customer_id, customer_name, progress, technician) VALUES (?, ?, ?, ?)`;
+            updateParams = [customer_id, customer_name, progress, technician];
+          }
+          
+          db.query(updateProcessSql, updateParams, (err, updateResults) => {
+            if (err) return res.cc(err);
+            
+            res.send({
+              code: 0,
+              message: "操作记录添加成功！",
+              re: {
+                id: historyResults.insertId,
+                operation_count: operation_count,
+                duration_minutes: duration_minutes,
+                previous_progress: previous_progress,
+                previous_technician: previous_technician
+              }
+            });
+          });
+        });
       });
     });
   });

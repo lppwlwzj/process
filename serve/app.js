@@ -41,6 +41,7 @@ app.use((req, res, next) => {
   // code 默认值为 500，表示失败的情况
   // err 的值，可能是一个错误对象，也可能是一个错误的描述字符串
   res.cc = function (err, code = 1) {
+    console.log("err", err);
     res.send({
       code,
       message: err instanceof Error ? err.message : err

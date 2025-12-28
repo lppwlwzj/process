@@ -4,7 +4,6 @@ export interface ProcessData {
   wear_time: string
   progress: string
   technician: string
-  other_staff?: string
   material?: string
   image?: string
     remark?: string
@@ -26,7 +25,6 @@ export interface ProcessData {
     wear_time: string
     progress: string
     technician: string
-  other_staff?: string
   material?: string
   image?: string
   remark?: string

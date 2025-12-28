@@ -1,133 +1,171 @@
 page {
-    background-color: #f5f5f5;
+  background-color: #fff5f8;
+}
+
+.content {
+  min-height: 100vh;
+  background-color: #fff5f8;
+  padding-bottom: 30rpx;
+}
+
+.page-title {
+  text-align: center;
+  font-size: 44rpx;
+  font-weight: 700;
+  padding: 50rpx 30rpx 40rpx;
+  background: linear-gradient(135deg, #dd524d63 0%, #ff7eb32e 100%);
+  box-shadow: 0 4rpx 20rpx rgba(255, 117, 140, 0.3);
+}
+
+.form-container {
+  padding: 40rpx 30rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+}
+
+.btn-row {
+  display: flex;
+  gap: 24rpx;
+}
+
+.icon-btn {
+  flex: 1;
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 40rpx 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(255, 117, 140, 0.08);
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  transition: all 0.3s;
+
+  &::after {
+    border: none;
   }
-  
-  .content {
-    min-height: 100vh;
-    background: #f5f5f5;
-      padding-bottom: 30rpx;
-  }
-  
-  .page-title {
-    text-align: center;
-    font-size: 40rpx;
-    font-weight: bold;
-    color: #ff6b6b;
-    padding: 40rpx 0;
-    background: #fff;
-    box-shadow: 0 2rpx 10rpx rgba(221, 82, 77, 0.1);
-  }
-  
-  .form-container {
-    padding: 30rpx;
+
+  .btn-icon {
+    font-size: 60rpx;
+    line-height: 1;
+
+    &.success {
+      color: #52c41a;
+      width: 48rpx;
+      height: 48rpx;
+      border-radius: 50%;
+      border: 4rpx solid #52c41a;
       display: flex;
-      flex-direction: column;
-      gap: 30rpx;
-  }
-  
-  .btn-row {
-    display: flex;
-    gap: 20rpx;
-  }
-  
-  .icon-btn {
-    flex: 1;
-    background: #fff;
-      border-radius: 20rpx;
-      padding: 40rpx 20rpx;
-      box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
-      border: none;
-      display: flex;
-    flex-direction: column;
-    align-items: center;
-      justify-content: center;
-    gap: 16rpx;
-    transition: all 0.3s;
-  
-    &::after {
-        border: none;
-      }
-  
-                  .btn-icon {
-                    font-size: 60rpx;
-                    line-height: 1;
-          
-                    &.success {
-                      color: #52c41a;
-                      width: 48rpx;
-                      height: 48rpx;
-                      border-radius: 50%;
-                      border: 4rpx solid #52c41a;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      font-size: 40rpx;
-      }
-      
-                                  &.error {
-                                    color: #ff4d4f;
-                                    width: 48rpx;
-                                    height: 48rpx;
-                                    border-radius: 50%;
-                                    border: 4rpx solid #ff4d4f;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    font-size: 32rpx;
-                                  }
-                                  }
-  
-                  .btn-text {
-      font-size: 28rpx;
-      color: #333;
-      }
-  
-                  &:active {
-                    opacity: 0.8;
-                    transform: scale(0.98);
-    }
-  }
-  
-  .full-btn {
-    width: 100%;
-    background: #fff;
-      border-radius: 20rpx;
-      padding: 40rpx 30rpx;
-      box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
-      border: none;
-    display: flex;
       align-items: center;
-    gap: 20rpx;
-      position: relative;
-  
-    &::after {
-        border: none;
-      }
-  
-                  .btn-icon {
-                    font-size: 48rpx;
-                    line-height: 1;
-                  }
-          
-                  .btn-text {
-                    font-size: 30rpx;
-                    color: #333;
-                    flex: 1;
-                    text-align: left;
-                  }
-          
-                  .arrow {
-                    font-size: 48rpx;
-                    color: #999;
-                    line-height: 1;
-                  }
-      &:active {
-      opacity: 0.8;
-      }
-  }
-  
-  .upload-btn {
-    .btn-icon {
-      font-size: 64rpx;
+      justify-content: center;
+      font-size: 40rpx;
+    }
+
+    &.error {
+      color: #ff4d4f;
+      width: 48rpx;
+      height: 48rpx;
+      border-radius: 50%;
+      border: 4rpx solid #ff4d4f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32rpx;
     }
   }
+
+  .btn-text {
+    font-size: 28rpx;
+    color: #1a1a1a;
+    font-weight: 500;
+  }
+
+  &.active {
+    background: linear-gradient(135deg, #dd524d63 0%, #ff7eb326 100%);
+    box-shadow: 0 8rpx 24rpx rgba(255, 117, 140, 0.4);
+    transform: scale(1.02);
+
+    .btn-text {
+      font-weight: 600;
+    }
+  }
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.full-btn {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 40rpx 30rpx;
+  box-shadow: 0 4rpx 16rpx rgba(255, 117, 140, 0.08);
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  position: relative;
+  transition: all 0.3s;
+
+  &::after {
+    border: none;
+  }
+
+  .btn-icon {
+    font-size: 48rpx;
+    line-height: 1;
+  }
+
+  .btn-text {
+    font-size: 30rpx;
+    color: #1a1a1a;
+    flex: 1;
+    text-align: left;
+    font-weight: 500;
+  }
+
+  .arrow {
+    font-size: 48rpx;
+    color: #ffb3c6;
+    line-height: 1;
+  }
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+    box-shadow: 0 8rpx 24rpx rgba(255, 117, 140, 0.15);
+  }
+}
+
+.status-btn {
+  &.active {
+    .btn-icon.success {
+      background: #52c41a;
+      color: #ffffff;
+      border-color: #52c41a;
+    }
+
+    .btn-icon.error {
+      background: #ff4d4f;
+      color: #ffffff;
+      border-color: #ff4d4f;
+    }
+  }
+}
+
+.upload-btn {
+  .btn-icon {
+    font-size: 64rpx;
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffe5ec 0%, #ffd4e5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

@@ -5,7 +5,7 @@ const install = (Vue, vm) => {
     getUserList: () => vm.$u.http.post("/api/user/list"),
     getCustomerDetailById: (data) =>
       vm.$u.http.post("/api/customer/detail", data),
-    getCustomerProcessDetailByCustomerId: (data) =>
+    getProcessDetailByCustomerId: (data) =>
       vm.$u.http.post("/api/process/detail", data),
 
 

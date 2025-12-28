@@ -5,10 +5,10 @@
 
     <view class="form-container">
       <view class="customer-header">
-        <text class="customer-name">{{ form.customerName }}</text>
+        <text class="customer-name">{{ form.customer_name }}</text>
         <view class="wear-time-info">
           <text class="wear-time-label">戴牙时间: </text>
-          <text class="wear-time-value">{{ formatDate(form.wearTime) }}</text>
+          <text class="wear-time-value">{{ formatDate(form.wear_time) }}</text>
         </view>
       </view>
 
@@ -51,7 +51,8 @@
           </view>
         </view>
 
-        <view class="action-card" @click="handleStart" :class="{ disabled: !form.progress || !form.technician }">
+        <view class="action-card" @click="handleStart"
+          :class="{ disabled: !form.progress || !form.technician || form.progress === 'not_started' }">
           <view class="card-icon-wrapper">
             <text class="card-icon">⚡</text>
           </view>
@@ -69,7 +70,7 @@
           <view class="card-content">
             <view class="card-text">
               <text class="card-label">备注</text>
-              <text class="card-selected-value">{{ form.remark }}</text>
+              <text class="card-selected-value">{{ form.customer_note }}</text>
             </view>
           </view>
         </view>
@@ -85,7 +86,7 @@
           </view>
         </view>
 
-        <view class="action-card">
+        <!-- <view class="action-card">
           <view class="card-icon-wrapper">
             <text class="card-icon">🎙</text>
           </view>
@@ -107,7 +108,7 @@
               <text class="card-label">上传视频</text>
             </view>
           </view>
-        </view>
+        </view> -->
       </view>
 
       <view class="yipan-button-container">
@@ -160,8 +161,8 @@ export default {
       cacheLastProgress: null, // 缓存上次选择的进度
       cacheLastTechnician: null, // 缓存上次选择的技工师
       form: {
-        customerName: "",
-        wearTime: "",
+        customer_name: "",
+        wear_time: "",
         progress: "",
         technician: "",
         material: "",
@@ -172,6 +173,7 @@ export default {
       technicianLabel: "",
       showProgressPicker: false,
       showTechnicianPicker: false,
+      isSubmitting: false,
       progressColumns: [
         [
           { key: "not_started", label: "未开始" },
@@ -201,9 +203,8 @@ export default {
   onLoad: function (option) {
     // 小程序环境直接从 option 获取
     if (option.customerId) {
-      this.customerId = option.customerId;
+      this.customerId = option.customerId
 
-      console.log("接收到客户ID:", this.customerId);
     }
     // H5 环境从 URL 参数获取
     else {
@@ -236,32 +237,26 @@ export default {
 
   methods: {
     async fetchData() {
-      if (!this.customerId) {
-        uni.showToast({
-          title: "缺少客户ID",
-          icon: "none"
-        });
-        return;
-      }
+      // TODO:测试
+      this.customerId = '1'
+      // if (!this.customerId) {
+      //   uni.showToast({
+      //     title: "缺少客户ID",
+      //     icon: "none"
+      //   });
+      //   return;
+      // }
 
       uni.showLoading({ title: "加载中..." });
 
       try {
-        const res = await this.$api.getCustomerProcessDetailByCustomerId({ id: this.customerId });
+        const res = await this.$api.getProcessDetailByCustomerId({ id: this.customerId });
         if (res.code === 0 && res.re) {
-          this.form = {
-            customerName: res.re.customer_name || "",
-            wearTime: res.re.wear_time || "",
-            progress: res.re.progress || "",
-            technician: res.re.technician || "",
-            material: res.re.material || "",
-            image: res.re.image || "",
-            remark: res.re.remark || ""
-          };
+          this.form = res.re
           this.cacheLastProgress = this.form.progress;
           this.cacheLastTechnician = this.form.technician;
-          this.progressLabel = this.progressColumns.find(item => item.key === this.form.progress)?.label || "";
-          this.technicianLabel = this.technicianColumns.find(item => item.key === this.form.technician)?.label || "";
+          this.progressLabel = this.progressColumns[0].find(item => item.key === this.form.progress)?.label || "";
+          this.technicianLabel = this.technicianColumns[0].find(item => item.key === this.form.technician)?.label || "";
         } else {
           console.error("获取客户详情失败:", res);
           uni.showToast({
@@ -343,11 +338,27 @@ export default {
     },
 
     handleStart() {
+      if (this.isSubmitting) {
+        uni.showToast({
+          title: "请勿重复提交",
+          icon: "none"
+        });
+        return;
+      }
+
       if (!this.form.progress) {
         uni.showToast({
           title: "请选择进度",
           icon: "none"
         });
+        return;
+      }
+
+      const newProgress = this.form.progress;
+      const newTechnician = this.form.technician;
+
+      console.log("this.progressLabel", this.cacheLastProgress, this.form.progress);
+      if (this.progressLabel === newProgress || newProgress === "not_started") {
         return;
       }
       if (!this.form.technician) {
@@ -363,31 +374,35 @@ export default {
         content: "确定要开始操作吗？",
         success: async (res) => {
           if (res.confirm) {
-            const newProgress = this.form.progress;
-            const newTechnician = this.form.technician;
+            if (this.isSubmitting) {
+              return;
+            }
+
+            this.isSubmitting = true;
 
             // 记录当前操作时间
             const now = new Date();
             const startTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
             try {
-              uni.showLoading({ title: "保存中..." });
-
               // 调用添加操作历史API
               const result = await this.$api.addProcessHistory({
                 customer_id: this.customerId,
-                customer_name: this.form.customerName,
+                customer_name: this.form.customer_name,
                 progress: newProgress,
                 technician: newTechnician,
                 start_time: startTime
               });
 
+
               uni.hideLoading();
 
               if (result.code === 0) {
-                const { duration_minutes, previous_progress, previous_technician } = result.re;
+                const { operation_count, duration_minutes, previous_progress, previous_technician } = result.re;
 
                 let message = "操作记录成功！\n";
+                message += `\n这是第 ${operation_count} 次操作`;
+
                 if (previous_progress && previous_technician) {
                   message += `\n上次进度：${previous_progress}`;
                   message += `\n上次技工师：${previous_technician}`;
@@ -422,6 +437,8 @@ export default {
                 title: "操作失败",
                 icon: "none"
               });
+            } finally {
+              this.isSubmitting = false;
             }
           }
         }

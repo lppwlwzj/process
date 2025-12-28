@@ -6,6 +6,7 @@ CREATE TABLE `customer_process_history` (
   `customer_name` varchar(50) NOT NULL COMMENT '客户名称',
   `progress` varchar(50) NOT NULL COMMENT '当前进度',
   `technician` varchar(50) NOT NULL COMMENT '当前技工师',
+  `operation_count` int(11) DEFAULT 1 COMMENT '第几次操作',
   `start_time` datetime NOT NULL COMMENT '开始操作时间',
   `duration_minutes` int(11) DEFAULT NULL COMMENT '距离上次操作的时长（分钟）',
   `previous_progress` varchar(50) DEFAULT NULL COMMENT '上一次的进度',

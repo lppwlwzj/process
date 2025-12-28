@@ -4,7 +4,11 @@ import { ElMessage, ElMessageBox } from "element-plus"
 import { Search, Refresh, CirclePlus, Delete, Edit } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
 import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi } from "@@/apis/process"
+import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
 import type { FormInstance, FormRules } from "element-plus"
+
+import { progressOptions } from "./constant"
+
 
 interface ProcessData {
   id: number
@@ -12,7 +16,6 @@ interface ProcessData {
   wear_time: string
   progress: string
   technician: string
-  other_staff?: string
   material?: string
   image?: string
   remark?: string
@@ -49,7 +52,6 @@ const formData = reactive<ProcessData>({
   wear_time: "",
   progress: "",
   technician: "",
-  other_staff: "",
   material: "",
   image: "",
   remark: "",
@@ -63,7 +65,7 @@ const formData = reactive<ProcessData>({
   daily_wear_status: undefined
 })
 
-const progressOptions = ["未开始", "进行中", "已完成"]
+
 const technicianOptions = ["李师傅", "王师傅", "赵师傅", "陈师傅"]
 const chairsideDoctorOptions = ["宇医生", "秦医生", "蔡医生", "王医生"]
 
@@ -181,6 +183,20 @@ const handleCloseDialog = () => {
   resetForm()
 }
 
+const historyDialogVisible = ref(false)
+const selectedCustomer = ref({
+  id: 0,
+  name: ""
+})
+
+const handleProgressRecord = (row: ProcessData) => {
+  selectedCustomer.value = {
+    id: row.id,
+    name: row.customer_name
+  }
+  historyDialogVisible.value = true
+}
+
 const resetForm = () => {
   formRef.value?.resetFields()
   formData.id = 0
@@ -188,7 +204,6 @@ const resetForm = () => {
   formData.wear_time = ""
   formData.progress = ""
   formData.technician = ""
-  formData.other_staff = ""
   formData.material = ""
   formData.image = ""
   formData.remark = ""
@@ -202,13 +217,25 @@ const resetForm = () => {
   formData.daily_wear_status = undefined
 }
 
-const getProgressType = (progress: string) => {
+const getProgressType = (progressKey: string) => {
   const typeMap: Record<string, string> = {
-    "未开始": "info",
-    "进行中": "warning",
-    "已完成": "success"
+    "not_started": "info",
+    "guan_mo": "warning",
+    "xiu_mo": "warning",
+    "cad_design": "warning",
+    "qie_xue": "warning",
+    "che_jin": "warning",
+    "shang_ci": "warning",
+    "che_ci": "warning",
+    "shang_you": "warning",
+    "completed": "success"
   }
-  return typeMap[progress] || ""
+  return typeMap[progressKey] || "info"
+}
+
+const getProgressLabel = (progressKey: string) => {
+  const option = progressOptions.find(item => item.key === progressKey)
+  return option ? option.label : progressKey
 }
 
 onMounted(() => {
@@ -218,7 +245,7 @@ onMounted(() => {
 
 <template>
   <div class="app-container">
-    <el-card shadow="never" class="search-wrapper">
+    <!-- <el-card shadow="never" class="search-wrapper">
       <el-form ref="searchFormRef" :inline="true" :model="searchData">
         <el-form-item prop="customer_name" label="客户名称">
           <el-input v-model="searchData.customer_name" placeholder="请输入客户名称" />
@@ -226,7 +253,7 @@ onMounted(() => {
         <el-form-item prop="progress" label="进度">
           <el-select v-model="searchData.progress" placeholder="请选择进度">
             <el-option label="全部" value="" />
-            <el-option v-for="item in progressOptions" :key="item" :label="item" :value="item" />
+            <el-option v-for="item in progressOptions" :key="item.key" :label="item.label" :value="item.key" />
           </el-select>
         </el-form-item>
         <el-form-item prop="technician" label="技工师">
@@ -240,13 +267,13 @@ onMounted(() => {
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
         </el-form-item>
       </el-form>
-    </el-card>
+    </el-card> -->
     <el-card shadow="never">
-      <div class="toolbar-wrapper">
+      <!-- <div class="toolbar-wrapper">
         <div>
           <el-button type="primary" :icon="CirclePlus" @click="handleCreate">新增客户进度</el-button>
         </div>
-      </div>
+      </div> -->
       <div class="table-wrapper">
         <el-table :data="tableData" v-loading="loading">
           <el-table-column prop="id" label="ID" width="80" align="center" />
@@ -254,7 +281,7 @@ onMounted(() => {
           <el-table-column prop="wear_time" label="戴牙时间" align="center" />
           <el-table-column prop="progress" label="进度" align="center">
             <template #default="{ row }">
-              <el-tag :type="getProgressType(row.progress)">{{ row.progress }}</el-tag>
+              <el-tag :type="getProgressType(row.progress)">{{ getProgressLabel(row.progress) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="technician" label="技工师" align="center" />
@@ -267,34 +294,23 @@ onMounted(() => {
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="150" align="center">
+          <el-table-column fixed="right" label="操作" width="200" align="center">
             <template #default="{ row }">
-              <el-button type="primary" text size="small" @click="handleUpdate(row)">编辑</el-button>
+              <el-button type="primary" text size="small" @click="handleProgressRecord(row)">进度记录</el-button>
+              <!-- <el-button type="primary" text size="small" @click="handleUpdate(row)">编辑</el-button> -->
               <el-button type="danger" text size="small" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
       <div class="pager-wrapper">
-        <el-pagination
-          background
-          :layout="paginationData.layout"
-          :page-sizes="paginationData.pageSizes"
-          :total="paginationData.total"
-          :page-size="paginationData.pageSize"
-          :currentPage="paginationData.currentPage"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
+        <el-pagination background :layout="paginationData.layout" :page-sizes="paginationData.pageSizes"
+          :total="paginationData.total" :page-size="paginationData.pageSize" :currentPage="paginationData.currentPage"
+          @size-change="handleSizeChange" @current-change="handleCurrentChange" />
       </div>
     </el-card>
 
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="800px"
-      @close="handleCloseDialog"
-    >
+    <!-- <el-dialog v-model="dialogVisible" :title="dialogTitle" width="800px" @close="handleCloseDialog">
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="120px">
         <el-row :gutter="20">
           <el-col :span="12">
@@ -304,13 +320,8 @@ onMounted(() => {
           </el-col>
           <el-col :span="12">
             <el-form-item label="戴牙时间" prop="wear_time">
-              <el-date-picker
-                v-model="formData.wear_time"
-                type="date"
-                placeholder="请选择戴牙时间"
-                style="width: 100%"
-                value-format="YYYY-MM-DD"
-              />
+              <el-date-picker v-model="formData.wear_time" type="date" placeholder="请选择戴牙时间" style="width: 100%"
+                value-format="YYYY-MM-DD" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -319,7 +330,7 @@ onMounted(() => {
           <el-col :span="12">
             <el-form-item label="进度" prop="progress">
               <el-select v-model="formData.progress" placeholder="请选择进度" style="width: 100%">
-                <el-option v-for="item in progressOptions" :key="item" :label="item" :value="item" />
+                <el-option v-for="item in progressOptions" :key="item.key" :label="item.label" :value="item.key" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -333,11 +344,6 @@ onMounted(() => {
         </el-row>
 
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="其他人员" prop="other_staff">
-              <el-input v-model="formData.other_staff" placeholder="请输入其他人员" clearable />
-            </el-form-item>
-          </el-col>
           <el-col :span="12">
             <el-form-item label="材料" prop="material">
               <el-input v-model="formData.material" placeholder="请输入材料" clearable />
@@ -366,24 +372,14 @@ onMounted(() => {
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="开始椅旁时间" prop="start_chairside_time">
-              <el-date-picker
-                v-model="formData.start_chairside_time"
-                type="datetime"
-                placeholder="请选择开始椅旁时间"
-                style="width: 100%"
-                value-format="YYYY-MM-DD HH:mm:ss"
-              />
+              <el-date-picker v-model="formData.start_chairside_time" type="datetime" placeholder="请选择开始椅旁时间"
+                style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="完成椅旁时间" prop="complete_chairside_time">
-              <el-date-picker
-                v-model="formData.complete_chairside_time"
-                type="datetime"
-                placeholder="请选择完成椅旁时间"
-                style="width: 100%"
-                value-format="YYYY-MM-DD HH:mm:ss"
-              />
+              <el-date-picker v-model="formData.complete_chairside_time" type="datetime" placeholder="请选择完成椅旁时间"
+                style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -419,20 +415,17 @@ onMounted(() => {
         </el-form-item>
 
         <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="formData.remark"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入备注"
-            clearable
-          />
+          <el-input v-model="formData.remark" type="textarea" :rows="3" placeholder="请输入备注" clearable />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="handleCloseDialog">取消</el-button>
         <el-button type="primary" @click="handleConfirm" :loading="loading">确定</el-button>
       </template>
-    </el-dialog>
+    </el-dialog> -->
+
+    <ProcessHistoryDialog v-model:visible="historyDialogVisible" :customer-id="selectedCustomer.id"
+      :customer-name="selectedCustomer.name" />
   </div>
 </template>
 
@@ -440,6 +433,7 @@ onMounted(() => {
 .app-container {
   .search-wrapper {
     margin-bottom: 20px;
+
     :deep(.el-card__body) {
       padding-bottom: 2px;
     }

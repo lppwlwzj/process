@@ -16,7 +16,7 @@ interface CustomerData {
   material: string
   image?: string
   qr_code?: string
-  note?: string
+  remark?: string
   created_at?: string
   updated_at?: string
 }
@@ -45,7 +45,7 @@ const formData = reactive<CustomerData>({
   material: "",
   image: "",
   qr_code: "",
-  note: ""
+  remark: ""
 })
 
 const stageOptions = [
@@ -171,7 +171,7 @@ const resetForm = () => {
   formData.material = ""
   formData.image = ""
   formData.qr_code = ""
-  formData.note = ""
+  formData.remark = ""
 }
 
 const getStageType = (technician: string) => {
@@ -229,14 +229,14 @@ onMounted(() => {
           <el-table-column prop="customer_name" label="客户姓名" width="100" align="center" />
           <el-table-column prop="technician" label="阶段进度" width="110" align="center">
             <template #default="{ row }">
-              <el-tag :type="getStageType(row.technician)">{{ row.technician }}</el-tag>
+              <el-tag :type="getStageType(row.technician)" v-if="row.technician">{{ row.technician }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="wear_time" label="戴牙时间" width="110" align="center" />
           <el-table-column prop="expected_cut_time" label="预计截牙时间" width="120" align="center" />
           <el-table-column prop="doctor" label="医生" width="90" align="center" />
           <el-table-column prop="material" label="材料" width="150" align="center" show-overflow-tooltip />
-          <el-table-column prop="note" label="备注" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
           <el-table-column fixed="right" label="操作" width="150" align="center">
             <template #default="{ row }">
               <el-button type="primary" text size="small" :icon="Edit" @click="handleUpdate(row)">编辑</el-button>
@@ -273,13 +273,14 @@ onMounted(() => {
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="戴牙时间" prop="wear_time">
-              <el-date-picker v-model="formData.wear_time" type="date" placeholder="选择日期" value-format="YYYY-MM-DD"
-                style="width: 100%" />
+              <el-date-picker v-model="formData.wear_time" type="date" placeholder="选择日期" format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="预计截牙时间" prop="expected_cut_time">
               <el-date-picker v-model="formData.expected_cut_time" type="date" placeholder="选择日期"
+format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD" style="width: 100%" />
             </el-form-item>
           </el-col>
@@ -300,8 +301,8 @@ onMounted(() => {
           </el-col>
         </el-row>
 
-        <el-form-item label="备注" prop="note">
-          <el-input v-model="formData.note" type="textarea" :rows="3" placeholder="请输入备注" />
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="formData.remark" type="textarea" :rows="3" placeholder="请输入备注" />
         </el-form-item>
       </el-form>
 
