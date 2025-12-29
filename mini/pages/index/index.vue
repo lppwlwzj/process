@@ -1,15 +1,19 @@
 <template>
   <view class="content" :style="{ paddingTop: statusBarHeight }">
-    <view class="page-title">客户进度表 <text class="progress-label" v-show="progressLabel">（{{ progressLabel }}）</text>
+    <view class="page-title">当前进度： <text class="progress-label" v-show="progressLabel">（{{ progressLabel }}）</text>
+    </view>
+
+    <view class="preparation-time">
+      <text class="preparation-time-text">备牙时间: {{ formatDate(form.preparation_time) }}</text>
     </view>
 
     <view class="form-container">
       <view class="customer-header">
-        <text class="customer-name">{{ form.customer_name }}</text>
         <view class="wear-time-info">
           <text class="wear-time-label">戴牙时间: </text>
           <text class="wear-time-value">{{ formatDate(form.wear_time) }}</text>
         </view>
+        <text class="customer-name">{{ form.customer_name }}</text>
       </view>
 
       <view class="action-grid">
@@ -47,7 +51,7 @@
               <text class="card-label">材料</text>
               <text class="card-selected-value">{{ form.material }}</text>
             </view>
-            <text class="card-arrow">›</text>
+            <text class="card-arrow"></text>
           </view>
         </view>
 
@@ -163,6 +167,7 @@ export default {
       form: {
         customer_name: "",
         wear_time: "",
+        preparation_time: "",
         progress: "",
         technician: "",
         material: "",

@@ -8,8 +8,8 @@ const fs =require("fs")
 const app = express();
 const bodyParser = require("body-parser");
 ////导入用于将客户端发送过来的JWT字符串解析还原成JSON对象的包
-const expressJWT = require("express-jwt");
-const config = require("./config");
+// const expressJWT = require("express-jwt");
+// const config = require("./config");
 // 导入并配置cors中间件，配置跨域
 const cors = require("cors");
 
@@ -75,11 +75,11 @@ app.use(express.urlencoded({ extended: false }));
 // 通过 express.json() 这个中间件，解析表单中的 JSON 格式的数据
 app.use(express.json());
 
-app.use(
-  expressJWT({ secret: config.jwtSecretKey }).unless({
-    path: [/^\/api\/user/, /^\/img/,/^\/api\/download/,/^\/api\/customer/,/^\/api\/process/,/^\/api\/process_history/]
-  })
-);
+// app.use(
+//   expressJWT({ secret: config.jwtSecretKey }).unless({
+//     path: [/^\/api\/user/, /^\/img/,/^\/api\/download/,/^\/api\/customer/,/^\/api\/process/,/^\/api\/process_history/,/^\/api\/yipan/]
+//   })
+// );
 
 //捕获错误的全局中间件
 app.use(function (err, req, res, next) {
@@ -130,8 +130,11 @@ app.use("/api/process", processRouter);
 const processHistoryRouter = require("./router/process_history");
 app.use("/api/process_history", processHistoryRouter);
 
-const kehuRouter = require("./router/kehu");
-app.use("/api/kehu", kehuRouter);
+const yipanRouter = require("./router/yipan");
+app.use("/api/yipan", yipanRouter);
+
+// const kehuRouter = require("./router/kehu");
+// app.use("/api/kehu", kehuRouter);
 
 
 // const serviceRouter = require("./router_handler/service");

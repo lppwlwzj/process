@@ -149,7 +149,7 @@ page {
 }
 
 .card-label {
-  font-size: 28rpx;
+  font-size: 32rpx;
   color: #1a1a1a;
   font-weight: 500;
   text-align: center;
@@ -213,6 +213,17 @@ page {
   margin-top: 40rpx;
 }
 
+.preparation-time {
+  padding: 20rpx 30rpx;
+  text-align: center;
+}
+
+.preparation-time-text {
+  font-size: 28rpx;
+  color: #999;
+  font-weight: 500;
+}
+
 .yipan-action-btn {
   width: 100%;
   background: linear-gradient(135deg, #ff758c 0%, #dd524d63 100%);
@@ -225,23 +236,23 @@ page {
   justify-content: center;
   gap: 20rpx;
   transition: all 0.3s;
-  
+
   &::after {
     border: none;
   }
-  
+
   .btn-icon {
     font-size: 48rpx;
     line-height: 1;
   }
-  
+
   .btn-text {
     font-size: 32rpx;
     color: #ffffff;
     font-weight: 600;
     letter-spacing: 2rpx;
   }
-  
+
   &:active {
     opacity: 0.9;
     transform: scale(0.98);

@@ -3,8 +3,8 @@ DROP TABLE IF EXISTS `customer`;
 CREATE TABLE `customer` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `customer_name` varchar(50) NOT NULL COMMENT '客户姓名',
-  `wear_time` date DEFAULT NULL COMMENT '各牙时间（戴牙时间）',
-  `expected_cut_time` date DEFAULT NULL COMMENT '预计截牙时间',
+  `wear_time` date DEFAULT NULL COMMENT '戴牙时间',
+  `preparation_time` date DEFAULT NULL COMMENT '备牙时间',
   `doctor` varchar(50) DEFAULT NULL COMMENT '医生（宇医生、秦医生、蔡医生等）',
   `material` varchar(100) DEFAULT NULL COMMENT '材料（抹光器、璞典姿、威兰德等）',
   `image` varchar(255) DEFAULT NULL COMMENT '图片URL',

@@ -5,6 +5,7 @@ import { Search, Refresh, CirclePlus, Delete, Edit } from "@element-plus/icons-v
 import { usePagination } from "@@/composables/usePagination"
 import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi } from "@@/apis/process"
 import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
+import ChairsideHistoryDialog from "./components/ChairsideHistoryDialog.vue"
 import type { FormInstance, FormRules } from "element-plus"
 
 import { progressOptions } from "./constant"
@@ -184,6 +185,7 @@ const handleCloseDialog = () => {
 }
 
 const historyDialogVisible = ref(false)
+const chairsideHistoryDialogVisible = ref(false)
 const selectedCustomer = ref({
   id: 0,
   name: ""
@@ -195,6 +197,14 @@ const handleProgressRecord = (row: ProcessData) => {
     name: row.customer_name
   }
   historyDialogVisible.value = true
+}
+
+const handleChairsideRecord = (row: ProcessData) => {
+  selectedCustomer.value = {
+    id: row.id,
+    name: row.customer_name
+  }
+  chairsideHistoryDialogVisible.value = true
 }
 
 const resetForm = () => {
@@ -297,6 +307,7 @@ onMounted(() => {
           <el-table-column fixed="right" label="操作" width="200" align="center">
             <template #default="{ row }">
               <el-button type="primary" text size="small" @click="handleProgressRecord(row)">进度记录</el-button>
+              <el-button type="primary" text size="small" @click="handleChairsideRecord(row)">椅旁记录</el-button>
               <!-- <el-button type="primary" text size="small" @click="handleUpdate(row)">编辑</el-button> -->
               <el-button type="danger" text size="small" @click="handleDelete(row)">删除</el-button>
             </template>
@@ -425,6 +436,9 @@ onMounted(() => {
     </el-dialog> -->
 
     <ProcessHistoryDialog v-model:visible="historyDialogVisible" :customer-id="selectedCustomer.id"
+      :customer-name="selectedCustomer.name" />
+
+    <ChairsideHistoryDialog v-model:visible="chairsideHistoryDialogVisible" :customer-id="selectedCustomer.id"
       :customer-name="selectedCustomer.name" />
   </div>
 </template>

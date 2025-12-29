@@ -15,55 +15,77 @@ exports.list = (req, res) => {
 
 // 新增客户
 exports.create = (req, res) => {
-  const { 
-    customer_name, 
-    technician, 
-    wear_time, 
-    expected_cut_time, 
-    doctor, 
-    material, 
-    image, 
+  const {
+    customer_name,
+    technician,
+    wear_time,
+    preparation_time,
+    expected_cut_time,
+    doctor,
+    material,
+    image,
     qr_code,
-    remark 
+    remark
   } = req.body;
   
   if (!customer_name) {
     return res.cc("客户姓名不能为空！");
   }
   
-  const sql = `INSERT INTO customer (customer_name, technician, wear_time, expected_cut_time, doctor, material, image, qr_code, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  db.query(sql, [customer_name, technician, wear_time, expected_cut_time, doctor, material, image, qr_code, remark], function (err, results) {
+  const sql = `INSERT INTO customer (customer_name, technician, wear_time, preparation_time, expected_cut_time, doctor, material, image, qr_code, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  db.query(sql, [customer_name, technician, wear_time, preparation_time, expected_cut_time, doctor, material, image, qr_code, remark], function (err, results) {
     if (err) return res.cc(err);
     if (results.affectedRows !== 1) return res.cc("新增客户失败！");
+    
+    const customerId = results.insertId;
+    
+    // 同时在 customer_process 表中创建记录
+    const processSQL = `INSERT INTO customer_process (customer_id, customer_name, wear_time, progress, material, remark) VALUES (?, ?, ?, ?, ?, ?)`;
+    db.query(processSQL, [customerId, customer_name, wear_time, 'not_started', material, remark], function (err) {
+      if (err) {
+        console.error("创建客户进度记录失败:", err);
+        // 不影响主流程，只记录错误
+      }
+    });
+    
+    // 同时在 yipan 表中创建记录
+    const yipanSQL = `INSERT INTO yipan (customer_id, customer_name) VALUES (?, ?)`;
+    db.query(yipanSQL, [customerId, customer_name], function (err) {
+      if (err) {
+        console.error("创建椅旁记录失败:", err);
+        // 不影响主流程，只记录错误
+      }
+    });
     
     res.send({
       code: 0,
       message: "新增成功！",
-      re: { id: results.insertId }
+      re: { id: customerId }
     });
   });
 };
 
 // 更新客户
 exports.update = (req, res) => {
-  const { 
+  const {
     id,
-    customer_name, 
-    technician, 
-    wear_time, 
-    expected_cut_time, 
-    doctor, 
-    material, 
-    image, 
+    customer_name,
+    technician,
+    wear_time,
+    preparation_time,
+    expected_cut_time,
+    doctor,
+    material,
+    image,
     qr_code,
-    remark 
+    remark
   } = req.body;
   
   if (!id) return res.cc("缺少客户ID！");
   if (!customer_name) return res.cc("客户姓名不能为空！");
   
-  const sql = `UPDATE customer SET customer_name=?, technician=?, wear_time=?, expected_cut_time=?, doctor=?, material=?, image=?, qr_code=?, remark=? WHERE id=?`;
-  db.query(sql, [customer_name, technician, wear_time, expected_cut_time, doctor, material, image, qr_code, remark, id], function (err, results) {
+  const sql = `UPDATE customer SET customer_name=?, technician=?, wear_time=?, preparation_time=?, expected_cut_time=?, doctor=?, material=?, image=?, qr_code=?, remark=? WHERE id=?`;
+  db.query(sql, [customer_name, technician, wear_time, preparation_time, expected_cut_time, doctor, material, image, qr_code, remark, id], function (err, results) {
     if (err) return res.cc(err);
     if (results.affectedRows !== 1) return res.cc("更新客户失败！");
     

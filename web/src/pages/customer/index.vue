@@ -13,7 +13,7 @@ interface CustomerData {
   wear_time: string
   expected_cut_time: string
   doctor: string
-  material: string
+  material: string | string[]
   image?: string
   qr_code?: string
   remark?: string
@@ -42,7 +42,7 @@ const formData = reactive<CustomerData>({
   wear_time: "",
   expected_cut_time: "",
   doctor: "",
-  material: "",
+  material: [],
   image: "",
   qr_code: "",
   remark: ""
@@ -60,6 +60,20 @@ const stageOptions = [
   { key: "shang_you", label: "上釉" },
   { key: "completed", label: "已完成" }
 ]
+
+const materialOptions = [
+  { value: "guochan_quancitiemin", label: "国产全瓷贴面" },
+  { value: "deguo_aidisiteyanghuagao", label: "德国爱迪特氧化锆" },
+  { value: "deguo_weilandeyanghuagao", label: "德国威兰德氧化锆" },
+  { value: "meiguo_shidan_lawawayanghuagao", label: "美国3M拉瓦氧化锆" },
+  { value: "derendun_zhugongzhuguangci", label: "德国以色列珠光瓷" },
+  { value: "deguo_weilan_lengchaici", label: "德国威兰冷釉瓷" },
+  { value: "delanxi_quanshougongchaobaocaigao", label: "德兰希全手工超薄彩锆" },
+  { value: "quanshougongdalilavayanghuagao", label: "全手工大立lava氧化锆" },
+  { value: "ruishiweidian_shidiancandianshuibozhanciyanghuagao", label: "瑞士维典睿典水波钻瓷氧化锆" },
+  { value: "ruishiweidian_candianci", label: "瑞士维典睿典瓷" }
+]
+
 const doctorOptions = ["宇医生", "秦医生", "蔡医生", "王医生"]
 
 const formRules: FormRules = {
@@ -104,7 +118,14 @@ const handleCreate = () => {
 
 const handleUpdate = (row: CustomerData) => {
   dialogTitle.value = "编辑客户"
-  Object.assign(formData, row)
+  const rowData = { ...row }
+  // 将字符串转换为数组
+  if (typeof rowData.material === 'string' && rowData.material) {
+    rowData.material = rowData.material.split(',')
+  } else if (!rowData.material) {
+    rowData.material = []
+  }
+  Object.assign(formData, rowData)
   dialogVisible.value = true
 }
 
@@ -115,11 +136,17 @@ const handleConfirm = async () => {
     if (valid) {
       try {
         loading.value = true
+        // 创建提交数据副本，将数组转换为字符串
+        const submitData = { ...formData }
+        if (Array.isArray(submitData.material)) {
+          submitData.material = submitData.material.join(',')
+        }
+
         if (formData.id) {
-          await updateCustomerApi(formData)
+          await updateCustomerApi(submitData)
           ElMessage.success("更新成功")
         } else {
-          await createCustomerApi(formData)
+          await createCustomerApi(submitData)
           ElMessage.success("新增成功")
         }
         dialogVisible.value = false
@@ -168,10 +195,22 @@ const resetForm = () => {
   formData.wear_time = ""
   formData.expected_cut_time = ""
   formData.doctor = ""
-  formData.material = ""
+  formData.material = []
   formData.image = ""
   formData.qr_code = ""
   formData.remark = ""
+}
+
+const getMaterialLabel = (materialValue: string | string[]) => {
+  if (!materialValue) return "-"
+
+  const values = typeof materialValue === 'string' ? materialValue.split(',') : materialValue
+  const labels = values.map(val => {
+    const material = materialOptions.find(m => m.value === val)
+    return material ? material.label : val
+  })
+
+  return labels.join(', ')
 }
 
 const getStageType = (technician: string) => {
@@ -194,7 +233,7 @@ onMounted(() => {
 
 <template>
   <div class="app-container">
-    <el-card shadow="never" class="search-wrapper">
+    <!-- <el-card shadow="never" class="search-wrapper">
       <el-form ref="searchFormRef" :inline="true" :model="searchData">
         <el-form-item prop="customer_name" label="客户姓名">
           <el-input v-model="searchData.customer_name" placeholder="请输入客户姓名" />
@@ -216,7 +255,7 @@ onMounted(() => {
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
         </el-form-item>
       </el-form>
-    </el-card>
+    </el-card> -->
 
     <el-card shadow="never">
       <div class="toolbar-wrapper">
@@ -235,7 +274,11 @@ onMounted(() => {
           <el-table-column prop="wear_time" label="戴牙时间" width="110" align="center" />
           <el-table-column prop="expected_cut_time" label="预计截牙时间" width="120" align="center" />
           <el-table-column prop="doctor" label="医生" width="90" align="center" />
-          <el-table-column prop="material" label="材料" width="150" align="center" show-overflow-tooltip />
+          <el-table-column prop="material" label="材料" width="200" align="center" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ getMaterialLabel(row.material) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
           <el-table-column fixed="right" label="操作" width="150" align="center">
             <template #default="{ row }">
@@ -262,9 +305,9 @@ onMounted(() => {
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="阶段进度" prop="technician">
-              <el-select v-model="formData.technician" placeholder="请选择阶段">
-                <el-option v-for="item in stageOptions" :key="item.key" :label="item.label" :value="item.label" />
+            <el-form-item label="材料" prop="material">
+              <el-select v-model="formData.material" placeholder="请选择材料" multiple collapse-tags collapse-tags-tooltip>
+                <el-option v-for="item in materialOptions" :key="item.value" :label="item.label" :value="item.value" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -272,7 +315,7 @@ onMounted(() => {
 
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="戴牙时间" prop="wear_time">
+            <el-form-item label="备牙时间" prop="wear_time">
               <el-date-picker v-model="formData.wear_time" type="date" placeholder="选择日期" format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD" style="width: 100%" />
             </el-form-item>
@@ -286,7 +329,7 @@ format="YYYY-MM-DD"
           </el-col>
         </el-row>
 
-        <el-row :gutter="20">
+        <!-- <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="医生" prop="doctor">
               <el-select v-model="formData.doctor" placeholder="请选择医生">
@@ -299,7 +342,7 @@ format="YYYY-MM-DD"
               <el-input v-model="formData.material" placeholder="请输入材料" />
             </el-form-item>
           </el-col>
-        </el-row>
+        </el-row> -->
 
         <el-form-item label="备注" prop="remark">
           <el-input v-model="formData.remark" type="textarea" :rows="3" placeholder="请输入备注" />

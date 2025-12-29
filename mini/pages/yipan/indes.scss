@@ -92,6 +92,12 @@ page {
     }
   }
 
+  &.disabled {
+    opacity: 0.4;
+    background: #f5f5f5;
+    pointer-events: none;
+  }
+
   &:active {
     opacity: 0.9;
     transform: scale(0.98);
@@ -134,6 +140,19 @@ page {
     line-height: 1;
   }
 
+  &.disabled {
+    opacity: 0.5;
+    background: #f5f5f5;
+    
+    .btn-text {
+      color: #000;
+    }
+    
+    .arrow {
+      color: #cccccc;
+    }
+  }
+
   &:active {
     opacity: 0.9;
     transform: scale(0.98);
@@ -167,5 +186,46 @@ page {
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+}
+
+.yipan-button-container {
+  padding: 20rpx 30rpx;
+  margin: 0 auto;
+}
+
+.yipan-action-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #ff758c 0%, #dd524d63 100%);
+  border: none;
+  border-radius: 24rpx;
+  padding: 12rpx 40rpx;
+  box-shadow: 0 8rpx 24rpx rgba(255, 117, 140, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20rpx;
+  transition: all 0.3s;
+  
+  &::after {
+    border: none;
+  }
+  
+  .btn-icon {
+    font-size: 48rpx;
+    line-height: 1;
+  }
+  
+  .btn-text {
+    font-size: 32rpx;
+    color: #ffffff;
+    font-weight: 600;
+    letter-spacing: 2rpx;
+  }
+  
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+    box-shadow: 0 4rpx 16rpx rgba(255, 117, 140, 0.4);
   }
 }

@@ -20,21 +20,15 @@ const install = (Vue, vm) => {
 
     editCustomer: (data) => vm.$u.http.post("/api/customer/edit", data),
     getCustomerList: (data) => vm.$u.http.post("/api/customer/list", data),
-    getKehuList: (data) => vm.$u.http.post("/api/kehu/list", data),
-    addKehu: (data) => vm.$u.http.post("/api/kehu/add", data),
-    editKehu: (data) => vm.$u.http.post("/api/kehu/edit", data),
-    getKehuDetailById: (data) =>
-      vm.$u.http.post("/api/kehu/detail", data),
-    deleteKehu: (data) => vm.$u.http.post("/api/kehu/delete", data),
+    // getKehuList: (data) => vm.$u.http.post("/api/kehu/list", data),
+    // addKehu: (data) => vm.$u.http.post("/api/kehu/add", data),
+    // editKehu: (data) => vm.$u.http.post("/api/kehu/edit", data),
+    // getKehuDetailById: (data) =>
+    //   vm.$u.http.post("/api/kehu/detail", data),
+    // deleteKehu: (data) => vm.$u.http.post("/api/kehu/delete", data),
 
     deleteCustomer: (data) => vm.$u.http.post("/api/customer/delete", data),
-    //获取主页信息
-    submitService: (data) => vm.$u.http.post("/api/service/edit", data),
-    //登录
-    getServiceDetailById: (data) =>
-      vm.$u.http.post("/api/service/detail", data),
-    editPreinstall: (data) => vm.$u.http.post("/api/preinstall/edit", data),
-    getPreinstall: (data) => vm.$u.http.post("/api/preinstall/detail", data),
+
     getLogList: (data) => vm.$u.http.post("/api/user/log", data),
 
     getRegisterCover: () => vm.$u.http.get("/api/index/registerCover"),
@@ -44,9 +38,17 @@ const install = (Vue, vm) => {
     },
     jiemi: (data) => vm.$u.http.post("/api/user/jiemi", data),
     
-    // 操作历史
+    // 客户进度操作历史
     addProcessHistory: (data) => vm.$u.http.post("/api/process_history/add", data),
     getProcessHistory: (data) => vm.$u.http.post("/api/process_history/list", data),
+    
+    // 椅旁操作
+    addYipan: (data) => vm.$u.http.post("/api/yipan/add", data),
+    getYipanDetail: (data) => vm.$u.http.post("/api/yipan/detail", data),
+    updateYipan: (data) => vm.$u.http.post("/api/yipan/update", data),
+    startChairside: (data) => vm.$u.http.post("/api/yipan/start", data),
+    completeChairside: (data) => vm.$u.http.post("/api/yipan/complete", data),
+    getYipanHistory: (data) => vm.$u.http.post("/api/yipan/history", data),
   };
 };
 
