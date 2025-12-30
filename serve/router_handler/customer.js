@@ -17,7 +17,6 @@ exports.list = (req, res) => {
 exports.create = (req, res) => {
   const {
     customer_name,
-    technician,
     wear_time,
     preparation_time,
     expected_cut_time,
@@ -32,8 +31,8 @@ exports.create = (req, res) => {
     return res.cc("客户姓名不能为空！");
   }
   
-  const sql = `INSERT INTO customer (customer_name, technician, wear_time, preparation_time, expected_cut_time, doctor, material, image, qr_code, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  db.query(sql, [customer_name, technician, wear_time, preparation_time, expected_cut_time, doctor, material, image, qr_code, remark], function (err, results) {
+  const sql = `INSERT INTO customer (customer_name, wear_time, preparation_time, expected_cut_time, doctor, material, image, qr_code, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  db.query(sql, [customer_name, wear_time, preparation_time, expected_cut_time, doctor, material, image, qr_code, remark], function (err, results) {
     if (err) return res.cc(err);
     if (results.affectedRows !== 1) return res.cc("新增客户失败！");
     
@@ -44,7 +43,6 @@ exports.create = (req, res) => {
     db.query(processSQL, [customerId, customer_name, wear_time, 'not_started', material, remark], function (err) {
       if (err) {
         console.error("创建客户进度记录失败:", err);
-        // 不影响主流程，只记录错误
       }
     });
     
@@ -53,7 +51,6 @@ exports.create = (req, res) => {
     db.query(yipanSQL, [customerId, customer_name], function (err) {
       if (err) {
         console.error("创建椅旁记录失败:", err);
-        // 不影响主流程，只记录错误
       }
     });
     
@@ -70,7 +67,6 @@ exports.update = (req, res) => {
   const {
     id,
     customer_name,
-    technician,
     wear_time,
     preparation_time,
     expected_cut_time,
@@ -84,8 +80,8 @@ exports.update = (req, res) => {
   if (!id) return res.cc("缺少客户ID！");
   if (!customer_name) return res.cc("客户姓名不能为空！");
   
-  const sql = `UPDATE customer SET customer_name=?, technician=?, wear_time=?, preparation_time=?, expected_cut_time=?, doctor=?, material=?, image=?, qr_code=?, remark=? WHERE id=?`;
-  db.query(sql, [customer_name, technician, wear_time, preparation_time, expected_cut_time, doctor, material, image, qr_code, remark, id], function (err, results) {
+  const sql = `UPDATE customer SET customer_name=?, wear_time=?, preparation_time=?, expected_cut_time=?, doctor=?, material=?, image=?, qr_code=?, remark=? WHERE id=?`;
+  db.query(sql, [customer_name, wear_time, preparation_time, expected_cut_time, doctor, material, image, qr_code, remark, id], function (err, results) {
     if (err) return res.cc(err);
     if (results.affectedRows !== 1) return res.cc("更新客户失败！");
     

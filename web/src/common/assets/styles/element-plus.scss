@@ -1,5 +1,18 @@
 // 自定义 Element Plus 样式
 
+// 确保对话框、消息框等弹出组件正确显示
+.el-message-box {
+  z-index: 9999 !important;
+}
+
+.el-dialog {
+  z-index: 9998 !important;
+}
+
+.el-overlay {
+  z-index: 9997 !important;
+}
+
 // 卡片
 .el-card {
   background-color: var(--el-bg-color) !important;
