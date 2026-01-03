@@ -49,6 +49,7 @@ exports.create = (req, res) => {
     progress,
     technician,
     material,
+    quantity,
     image,
     remark,
     technician_audio,
@@ -65,14 +66,15 @@ exports.create = (req, res) => {
     return res.cc("客户名称和进度不能为空！");
   }
 
-  const sql = `INSERT INTO customer_process (customer_name, wear_time, progress, technician, material, image, remark, technician_audio, technician_video, chairside_audio, chairside_video, start_chairside_time, complete_chairside_time, chairside_doctor, daily_wear_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  
+  const sql = `INSERT INTO customer_process (customer_name, wear_time, progress, technician, material, quantity, image, remark, technician_audio, technician_video, chairside_audio, chairside_video, start_chairside_time, complete_chairside_time, chairside_doctor, daily_wear_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
   db.query(sql, [
     customer_name,
     wear_time || null,
     'not_started',
     technician || null,
     material || null,
+    quantity || null,
     image || null,
     remark || null,
     technician_audio || null,
@@ -103,6 +105,7 @@ exports.update = (req, res) => {
     progress,
     technician,
     material,
+    quantity,
     image,
     remark,
     technician_audio,
@@ -120,14 +123,15 @@ exports.update = (req, res) => {
     return res.cc("客户名称和进度不能为空！");
   }
 
-  const sql = `UPDATE customer_process SET customer_name=?, wear_time=?, progress=?, technician=?, material=?, image=?, remark=?, technician_audio=?, technician_video=?, chairside_audio=?, chairside_video=?, start_chairside_time=?, complete_chairside_time=?, chairside_doctor=?, daily_wear_status=? WHERE id=?`;
-  
+  const sql = `UPDATE customer_process SET customer_name=?, wear_time=?, progress=?, technician=?, material=?, quantity=?, image=?, remark=?, technician_audio=?, technician_video=?, chairside_audio=?, chairside_video=?, start_chairside_time=?, complete_chairside_time=?, chairside_doctor=?, daily_wear_status=? WHERE id=?`;
+
   db.query(sql, [
     customer_name,
     wear_time || null,
     progress,
     technician || null,
     material || null,
+    quantity || null,
     image || null,
     remark || null,
     technician_audio || null,
@@ -173,13 +177,14 @@ exports.detail = (req, res) => {
   if (!id) return res.cc("缺少客户ID！");
 
   const sql = `
-    SELECT 
+    SELECT
       c.id as customer_id,
       c.customer_name,
       c.wear_time,
       c.expected_cut_time,
       c.doctor,
       c.material,
+      c.quantity,
       c.image,
       c.qr_code,
       c.remark as customer_note,

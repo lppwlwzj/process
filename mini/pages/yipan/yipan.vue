@@ -37,10 +37,10 @@
       </view>
 
       <view class="btn-row">
-        <button class="icon-btn upload-btn" @click="handleUploadAudio">
+        <!-- <button class="icon-btn upload-btn" @click="handleUploadAudio">
           <view class="btn-icon">🎤</view>
           <view class="btn-text">上传录音</view>
-        </button>
+        </button> -->
         <button class="icon-btn upload-btn" @click="handleUploadVideo">
           <view class="btn-icon">▶</view>
           <view class="btn-text">上传视频</view>

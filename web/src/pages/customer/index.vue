@@ -14,6 +14,7 @@ interface CustomerData {
   expected_cut_time: string
   doctor: string
   material: string | string[]
+  quantity?: string | number
   image?: string
   qr_code?: string
   remark?: string
@@ -43,6 +44,7 @@ const formData = reactive<CustomerData>({
   expected_cut_time: "",
   doctor: "",
   material: [],
+  quantity: "",
   image: "",
   qr_code: "",
   remark: ""
@@ -196,6 +198,7 @@ const resetForm = () => {
   formData.expected_cut_time = ""
   formData.doctor = ""
   formData.material = []
+  formData.quantity = ""
   formData.image = ""
   formData.qr_code = ""
   formData.remark = ""
@@ -279,6 +282,7 @@ onMounted(() => {
               {{ getMaterialLabel(row.material) }}
             </template>
           </el-table-column>
+          <el-table-column prop="quantity" label="数量" width="80" align="center" />
           <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
           <el-table-column fixed="right" label="操作" width="150" align="center">
             <template #default="{ row }">
@@ -304,6 +308,9 @@ onMounted(() => {
               <el-input v-model="formData.customer_name" placeholder="请输入客户姓名" />
             </el-form-item>
           </el-col>
+        </el-row>
+        <el-row :gutter="20">
+
           <el-col :span="12">
             <el-form-item label="材料" prop="material">
               <el-select v-model="formData.material" placeholder="请选择材料" multiple collapse-tags collapse-tags-tooltip>
@@ -311,7 +318,14 @@ onMounted(() => {
               </el-select>
             </el-form-item>
           </el-col>
+
+          <el-col :span="12">
+            <el-form-item label="数量" prop="quantity">
+              <el-input v-model="formData.quantity" placeholder="请输入数量" />
+            </el-form-item>
+          </el-col>
         </el-row>
+
 
         <el-row :gutter="20">
           <el-col :span="12">

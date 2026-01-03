@@ -13,6 +13,26 @@
   z-index: 9997 !important;
 }
 
+// 确保下拉框在对话框内正确显示
+.el-select-dropdown {
+  z-index: 10000 !important;
+}
+
+.el-popper {
+  z-index: 10000 !important;
+}
+
+// 确保对话框内的下拉框正确显示
+.el-dialog {
+  .el-select-dropdown {
+    z-index: 10001 !important;
+  }
+
+  .el-popper {
+    z-index: 10001 !important;
+  }
+}
+
 // 卡片
 .el-card {
   background-color: var(--el-bg-color) !important;

@@ -4,7 +4,8 @@
     </view>
 
     <view class="preparation-time">
-      <text class="preparation-time-text">备牙时间: {{ formatDate(form.preparation_time) }}</text>
+      <text class="preparation-time-text">备牙时间:<span class="preparation-time-value">{{ formatDate(form.preparation_time)
+      }}</span></text>
     </view>
 
     <view class="form-container">
@@ -42,16 +43,17 @@
             <text class="card-arrow">›</text>
           </view>
         </view>
-        <view class="action-card">
-          <view class="card-icon-wrapper">
-            <text class="card-icon">👤</text>
+        <view class="action-card note-card">
+          <view class="card-content note-content">
+            <text class="card-label note-label">材料</text>
+            <text class="note-value" :class="{ 'note-empty': !form.material }">{{ form.material || '暂无材料' }}</text>
           </view>
-          <view class="card-content">
-            <view class="card-text">
-              <text class="card-label">材料</text>
-              <text class="card-selected-value">{{ form.material }}</text>
-            </view>
-            <text class="card-arrow"></text>
+        </view>
+
+        <view class="action-card note-card">
+          <view class="card-content note-content">
+            <text class="card-label note-label">数量</text>
+            <text class="note-value" :class="{ 'note-empty': !form.quantity }">{{ form.quantity || '暂无数量' }}</text>
           </view>
         </view>
 
@@ -67,15 +69,14 @@
           </view>
         </view>
 
-        <view class="action-card">
-          <view class="card-icon-wrapper">
-            <text class="card-icon">👤</text>
-          </view>
-          <view class="card-content">
-            <view class="card-text">
-              <text class="card-label">备注</text>
-              <text class="card-selected-value">{{ form.customer_note }}</text>
-            </view>
+        <view class="action-card note-card">
+          <!-- <view class="card-icon-wrapper">
+            <text class="card-icon">📝</text>
+          </view> -->
+          <view class="card-content note-content">
+            <text class="card-label note-label">备注</text>
+            <text class="note-value" :class="{ 'note-empty': !form.customer_note }">{{ form.customer_note || '暂无备注'
+            }}</text>
           </view>
         </view>
 
@@ -99,11 +100,11 @@
               <text class="card-label">上传录音</text>
             </view>
           </view>
-        </view>
+        </view> -->
 
 
 
-        <view class="action-card" @click="goToYipan">
+        <view class="action-card" @click="handleUploadVideo">
           <view class="card-icon-wrapper">
             <text class="card-icon">▶</text>
           </view>
@@ -112,7 +113,7 @@
               <text class="card-label">上传视频</text>
             </view>
           </view>
-        </view> -->
+        </view>
       </view>
 
       <view class="yipan-button-container">
@@ -171,6 +172,7 @@ export default {
         progress: "",
         technician: "",
         material: "",
+        quantity: "",
         image: "",
         remark: ""
       },
@@ -278,6 +280,12 @@ export default {
       } finally {
         uni.hideLoading();
       }
+    },
+    handleUploadVideo() {
+      uni.showToast({
+        title: "上传视频功能",
+        icon: "none"
+      });
     },
 
     async fetchTechnicians() {

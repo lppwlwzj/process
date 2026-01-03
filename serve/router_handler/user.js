@@ -62,7 +62,6 @@ exports.login = (req, res) => {
 };
 exports.list = (req, res) => {
   const sql = `select * from user `;
-  console.log("sql=======>", sql)
   // 执行 SQL 语句，查询用户的数据
   db.query(sql, function (err, results) {
     if (err) return res.cc(err);
