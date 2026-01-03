@@ -1,5 +1,33 @@
 <template>
   <view class="content" :style="{ paddingTop: statusBarHeight }">
+    <view class="page-title">贴面质检</view>
+    <view class="form-container">
+      <view class="btn-row">
+        <button class="icon-btn status-btn" :class="{ active: edgeSeating === 'seated' }"
+          @click="handleEdgeSeatingSelect('seated')">
+          <view class="btn-icon success">✓</view>
+          <view class="btn-text">边缘已就位</view>
+        </button>
+        <button class="icon-btn status-btn" :class="{ active: edgeSeating === 'notSeated' }"
+          @click="handleEdgeSeatingSelect('notSeated')">
+          <view class="btn-icon error">✕</view>
+          <view class="btn-text">边缘未就位</view>
+        </button>
+      </view>
+      <view class="btn-row">
+        <button class="icon-btn status-btn" :class="{ active: occlusionStatus === 'normal' }"
+          @click="handleOcclusionStatusSelect('normal')">
+          <view class="btn-icon success">✓</view>
+          <view class="btn-text">咬合正常</view>
+        </button>
+        <button class="icon-btn status-btn" :class="{ active: occlusionStatus === 'abnormal' }"
+          @click="handleOcclusionStatusSelect('abnormal')">
+          <view class="btn-icon error">✕</view>
+          <view class="btn-text">咬合不正常</view>
+        </button>
+      </view>
+    </view>
+
     <view class="page-title">椅旁操作</view>
 
     <view class="form-container">
@@ -71,6 +99,8 @@ export default {
         customer_name: "",
         chairside_doctor: "",
         daily_wear_status: null,
+        edge_seating: null,
+        occlusion_status: null,
         chairside_audio: "",
         chairside_video: "",
         start_time: null
@@ -78,6 +108,8 @@ export default {
       currentOperation: "",
       selectedDoctor: "",
       wearStatus: "",
+      edgeSeating: "",
+      occlusionStatus: "",
       showDoctorPicker: false,
       doctorColumns: [
         []
@@ -107,6 +139,72 @@ export default {
   options: { styleIsolation: "shared" },
 
   methods: {
+    async handleEdgeSeatingSelect(status) {
+      this.edgeSeating = status;
+      this.form.edge_seating = status === 'seated' ? 1 : 0;
+
+      if (!this.customerId) {
+        console.warn("缺少客户ID，无法更新边缘就位状态");
+        return;
+      }
+
+      try {
+        const res = await this.$api.updateYipan({
+          customer_id: this.customerId,
+          edge_seating: this.form.edge_seating
+        });
+
+        if (res.code === 0) {
+          console.log("边缘就位状态更新成功");
+        } else {
+          console.error("边缘就位状态更新失败:", res);
+          uni.showToast({
+            title: "更新失败",
+            icon: "none"
+          });
+        }
+      } catch (err) {
+        console.error("更新边缘就位状态失败:", err);
+        uni.showToast({
+          title: "更新失败",
+          icon: "none"
+        });
+      }
+    },
+
+    async handleOcclusionStatusSelect(status) {
+      this.occlusionStatus = status;
+      this.form.occlusion_status = status === 'normal' ? 1 : 0;
+
+      if (!this.customerId) {
+        console.warn("缺少客户ID，无法更新咬合状态");
+        return;
+      }
+
+      try {
+        const res = await this.$api.updateYipan({
+          customer_id: this.customerId,
+          occlusion_status: this.form.occlusion_status
+        });
+
+        if (res.code === 0) {
+          console.log("咬合状态更新成功");
+        } else {
+          console.error("咬合状态更新失败:", res);
+          uni.showToast({
+            title: "更新失败",
+            icon: "none"
+          });
+        }
+      } catch (err) {
+        console.error("更新咬合状态失败:", err);
+        uni.showToast({
+          title: "更新失败",
+          icon: "none"
+        });
+      }
+    },
+
     async fetchDoctors() {
       try {
         const res = await this.$api.getUserList();
@@ -148,12 +246,22 @@ export default {
             this.wearStatus = data.daily_wear_status === 1 ? 'today' : 'notToday';
           }
 
+          if (data.edge_seating !== null) {
+            this.edgeSeating = data.edge_seating === 1 ? 'seated' : 'notSeated';
+          }
+
+          if (data.occlusion_status !== null) {
+            this.occlusionStatus = data.occlusion_status === 1 ? 'normal' : 'abnormal';
+          }
+
           this.form = {
             ...this.form,
             customer_id: this.customerId,
             customer_name: this.customerName,
             chairside_doctor: data.chairside_doctor || "",
             daily_wear_status: data.daily_wear_status,
+            edge_seating: data.edge_seating,
+            occlusion_status: data.occlusion_status,
             chairside_audio: data.chairside_audio || "",
             chairside_video: data.chairside_video || "",
             start_time: data.start_time
@@ -413,11 +521,15 @@ export default {
     resetForm() {
       this.currentOperation = "";
       this.wearStatus = "";
+      this.edgeSeating = "";
+      this.occlusionStatus = "";
       this.form = {
         customer_id: this.customerId,
         customer_name: this.customerName,
         chairside_doctor: this.selectedDoctor,
         daily_wear_status: null,
+        edge_seating: null,
+        occlusion_status: null,
         chairside_audio: "",
         chairside_video: "",
         start_time: null

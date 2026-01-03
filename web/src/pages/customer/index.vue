@@ -1,17 +1,17 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
-import { Search, Refresh, CirclePlus, Delete, Edit } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
 import { getCustomerListApi, createCustomerApi, updateCustomerApi, deleteCustomerApi } from "@@/apis/customers"
 import type { FormInstance, FormRules } from "element-plus"
-
+import moment from 'moment'
+import { materialOptions } from "../process/constant"
 interface CustomerData {
   id: number
   customer_name: string
   technician: string
   wear_time: string
-  expected_cut_time: string
+  preparation_time: string
   doctor: string
   material: string | string[]
   quantity?: string | number
@@ -41,7 +41,7 @@ const formData = reactive<CustomerData>({
   customer_name: "",
   technician: "",
   wear_time: "",
-  expected_cut_time: "",
+  preparation_time: "",
   doctor: "",
   material: [],
   quantity: "",
@@ -63,18 +63,6 @@ const stageOptions = [
   { key: "completed", label: "已完成" }
 ]
 
-const materialOptions = [
-  { value: "guochan_quancitiemin", label: "国产全瓷贴面" },
-  { value: "deguo_aidisiteyanghuagao", label: "德国爱迪特氧化锆" },
-  { value: "deguo_weilandeyanghuagao", label: "德国威兰德氧化锆" },
-  { value: "meiguo_shidan_lawawayanghuagao", label: "美国3M拉瓦氧化锆" },
-  { value: "derendun_zhugongzhuguangci", label: "德国以色列珠光瓷" },
-  { value: "deguo_weilan_lengchaici", label: "德国威兰冷釉瓷" },
-  { value: "delanxi_quanshougongchaobaocaigao", label: "德兰希全手工超薄彩锆" },
-  { value: "quanshougongdalilavayanghuagao", label: "全手工大立lava氧化锆" },
-  { value: "ruishiweidian_shidiancandianshuibozhanciyanghuagao", label: "瑞士维典睿典水波钻瓷氧化锆" },
-  { value: "ruishiweidian_candianci", label: "瑞士维典睿典瓷" }
-]
 
 const doctorOptions = ["宇医生", "秦医生", "蔡医生", "王医生"]
 
@@ -195,7 +183,7 @@ const resetForm = () => {
   formData.customer_name = ""
   formData.technician = ""
   formData.wear_time = ""
-  formData.expected_cut_time = ""
+  formData.preparation_time = ""
   formData.doctor = ""
   formData.material = []
   formData.quantity = ""
@@ -274,8 +262,16 @@ onMounted(() => {
               <el-tag :type="getStageType(row.technician)" v-if="row.technician">{{ row.technician }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="wear_time" label="戴牙时间" width="110" align="center" />
-          <el-table-column prop="expected_cut_time" label="预计截牙时间" width="120" align="center" />
+          <el-table-column prop="wear_time" label="戴牙时间" width="110" align="center">
+            <template #default="{ row }">
+              {{ moment(row.wear_time).format('YYYY-MM-DD') }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="preparation_time" label="备牙时间" width="120" align="center">
+            <template #default="{ row }">
+              {{ row.preparation_time ? moment(row.preparation_time).format('YYYY-MM-DD') : '-' }}
+            </template>
+          </el-table-column>
           <el-table-column prop="doctor" label="医生" width="90" align="center" />
           <el-table-column prop="material" label="材料" width="200" align="center" show-overflow-tooltip>
             <template #default="{ row }">
@@ -300,7 +296,7 @@ onMounted(() => {
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" @close="handleCloseDialog">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="800px" @close="handleCloseDialog">
       <el-form ref="formRef" :model="formData" :rules="formRules" label-width="120px">
         <el-row :gutter="20">
           <el-col :span="12">
@@ -330,13 +326,13 @@ onMounted(() => {
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="备牙时间" prop="wear_time">
-              <el-date-picker v-model="formData.wear_time" type="date" placeholder="选择日期" format="YYYY-MM-DD"
+              <el-date-picker v-model="formData.preparation_time" type="date" placeholder="选择日期" format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="预计截牙时间" prop="expected_cut_time">
-              <el-date-picker v-model="formData.expected_cut_time" type="date" placeholder="选择日期"
+            <el-form-item label="截牙时间" prop="wear_time">
+              <el-date-picker v-model="formData.wear_time" type="date" placeholder="选择日期"
 format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD" style="width: 100%" />
             </el-form-item>

@@ -12,7 +12,7 @@
       <view class="customer-header">
         <view class="wear-time-info">
           <text class="wear-time-label">戴牙时间: </text>
-          <text class="wear-time-value">{{ formatDate(form.wear_time) }}</text>
+          <text class="wear-time-value">{{ formatDateSimple(form.wear_time) }}</text>
         </view>
         <text class="customer-name">{{ form.customer_name }}</text>
       </view>
@@ -119,7 +119,7 @@
       <view class="yipan-button-container">
         <button class="yipan-action-btn" @click="goToYipan">
           <view class="btn-icon">🦷</view>
-          <view class="btn-text">椅旁操作</view>
+          <view class="btn-text">贴面质检/椅旁操作</view>
         </button>
       </view>
 
@@ -134,6 +134,7 @@
 </template>
 
 <script>
+import moment from 'moment';
 function getDate(date, AddDayCount = 0) {
   if (!date) {
     date = new Date();
@@ -334,6 +335,11 @@ export default {
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}年${month}月${day}日`;
+    },
+
+    formatDateSimple(dateStr) {
+      if (!dateStr) return '';
+      return moment(dateStr).format('YYYY-MM-DD');
     },
 
     previewImage() {

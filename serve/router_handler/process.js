@@ -181,7 +181,7 @@ exports.detail = (req, res) => {
       c.id as customer_id,
       c.customer_name,
       c.wear_time,
-      c.expected_cut_time,
+      c.preparation_time,
       c.doctor,
       c.material,
       c.quantity,

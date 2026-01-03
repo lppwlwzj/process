@@ -1,15 +1,13 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
-import { Search, Refresh, CirclePlus, Delete, Edit } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
 import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi } from "@@/apis/process"
 import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
 import ChairsideHistoryDialog from "./components/ChairsideHistoryDialog.vue"
 import type { FormInstance, FormRules } from "element-plus"
-
-import { progressOptions } from "./constant"
-
+import dayjs from 'dayjs'
+import { progressOptions, materialOptions } from "./constant"
 
 interface ProcessData {
   id: number
@@ -77,6 +75,20 @@ const formRules: FormRules = {
   progress: [
     { required: true, message: "请选择进度", trigger: "change" }
   ]
+}
+
+
+
+const getMaterialLabel = (materialValue: string | string[]) => {
+  if (!materialValue) return "-"
+
+  const values = typeof materialValue === 'string' ? materialValue.split(',') : materialValue
+  const labels = values.map(val => {
+    const material = materialOptions.find(m => m.value === val)
+    return material ? material.label : val
+  })
+
+  return labels.join(', ')
 }
 
 const getTableData = async () => {
@@ -288,7 +300,16 @@ onMounted(() => {
         <el-table :data="tableData" v-loading="loading">
           <el-table-column prop="id" label="ID" width="80" align="center" />
           <el-table-column prop="customer_name" label="客户名称" align="center" />
-          <el-table-column prop="wear_time" label="戴牙时间" align="center" />
+          <el-table-column prop="wear_time" label="戴牙时间" align="center">
+            <template #default="{ row }">
+              {{ row.wear_time ? dayjs(row.wear_time).format('YYYY-MM-DD') : '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="preparation_time" label="备牙时间" align="center">
+            <template #default="{ row }">
+              {{ row.preparation_time ? dayjs(row.preparation_time).format('YYYY-MM-DD') : '-' }}
+            </template>
+          </el-table-column>
           <el-table-column prop="progress" label="进度" align="center">
             <template #default="{ row }">
               <el-tag :type="getProgressType(row.progress)">{{ getProgressLabel(row.progress) }}</el-tag>
@@ -296,7 +317,11 @@ onMounted(() => {
           </el-table-column>
           <el-table-column prop="technician" label="技工师" align="center" />
           <el-table-column prop="chairside_doctor" label="椅旁医生" align="center" />
-          <el-table-column prop="material" label="材料" align="center" />
+          <el-table-column prop="material" label="材料" width="200" align="center" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ getMaterialLabel(row.material) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="daily_wear_status" label="当日戴牙" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.daily_wear_status === 1" type="success">已戴牙</el-tag>
