@@ -139,6 +139,12 @@ export default {
   options: { styleIsolation: "shared" },
 
   methods: {
+    goToYipan() {
+      uni.navigateTo({
+        url: `/pages/index/index?customerId=${this.customerId}`
+      });
+    },
+
     async handleEdgeSeatingSelect(status) {
       this.edgeSeating = status;
       this.form.edge_seating = status === 'seated' ? 1 : 0;

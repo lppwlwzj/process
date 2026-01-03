@@ -31,7 +31,7 @@ interface ProcessData {
 }
 
 const loading = ref(false)
-const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
+const { paginationData, handleCurrentChange: baseHandleCurrentChange, handleSizeChange: baseHandleSizeChange } = usePagination()
 
 const tableData = ref<ProcessData[]>([])
 const searchFormRef = ref()
@@ -63,19 +63,6 @@ const formData = reactive<ProcessData>({
   chairside_doctor: "",
   daily_wear_status: undefined
 })
-
-
-const technicianOptions = ["李师傅", "王师傅", "赵师傅", "陈师傅"]
-const chairsideDoctorOptions = ["宇医生", "秦医生", "蔡医生", "王医生"]
-
-const formRules: FormRules = {
-  customer_name: [
-    { required: true, message: "请输入客户名称", trigger: "blur" }
-  ],
-  progress: [
-    { required: true, message: "请选择进度", trigger: "change" }
-  ]
-}
 
 
 
@@ -111,6 +98,16 @@ const getTableData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleCurrentChange = (value: number) => {
+  baseHandleCurrentChange(value)
+  getTableData()
+}
+
+const handleSizeChange = (value: number) => {
+  baseHandleSizeChange(value)
+  getTableData()
 }
 
 const handleSearch = () => {
@@ -322,6 +319,25 @@ onMounted(() => {
               {{ getMaterialLabel(row.material) }}
             </template>
           </el-table-column>
+          <el-table-column prop="quantity" label="数量" width="80" align="center">
+            <template #default="{ row }">
+              {{ row.quantity || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="edge_seating" label="边缘就位" align="center" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.edge_seating === 1" type="success">已就位</el-tag>
+              <el-tag v-else-if="row.edge_seating === 0" type="warning">未就位</el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="occlusion_status" label="咬合状态" align="center" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.occlusion_status === 1" type="success">正常</el-tag>
+              <el-tag v-else-if="row.occlusion_status === 0" type="danger">不正常</el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="daily_wear_status" label="当日戴牙" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.daily_wear_status === 1" type="success">已戴牙</el-tag>
@@ -329,7 +345,7 @@ onMounted(() => {
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="200" align="center">
+          <el-table-column fixed="right" label="操作" width="240" align="center">
             <template #default="{ row }">
               <el-button type="primary" text size="small" @click="handleProgressRecord(row)">进度记录</el-button>
               <el-button type="primary" text size="small" @click="handleChairsideRecord(row)">椅旁记录</el-button>

@@ -135,29 +135,6 @@
 
 <script>
 import moment from 'moment';
-function getDate(date, AddDayCount = 0) {
-  if (!date) {
-    date = new Date();
-  }
-  if (typeof date !== "object") {
-    date = date.replace(/-/g, "/");
-  }
-  const dd = new Date(date);
-
-  dd.setDate(dd.getDate() + AddDayCount);
-
-  const y = dd.getFullYear();
-  const m =
-    dd.getMonth() + 1 < 10 ? "0" + (dd.getMonth() + 1) : dd.getMonth() + 1;
-  const d = dd.getDate() < 10 ? "0" + dd.getDate() : dd.getDate();
-  return {
-    fullDate: y + "-" + m + "-" + d,
-    year: y,
-    month: m,
-    date: d,
-    day: dd.getDay()
-  };
-}
 
 export default {
   data() {

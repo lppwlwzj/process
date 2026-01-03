@@ -2,19 +2,25 @@ const db = require('../db/index')
 
 exports.list = (req, res) => {
   const { customer_name, progress, technician, currentPage = 1, pageSize = 10 } = req.body;
-  let sql = `SELECT * FROM customer_process WHERE 1=1`;
+  let sql = `SELECT 
+    cp.*,
+    y.edge_seating,
+    y.occlusion_status
+    FROM customer_process cp
+    LEFT JOIN yipan y ON cp.customer_id = y.customer_id
+    WHERE 1=1`;
   const params = [];
 
   if (customer_name) {
-    sql += ` AND customer_name LIKE ?`;
+    sql += ` AND cp.customer_name LIKE ?`;
     params.push(`%${customer_name}%`);
   }
   if (progress) {
-    sql += ` AND progress = ?`;
+    sql += ` AND cp.progress = ?`;
     params.push(progress);
   }
   if (technician) {
-    sql += ` AND technician = ?`;
+    sql += ` AND cp.technician = ?`;
     params.push(technician);
   }
 
@@ -23,7 +29,7 @@ exports.list = (req, res) => {
     if (err) return res.cc(err);
     const total = countResults[0].total;
 
-    sql += ` ORDER BY created_at DESC LIMIT ?, ?`;
+    sql += ` ORDER BY cp.created_at DESC LIMIT ?, ?`;
     params.push((currentPage - 1) * pageSize, pageSize);
 
     db.query(sql, params, (err, results) => {
@@ -195,9 +201,12 @@ exports.detail = (req, res) => {
       cp.technician_audio,
       cp.technician_video,
       cp.created_at as process_created_at,
-      cp.updated_at as process_updated_at
+      cp.updated_at as process_updated_at,
+      y.edge_seating,
+      y.occlusion_status
     FROM customer c
     LEFT JOIN customer_process cp ON c.id = cp.customer_id
+    LEFT JOIN yipan y ON c.id = y.customer_id
     WHERE c.id = ?
     ORDER BY cp.created_at DESC
     LIMIT 1
