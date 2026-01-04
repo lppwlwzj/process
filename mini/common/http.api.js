@@ -52,6 +52,7 @@ const install = (Vue, vm) => {
     startChairside: (data) => vm.$u.http.post("/api/yipan/start", data),
     completeChairside: (data) => vm.$u.http.post("/api/yipan/complete", data),
     getYipanHistory: (data) => vm.$u.http.post("/api/yipan/history", data),
+    updateChairsideVideo: (data) => vm.$u.http.post("/api/yipan/updateChairsideVideo", data),
   };
 };
 

@@ -5,7 +5,8 @@ exports.list = (req, res) => {
   let sql = `SELECT 
     cp.*,
     y.edge_seating,
-    y.occlusion_status
+    y.occlusion_status,
+    y.chairside_video
     FROM customer_process cp
     LEFT JOIN yipan y ON cp.customer_id = y.customer_id
     WHERE 1=1`;

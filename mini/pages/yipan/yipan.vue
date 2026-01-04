@@ -548,10 +548,106 @@ export default {
     },
 
     handleUploadVideo() {
-      uni.showToast({
-        title: "上传视频功能",
-        icon: "none"
+      uni.chooseVideo({
+        sourceType: ['camera', 'album'],
+        maxDuration: 60,
+        camera: 'back',
+        success: (res) => {
+          this.uploadVideoToCOS(res.tempFilePath);
+        },
+        fail: (err) => {
+          console.error("选择视频失败:", err);
+          if (err.errMsg !== 'chooseVideo:fail cancel') {
+            uni.showToast({
+              title: "选择视频失败",
+              icon: "none"
+            });
+          }
+        }
       });
+    },
+    uploadVideoToCOS(videoPath) {
+      uni.showLoading({ title: "上传中..." });
+
+      const userInfo = uni.getStorageSync("userInfo");
+      const timestamp = Date.now();
+      const fileName = `video_${timestamp}_${this.customerId || 'unknown'}.mp4`;
+
+      uni.uploadFile({
+        url: "https://gdcasa.cn/api/upload",
+        filePath: videoPath,
+        name: "file",
+        header: {
+          Authorization: userInfo?.token || ""
+        },
+        formData: {
+          id: this.customerId || "",
+          name: fileName
+        },
+        success: (res) => {
+          uni.hideLoading();
+          if (res?.statusCode === 401) {
+            uni.removeStorageSync("userInfo");
+            uni.redirectTo({
+              url: "/pages/login/login"
+            });
+          } else if (res?.statusCode === 200) {
+            const data = JSON.parse(res.data);
+            if (data.code === 0) {
+              const videoUrl = data.re?.img_url;
+
+              if (videoUrl && this.customerId) {
+                this.updateVideoToDatabase(videoUrl);
+              }
+            } else {
+              uni.showToast({
+                title: data.message || "上传失败",
+                icon: "none"
+              });
+            }
+          } else {
+            uni.showToast({
+              title: "上传失败",
+              icon: "none"
+            });
+          }
+        },
+        fail: (err) => {
+          uni.hideLoading();
+          console.error("上传视频失败:", err);
+          uni.showToast({
+            title: "上传失败",
+            icon: "none"
+          });
+        }
+      });
+    },
+    async updateVideoToDatabase(videoUrl) {
+      try {
+        const res = await this.$api.updateChairsideVideo({
+          customer_id: this.customerId,
+          chairside_video: videoUrl
+        });
+
+        if (res.code === 0) {
+          uni.showToast({
+            title: "上传成功",
+            icon: "success"
+          });
+          await this.fetchYipanData();
+        } else {
+          uni.showToast({
+            title: res.message || "更新失败",
+            icon: "none"
+          });
+        }
+      } catch (err) {
+        console.error("更新视频到数据库失败:", err);
+        uni.showToast({
+          title: "更新失败",
+          icon: "none"
+        });
+      }
     }
   }
 };

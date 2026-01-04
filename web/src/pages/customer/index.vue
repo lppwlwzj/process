@@ -340,13 +340,13 @@ onMounted(() => {
               <el-button v-else type="primary" size="small" @click="handleGenerateQrCode(row)">生成</el-button>
             </template>
           </el-table-column>
-          <el-table-column prop="technician_video" label="视频" width="100" align="center">
+          <!-- <el-table-column prop="technician_video" label="视频" width="100" align="center">
             <template #default="{ row }">
               <el-button v-if="row.technician_video" type="primary" :icon="VideoPlay" circle size="small"
                 @click="handlePlayVideo(row)" />
               <span v-else style="color: #999;">-</span>
             </template>
-          </el-table-column>
+          </el-table-column> -->
           <el-table-column prop="quantity" label="数量" width="80" align="center" />
           <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
           <el-table-column fixed="right" label="操作" width="150" align="center">

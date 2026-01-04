@@ -10,5 +10,6 @@ router.post('/list', yipan_handler.list)
 router.post('/start', yipan_handler.startChairside)
 router.post('/complete', yipan_handler.completeChairside)
 router.post('/history', yipan_handler.getHistory)
+router.post('/updateChairsideVideo', yipan_handler.updateChairsideVideo)
 
 module.exports = router

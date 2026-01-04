@@ -208,6 +208,48 @@ exports.list = (req, res) => {
   });
 };
 
+exports.updateChairsideVideo = (req, res) => {
+  const { customer_id, chairside_video } = req.body;
+  
+  if (!customer_id) return res.cc("缺少客户ID！");
+  if (!chairside_video) return res.cc("缺少视频URL！");
+  
+  const checkSql = `SELECT id, customer_name FROM yipan WHERE customer_id=? LIMIT 1`;
+  
+  db.query(checkSql, [customer_id], (err, results) => {
+    if (err) return res.cc(err);
+    
+    if (results.length > 0) {
+      const updateSql = `UPDATE yipan SET chairside_video=? WHERE customer_id=?`;
+      db.query(updateSql, [chairside_video, customer_id], (err, updateResults) => {
+        if (err) return res.cc(err);
+        res.send({
+          code: 0,
+          message: "更新视频成功！",
+          re: null
+        });
+      });
+    } else {
+      const getCustomerSql = `SELECT customer_name FROM customer WHERE id=? LIMIT 1`;
+      db.query(getCustomerSql, [customer_id], (err, customerResults) => {
+        if (err) return res.cc(err);
+        if (customerResults.length === 0) return res.cc("客户不存在！");
+        
+        const customer_name = customerResults[0].customer_name;
+        const insertSql = `INSERT INTO yipan (customer_id, customer_name, chairside_video) VALUES (?, ?, ?)`;
+        db.query(insertSql, [customer_id, customer_name, chairside_video], (err, insertResults) => {
+          if (err) return res.cc(err);
+          res.send({
+            code: 0,
+            message: "保存视频成功！",
+            re: null
+          });
+        });
+      });
+    }
+  });
+};
+
 exports.getHistory = (req, res) => {
   const { customer_id } = req.body;
   

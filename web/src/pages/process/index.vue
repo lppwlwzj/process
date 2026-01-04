@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
+import { VideoPlay } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
 import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi } from "@@/apis/process"
 import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
@@ -44,6 +45,8 @@ const searchData = reactive({
 const dialogVisible = ref(false)
 const dialogTitle = ref("")
 const isEdit = ref(false)
+const videoDialogVisible = ref(false)
+const currentVideoUrl = ref("")
 const formRef = ref<FormInstance>()
 const formData = reactive<ProcessData>({
   id: 0,
@@ -257,6 +260,15 @@ const getProgressLabel = (progressKey: string) => {
   return option ? option.label : progressKey
 }
 
+const handlePlayVideo = (videoUrl: string) => {
+  if (!videoUrl) {
+    ElMessage.warning("暂无视频")
+    return
+  }
+  currentVideoUrl.value = videoUrl
+  videoDialogVisible.value = true
+}
+
 onMounted(() => {
   getTableData()
 })
@@ -343,6 +355,20 @@ onMounted(() => {
               <el-tag v-if="row.daily_wear_status === 1" type="success">已戴牙</el-tag>
               <el-tag v-else-if="row.daily_wear_status === 0" type="warning">未戴牙</el-tag>
               <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="technician_video" label="进度视频" width="100" align="center">
+            <template #default="{ row }">
+              <el-button v-if="row.technician_video" type="primary" :icon="VideoPlay" circle size="small"
+                @click="handlePlayVideo(row.technician_video)" />
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="chairside_video" label="椅旁视频" width="100" align="center">
+            <template #default="{ row }">
+              <el-button v-if="row.chairside_video" type="primary" :icon="VideoPlay" circle size="small"
+                @click="handlePlayVideo(row.chairside_video)" />
+              <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
           <el-table-column fixed="right" label="操作" width="240" align="center">
@@ -481,6 +507,12 @@ onMounted(() => {
 
     <ChairsideHistoryDialog v-model:visible="chairsideHistoryDialogVisible" :customer-id="selectedCustomer.id"
       :customer-name="selectedCustomer.name" />
+
+    <el-dialog v-model="videoDialogVisible" title="视频播放" width="800px" @close="videoDialogVisible = false">
+      <div style="display: flex; justify-content: center; align-items: center; min-height: 400px;">
+        <video v-if="currentVideoUrl" :src="currentVideoUrl" controls style="width: 100%; max-height: 600px;" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
