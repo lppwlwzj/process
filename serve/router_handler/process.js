@@ -225,3 +225,22 @@ exports.detail = (req, res) => {
   });
 };
 
+exports.updateTechnicianVideo = (req, res) => {
+  const { customer_id, technician_video } = req.body;
+  
+  if (!customer_id) return res.cc("缺少客户ID！");
+  if (!technician_video) return res.cc("缺少视频URL！");
+  
+  const sql = `UPDATE customer_process SET technician_video=? WHERE customer_id=?`;
+  
+  db.query(sql, [technician_video, customer_id], (err, results) => {
+    if (err) return res.cc(err);
+    
+    res.send({
+      code: 0,
+      message: "更新视频成功！",
+      re: null
+    });
+  });
+};
+

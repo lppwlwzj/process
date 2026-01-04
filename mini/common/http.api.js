@@ -13,7 +13,7 @@ const install = (Vue, vm) => {
     uploadImg: (formData) => vm.$u.http.upload("/api/upload", formData),
     deleteImg: (data) => vm.$u.http.post("/api/upload/delete", data),
 
-    login: (data) => vm.$u.http.post("/api/user/login", data),
+    // login: (data) => vm.$u.http.post("/api/user/login", data),
     getQrImg: (data) => vm.$u.http.post("/api/user/getQrImg", data),
 
     addCustomer: (data) => vm.$u.http.post("/api/customer/add", data),
@@ -41,6 +41,9 @@ const install = (Vue, vm) => {
     // 客户进度操作历史
     addProcessHistory: (data) => vm.$u.http.post("/api/process_history/add", data),
     getProcessHistory: (data) => vm.$u.http.post("/api/process_history/list", data),
+    
+    // 更新技工视频
+    updateTechnicianVideo: (data) => vm.$u.http.post("/api/process/updateTechnicianVideo", data),
     
     // 椅旁操作
     addYipan: (data) => vm.$u.http.post("/api/yipan/add", data),

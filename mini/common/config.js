@@ -7,8 +7,8 @@ const CONFIG = {
   // 开发环境配置
 
   development: {
-    BASE_URL: `http://${host}:3006`,
-    // BASE_URL: `https://gdcasa.cn`,
+    // BASE_URL: `http://${host}:3006`,
+    BASE_URL: `https://gdcasa.cn`,
 
     UPLOAD_URL: "https://receiving.shandongweipai.com/api/college/upload"
   },

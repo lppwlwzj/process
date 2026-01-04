@@ -180,15 +180,17 @@ export default {
   },
 
   async onReady() {
-    await this.fetchTechnicians();
-    await this.fetchData();
+    // await this.fetchData();
 
   },
 
-  onLoad: function (option) {
+  onLoad: async function (option) {
+    await this.fetchTechnicians();
     // 小程序环境直接从 option 获取
-    if (option.customerId) {
-      this.customerId = option.customerId
+    if (option.scene) {
+      console.log("option.scene", option.scene);
+      this.customerId = option.scene;
+      await this.fetchData();
 
     }
     // H5 环境从 URL 参数获取
@@ -199,7 +201,6 @@ export default {
       if (customerIdFromUrl) {
         this.customerId = customerIdFromUrl;
 
-        console.log("从URL获取客户ID:", this.customerId);
       }
       // 也尝试从 hash 后面的参数获取
       const hash = window.location.hash;
@@ -208,8 +209,6 @@ export default {
         const customerIdFromHash = hashParams.get('customerId');
         if (customerIdFromHash) {
           this.customerId = customerIdFromHash;
-
-          console.log("从Hash获取客户ID:", this.customerId);
         }
       }
       // #endif
@@ -222,15 +221,14 @@ export default {
 
   methods: {
     async fetchData() {
-      // TODO:测试
-      this.customerId = '1'
-      // if (!this.customerId) {
-      //   uni.showToast({
-      //     title: "缺少客户ID",
-      //     icon: "none"
-      //   });
-      //   return;
-      // }
+      // this.customerId = '1'
+      if (!this.customerId) {
+        uni.showToast({
+          title: "缺少客户ID",
+          icon: "none"
+        });
+        return;
+      }
 
       uni.showLoading({ title: "加载中..." });
 
@@ -260,10 +258,112 @@ export default {
       }
     },
     handleUploadVideo() {
-      uni.showToast({
-        title: "上传视频功能",
-        icon: "none"
+      uni.chooseVideo({
+        sourceType: ['camera', 'album'],
+        maxDuration: 60,
+        camera: 'back',
+        success: (res) => {
+          this.uploadVideoToCOS(res.tempFilePath);
+        },
+        fail: (err) => {
+          console.error("选择视频失败:", err);
+          if (err.errMsg !== 'chooseVideo:fail cancel') {
+            uni.showToast({
+              title: "选择视频失败",
+              icon: "none"
+            });
+          }
+        }
       });
+    },
+    uploadVideoToCOS(videoPath) {
+      uni.showLoading({ title: "上传中..." });
+
+      const userInfo = uni.getStorageSync("userInfo");
+      const timestamp = Date.now();
+      const fileName = `video_${timestamp}_${this.customerId || 'unknown'}.mp4`;
+
+      uni.uploadFile({
+        url: "https://gdcasa.cn/api/upload",
+        filePath: videoPath,
+        name: "file",
+        header: {
+          Authorization: userInfo?.token || ""
+        },
+        formData: {
+          id: this.customerId || "",
+          name: fileName
+        },
+        success: (res) => {
+          uni.hideLoading();
+          if (res?.statusCode === 401) {
+            uni.removeStorageSync("userInfo");
+            uni.redirectTo({
+              url: "/pages/login/login"
+            });
+          } else if (res?.statusCode === 200) {
+            const data = JSON.parse(res.data);
+            if (data.code === 0) {
+              const videoUrl = data.re?.img_url;
+              console.log("视频上传成功，URL:", videoUrl);
+
+              if (videoUrl && this.customerId) {
+                this.updateVideoToDatabase(videoUrl);
+              } else {
+                uni.showToast({
+                  title: "上传成功",
+                  icon: "success"
+                });
+              }
+            } else {
+              uni.showToast({
+                title: data.message || "上传失败",
+                icon: "none"
+              });
+            }
+          } else {
+            uni.showToast({
+              title: "上传失败",
+              icon: "none"
+            });
+          }
+        },
+        fail: (err) => {
+          uni.hideLoading();
+          console.error("上传视频失败:", err);
+          uni.showToast({
+            title: "上传失败",
+            icon: "none"
+          });
+        }
+      });
+    },
+    async updateVideoToDatabase(videoUrl) {
+      try {
+        const res = await this.$api.updateTechnicianVideo({
+          customer_id: this.customerId,
+          technician_video: videoUrl
+        });
+
+        if (res.code === 0) {
+          uni.showToast({
+            title: "上传成功",
+            icon: "success"
+          });
+          await this.fetchData();
+        } else {
+          uni.showToast({
+            title: res.message || "更新失败",
+            icon: "none"
+          });
+        }
+      } catch (err) {
+        console.error("更新视频到数据库失败:", err);
+        uni.showToast({
+          title: "更新失败",
+          icon: "none"
+        });
+      }
     },
 
     async fetchTechnicians() {

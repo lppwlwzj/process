@@ -22,8 +22,9 @@ interface UserFormData {
 }
 
 const loading = ref(false)
-const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
+const { paginationData, handleCurrentChange: baseHandleCurrentChange, handleSizeChange: baseHandleSizeChange } = usePagination()
 
+const allTableData = ref<UserData[]>([])
 const tableData = ref<UserData[]>([])
 const searchFormRef = ref()
 const searchData = reactive({
@@ -65,8 +66,9 @@ const getTableData = async () => {
   try {
     const res = await getUserListApi()
     if (res.re) {
-      tableData.value = res.re
+      allTableData.value = res.re
       paginationData.total = res.re.length
+      updateTableData()
     }
   } catch (error) {
     console.error("获取用户列表失败:", error)
@@ -74,6 +76,23 @@ const getTableData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const updateTableData = () => {
+  const start = (paginationData.currentPage - 1) * paginationData.pageSize
+  const end = start + paginationData.pageSize
+  tableData.value = allTableData.value.slice(start, end)
+}
+
+const handleCurrentChange = (value: number) => {
+  baseHandleCurrentChange(value)
+  updateTableData()
+}
+
+const handleSizeChange = (value: number) => {
+  baseHandleSizeChange(value)
+  paginationData.currentPage = 1
+  updateTableData()
 }
 
 const handleSearch = () => {

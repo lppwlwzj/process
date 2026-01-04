@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
-import { CirclePlus, Edit, Delete } from "@element-plus/icons-vue"
+import { CirclePlus, Edit, Delete, VideoPlay } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
-import { getCustomerListApi, createCustomerApi, updateCustomerApi, deleteCustomerApi } from "@@/apis/customers"
+import { getCustomerListApi, createCustomerApi, updateCustomerApi, deleteCustomerApi, generateQrCodeApi } from "@@/apis/customers"
 import type { FormInstance, FormRules } from "element-plus"
 import dayjs from "dayjs"
 import { materialOptions } from "../process/constant"
@@ -18,14 +18,16 @@ interface CustomerData {
   quantity?: string | number
   image?: string
   qr_code?: string
+  technician_video?: string
   remark?: string
   created_at?: string
   updated_at?: string
 }
 
 const loading = ref(false)
-const { paginationData, handleCurrentChange, handleSizeChange } = usePagination()
+const { paginationData, handleCurrentChange: baseHandleCurrentChange, handleSizeChange: baseHandleSizeChange } = usePagination()
 
+const allTableData = ref<CustomerData[]>([])
 const tableData = ref<CustomerData[]>([])
 const searchFormRef = ref()
 const searchData = reactive({
@@ -36,6 +38,8 @@ const searchData = reactive({
 
 const dialogVisible = ref(false)
 const dialogTitle = ref("")
+const videoDialogVisible = ref(false)
+const currentVideoUrl = ref("")
 const formRef = ref<FormInstance>()
 const formData = reactive<CustomerData>({
   id: 0,
@@ -48,6 +52,7 @@ const formData = reactive<CustomerData>({
   quantity: "",
   image: "",
   qr_code: "",
+  technician_video: "",
   remark: ""
 })
 
@@ -81,8 +86,9 @@ const getTableData = async () => {
   try {
     const res = await getCustomerListApi()
     if (res.re) {
-      tableData.value = res.re
+      allTableData.value = res.re
       paginationData.total = res.re.length
+      updateTableData()
     }
   } catch (error) {
     console.error("获取客户列表失败:", error)
@@ -90,6 +96,23 @@ const getTableData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const updateTableData = () => {
+  const start = (paginationData.currentPage - 1) * paginationData.pageSize
+  const end = start + paginationData.pageSize
+  tableData.value = allTableData.value.slice(start, end)
+}
+
+const handleCurrentChange = (value: number) => {
+  baseHandleCurrentChange(value)
+  updateTableData()
+}
+
+const handleSizeChange = (value: number) => {
+  baseHandleSizeChange(value)
+  paginationData.currentPage = 1
+  updateTableData()
 }
 
 const handleSearch = () => {
@@ -190,6 +213,7 @@ const resetForm = () => {
   formData.quantity = ""
   formData.image = ""
   formData.qr_code = ""
+  formData.technician_video = ""
   formData.remark = ""
 }
 
@@ -216,6 +240,37 @@ const getStageType = (technician: string): "primary" | "success" | "warning" | "
     "上架": "success"
   }
   return typeMap[technician] || undefined
+}
+
+const handleGenerateQrCode = async (row: CustomerData) => {
+  try {
+    loading.value = true
+    const res = await generateQrCodeApi({ id: row.id, page: "pages/index/index" })
+    if (res.code === 0 && res.re?.img) {
+      const index = allTableData.value.findIndex(item => item.id === row.id)
+      if (index !== -1) {
+        allTableData.value[index].qr_code = res.re.img
+        updateTableData()
+      }
+      ElMessage.success("生成二维码成功")
+    } else {
+      ElMessage.error("生成二维码失败")
+    }
+  } catch (error) {
+    console.error("生成二维码失败:", error)
+    ElMessage.error("生成二维码失败")
+  } finally {
+    loading.value = false
+  }
+}
+
+const handlePlayVideo = (row: CustomerData) => {
+  if (!row.technician_video) {
+    ElMessage.warning("暂无视频")
+    return
+  }
+  currentVideoUrl.value = row.technician_video
+  videoDialogVisible.value = true
 }
 
 onMounted(() => {
@@ -277,6 +332,19 @@ onMounted(() => {
           <el-table-column prop="material" label="材料" width="200" align="center" show-overflow-tooltip>
             <template #default="{ row }">
               {{ getMaterialLabel(row.material) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="qr_code" label="二维码" width="120" align="center">
+            <template #default="{ row }">
+              <el-image v-if="row.qr_code" :src="row.qr_code" style="width: 50px; height: 50px;" />
+              <el-button v-else type="primary" size="small" @click="handleGenerateQrCode(row)">生成</el-button>
+            </template>
+          </el-table-column>
+          <el-table-column prop="technician_video" label="视频" width="100" align="center">
+            <template #default="{ row }">
+              <el-button v-if="row.technician_video" type="primary" :icon="VideoPlay" circle size="small"
+                @click="handlePlayVideo(row)" />
+              <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
           <el-table-column prop="quantity" label="数量" width="80" align="center" />
@@ -364,6 +432,12 @@ format="YYYY-MM-DD"
         <el-button @click="handleCloseDialog">取消</el-button>
         <el-button type="primary" @click="handleConfirm" :loading="loading">确定</el-button>
       </template>
+    </el-dialog>
+
+    <el-dialog v-model="videoDialogVisible" title="视频播放" width="800px" @close="videoDialogVisible = false">
+      <div style="display: flex; justify-content: center; align-items: center; min-height: 400px;">
+        <video v-if="currentVideoUrl" :src="currentVideoUrl" controls style="width: 100%; max-height: 600px;" />
+      </div>
     </el-dialog>
   </div>
 </template>

@@ -17,6 +17,7 @@ const jwt = require("jsonwebtoken");
 const config = require("../config");
 
 const WXBizDataCrypt = require("../common/WXBizDataCrypt");
+const uploadFileToCOS = require("../common/cosUpload");
 
 // 登录的处理函数
 exports.login = (req, res) => {
@@ -164,66 +165,97 @@ exports.jiemi = (req, res) => {
   }
 };
 
-const getQrCode = (token, params) => {
+// const getQrCode = (token, params) => {
+//   const { page, id } = params;
+//   return axios
+//     .post(
+//       `https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=${token}`,
+//       {
+//         page: page, // 需要打开的页面路径
+//         scene: `${id}`, // 这个是需要传递的参数
+//         width: 280,
+//         check_path: false
+//       },
+//       {
+//         responseType: "arraybuffer"
+//       }
+//     )
+//     .then((res) => {
+//       // res.data:<Buffer ff d8 ff e0 00 10 4a 46 49 46 00 01 01 00 00 01 00> ....
+//       let src =
+//         path.dirname(__dirname).replace(/\\/g, "/") +
+//         `/public/images/customer/${id}.png`;
+//       return new Promise((resolve) => {
+//         fs.writeFile(src, res.data, function (err) {
+//           if (err) {
+//             console.log("生二维码图片失败", err);
+//           }
+//           // resolve(`https://gdcasa.cn/img/images/customer/${id}.png`);
+//           resolve(`http://127.0.01:3006/img/images/customer/${id}.png`);
+//         });
+//       });
+//     })
+//     .catch((err) => {
+//       console.log("生二维码图片失败", err);
+//     });
+// };
+
+
+const getQrCode = async (token, params) => {
   const { page, id } = params;
-  return axios
-    .post(
+  try {
+    const res = await axios.post(
       `https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=${token}`,
       {
-        page: page, // 需要打开的页面路径
-        scene: `${id}`, // 这个是需要传递的参数
+        page: page,
+        scene: `${id}`,
         width: 280,
         check_path: false
       },
       {
         responseType: "arraybuffer"
       }
-    )
-    .then((res) => {
-      // res.data:<Buffer ff d8 ff e0 00 10 4a 46 49 46 00 01 01 00 00 01 00> ....
-      let src =
-        path.dirname(__dirname).replace(/\\/g, "/") +
-        `/public/images/zhibao/${id}.png`;
-      return new Promise((resolve) => {
-        fs.writeFile(src, res.data, function (err) {
-          if (err) {
-            console.log("生二维码图片失败", err);
-          }
-          resolve(`https://gdcasa.cn/img/images/zhibao/${id}.png`);
-          // resolve(`http://127.0.01:3010/img/images/zhibao/${id}.png`);
-        });
-      });
-    })
-    .catch((err) => {
-      console.log("生二维码图片失败", err);
-    });
+    );
+    
+    const fileKey = `qrCode/${id}.png`;
+    const cosFileUrl = await uploadFileToCOS(res.data, fileKey, "image/png");
+    return `https://${cosFileUrl}`;
+  } catch (err) {
+    console.log("生成二维码图片失败", err);
+    throw err;
+  }
 };
+
 
 exports.getAccessToken = (req, res) => {
   axios
     .get("https://api.weixin.qq.com/cgi-bin/token", {
       params: {
-        appid: "wxde671469f6dd9711", //你的小程序的APPID
-        secret: "8163e585493cb7ac881574e1cec415a2", //你的小程序秘钥secret,
+        appid: "wxde671469f6dd9711",
+        secret: "8163e585493cb7ac881574e1cec415a2",
         grant_type: "client_credential"
       }
     })
     .then(async (_res) => {
       const access_token = _res.data.access_token;
       if (access_token) {
-        const img = await getQrCode(_res.data.access_token, req.body);
-        const sql = `update  zhibao set imgQr='${img}' where id=${req.body.id}`;
-        // 更新参数表
-        db.query(sql, (err) => {
-          if (err) return res.cc(err);
-          res.send({
-            code: 0,
-            message: "成功！",
-            re: {
-              img
-            }
+        try {
+          const img = await getQrCode(access_token, req.body);
+          const sql = `update customer set qr_code=? where id=?`;
+          db.query(sql, [img, req.body.id], (err) => {
+            if (err) return res.cc(err);
+            res.send({
+              code: 0,
+              message: "成功！",
+              re: {
+                img
+              }
+            });
           });
-        });
+        } catch (error) {
+          console.error("生成二维码失败:", error);
+          return res.cc("生成二维码失败");
+        }
       }
     })
     .catch((err) => {

@@ -44,3 +44,12 @@ export function getCustomerDetailApi(id: number) {
   })
 }
 
+/** 生成二维码 */
+export function generateQrCodeApi(data: { id: number; page?: string }) {
+  return request<any>({
+    url: "user/getQrImg",
+    method: "post",
+    data
+  })
+}
+

@@ -14,7 +14,7 @@ router.post('/create',user_handler.create)
 router.post('/delete',user_handler.delete)
 // router.post('/getmiyao',user_handler.getMiyao)
 // router.post('/jiemi',user_handler.jiemi)
-// router.post('/getQrImg',user_handler.getAccessToken)
+router.post('/getQrImg',user_handler.getAccessToken)
 
 
 

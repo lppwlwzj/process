@@ -121,18 +121,17 @@ export default {
   },
 
   onReady() {
-    this.fetchDoctors();
-    this.fetchYipanData();
   },
 
   onLoad: function (option) {
+    this.fetchDoctors();
     if (option.customerId) {
       this.customerId = option.customerId;
-      console.log("接收到客户ID:", this.customerId);
+      this.fetchYipanData();
+
     }
     if (option.customerName) {
       this.customerName = option.customerName;
-      console.log("接收到客户名称:", this.customerName);
     }
   },
 
@@ -150,7 +149,6 @@ export default {
       this.form.edge_seating = status === 'seated' ? 1 : 0;
 
       if (!this.customerId) {
-        console.warn("缺少客户ID，无法更新边缘就位状态");
         return;
       }
 

@@ -2,7 +2,11 @@ const db = require("../db/index");
 
 // 获取客户列表
 exports.list = (req, res) => {
-  const sql = `SELECT * FROM customer ORDER BY created_at DESC`;
+  const sql = `SELECT 
+    c.*,
+    (SELECT technician_video FROM customer_process WHERE customer_id = c.id ORDER BY created_at DESC LIMIT 1) as technician_video
+    FROM customer c
+    ORDER BY c.created_at DESC`;
   db.query(sql, function (err, results) {
     if (err) return res.cc(err);
     res.send({
