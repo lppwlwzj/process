@@ -58,7 +58,6 @@ function upload(req, res) {
   return new Promise((resolve, reject) => {
     multerUpload.single(fileName)(req, res, async function (err) {
       const file = req.file
-      console.log('file',file )
       // 判断文件类型
       if (!['image/jpeg', 'image/png', 'video/mp4'].includes(file.mimetype)) {
         return res.status(400).json({ error: 'Mime type not supported' });

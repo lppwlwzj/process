@@ -231,16 +231,39 @@ exports.updateTechnicianVideo = (req, res) => {
   if (!customer_id) return res.cc("缺少客户ID！");
   if (!technician_video) return res.cc("缺少视频URL！");
   
-  const sql = `UPDATE customer_process SET technician_video=? WHERE customer_id=?`;
+  const checkSql = `SELECT id, customer_name FROM customer_process WHERE customer_id=? LIMIT 1`;
   
-  db.query(sql, [technician_video, customer_id], (err, results) => {
+  db.query(checkSql, [customer_id], (err, results) => {
     if (err) return res.cc(err);
     
-    res.send({
-      code: 0,
-      message: "更新视频成功！",
-      re: null
-    });
+    if (results.length > 0) {
+      const updateSql = `UPDATE customer_process SET technician_video=? WHERE customer_id=?`;
+      db.query(updateSql, [technician_video, customer_id], (err, updateResults) => {
+        if (err) return res.cc(err);
+        console.log("updateResults--->", updateResults);
+        res.send({
+          code: 0,
+          message: "更新视频成功！",
+          re: null
+        });
+      });
+    } else {
+      const getCustomerSql = `SELECT customer_name FROM customer WHERE id=? LIMIT 1`;
+      db.query(getCustomerSql, [customer_id], (err, customerResults) => {
+        if (err) return res.cc(err);
+        if (customerResults.length === 0) return res.cc("客户不存在！");
+        
+        const customer_name = customerResults[0].customer_name;
+        const insertSql = `INSERT INTO customer_process (customer_id, customer_name, progress, technician_video) VALUES (?, ?, ?, ?)`;
+        db.query(insertSql, [customer_id, customer_name, 'not_started', technician_video], (err, insertResults) => {
+          if (err) return res.cc(err);
+          res.send({
+            message: "保存视频成功！",
+            re: null
+          });
+        });
+      });
+    }
   });
 };
 

@@ -5,7 +5,7 @@
 
     <view class="preparation-time">
       <text class="preparation-time-text">备牙时间:<span class="preparation-time-value">{{ formatDate(form.preparation_time)
-      }}</span></text>
+          }}</span></text>
     </view>
 
     <view class="form-container">
@@ -76,7 +76,7 @@
           <view class="card-content note-content">
             <text class="card-label note-label">备注</text>
             <text class="note-value" :class="{ 'note-empty': !form.customer_note }">{{ form.customer_note || '暂无备注'
-            }}</text>
+              }}</text>
           </view>
         </view>
 
@@ -221,7 +221,6 @@ export default {
 
   methods: {
     async fetchData() {
-      // this.customerId = '1'
       if (!this.customerId) {
         uni.showToast({
           title: "缺少客户ID",
@@ -285,6 +284,7 @@ export default {
 
       uni.uploadFile({
         url: "https://gdcasa.cn/api/upload",
+        // url: "http://127.0.0.1:3006/api/upload",
         filePath: videoPath,
         name: "file",
         header: {
@@ -305,15 +305,10 @@ export default {
             const data = JSON.parse(res.data);
             if (data.code === 0) {
               const videoUrl = data.re?.img_url;
-              console.log("视频上传成功，URL:", videoUrl);
 
               if (videoUrl && this.customerId) {
+
                 this.updateVideoToDatabase(videoUrl);
-              } else {
-                uni.showToast({
-                  title: "上传成功",
-                  icon: "success"
-                });
               }
             } else {
               uni.showToast({
