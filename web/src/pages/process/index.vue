@@ -236,8 +236,8 @@ const resetForm = () => {
   formData.daily_wear_status = undefined
 }
 
-const getProgressType = (progressKey: string) => {
-  const typeMap: Record<string, string> = {
+const getProgressType = (progressKey: string): "primary" | "success" | "warning" | "info" | "danger" => {
+  const typeMap: Record<string, "primary" | "success" | "warning" | "info" | "danger"> = {
     "not_started": "info",
     "guan_mo": "warning",
     "xiu_mo": "warning",

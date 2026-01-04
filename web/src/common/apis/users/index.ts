@@ -18,7 +18,7 @@ export function getUserListApi() {
 }
 
 /** 新增用户 */
-export function createUserApi(data: { username: string; usercount: string; password: string }) {
+export function createUserApi(data: { username: string; usercount: string; password: string; role?: string }) {
   return request<any>({
     url: "user/create",
     method: "post",

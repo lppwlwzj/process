@@ -34,7 +34,7 @@ const loading = ref(false)
 const loginFormData: LoginRequestData = reactive({
   username: "admin",
   password: "12345678",
-  // code: ""
+  code: ""
 })
 
 /** 登录表单校验规则 */

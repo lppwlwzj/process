@@ -44,7 +44,7 @@ const loadHistoryData = async () => {
 
   loading.value = true
   try {
-    const res = await getProcessHistoryApi({ customer_id: props.customerId })
+    const res = await getProcessHistoryApi({ customer_id: props.customerId }) as ApiResponseData<HistoryRecord[]>
     if (res.code === 0 && res.re) {
       tableData.value = res.re
     }

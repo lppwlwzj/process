@@ -1,10 +1,11 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
+import { CirclePlus, Edit, Delete } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
 import { getCustomerListApi, createCustomerApi, updateCustomerApi, deleteCustomerApi } from "@@/apis/customers"
 import type { FormInstance, FormRules } from "element-plus"
-import moment from 'moment'
+import dayjs from "dayjs"
 import { materialOptions } from "../process/constant"
 interface CustomerData {
   id: number
@@ -204,17 +205,17 @@ const getMaterialLabel = (materialValue: string | string[]) => {
   return labels.join(', ')
 }
 
-const getStageType = (technician: string) => {
-  const typeMap: Record<string, string> = {
+const getStageType = (technician: string): "primary" | "success" | "warning" | "info" | "danger" | undefined => {
+  const typeMap: Record<string, "primary" | "success" | "warning" | "info" | "danger" | undefined> = {
     "未成": "info",
     "美成": "success",
     "车装": "warning",
-    "石膏溜模": "",
+    "石膏溜模": undefined,
     "切割": "warning",
     "CAD设计": "primary",
     "上架": "success"
   }
-  return typeMap[technician] || ""
+  return typeMap[technician] || undefined
 }
 
 onMounted(() => {
@@ -259,17 +260,17 @@ onMounted(() => {
           <el-table-column prop="customer_name" label="客户姓名" width="100" align="center" />
           <el-table-column prop="technician" label="阶段进度" width="110" align="center">
             <template #default="{ row }">
-              <el-tag :type="getStageType(row.technician)" v-if="row.technician">{{ row.technician }}</el-tag>
+              <el-tag v-if="row.technician" :type="getStageType(row.technician) || undefined">{{ row.technician }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="wear_time" label="戴牙时间" width="110" align="center">
             <template #default="{ row }">
-              {{ moment(row.wear_time).format('YYYY-MM-DD') }}
+              {{ dayjs(row.wear_time).format('YYYY-MM-DD') }}
             </template>
           </el-table-column>
           <el-table-column prop="preparation_time" label="备牙时间" width="120" align="center">
             <template #default="{ row }">
-              {{ row.preparation_time ? moment(row.preparation_time).format('YYYY-MM-DD') : '-' }}
+              {{ row.preparation_time ? dayjs(row.preparation_time).format('YYYY-MM-DD') : '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="doctor" label="医生" width="90" align="center" />

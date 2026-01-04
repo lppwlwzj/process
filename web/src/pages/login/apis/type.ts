@@ -4,7 +4,7 @@ export interface LoginRequestData {
   /** 密码 */
   password: string
   /** 验证码 */
-  code: string
+  code?: string
 }
 
 export type CaptchaResponseData = ApiResponseData<string>
