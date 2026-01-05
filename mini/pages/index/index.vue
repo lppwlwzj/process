@@ -46,7 +46,9 @@
         <view class="action-card note-card">
           <view class="card-content note-content">
             <text class="card-label note-label">材料</text>
-            <text class="note-value" :class="{ 'note-empty': !form.material }">{{ form.material || '暂无材料' }}</text>
+            <text class="note-value" :class="{ 'note-empty': !form.material }">
+
+              {{ getMaterialLabel(form.material) || '暂无材料' }}</text>
           </view>
         </view>
 
@@ -135,6 +137,19 @@
 
 <script>
 import moment from 'moment';
+export const materialOptions = [
+  { value: "guochan_quancitiemin", label: "国产全瓷贴面" },
+  { value: "deguo_aidisiteyanghuagao", label: "德国爱迪特氧化锆" },
+  { value: "deguo_weilandeyanghuagao", label: "德国威兰德氧化锆" },
+  { value: "meiguo_shidan_lawawayanghuagao", label: "美国3M拉瓦氧化锆" },
+  { value: "derendun_zhugongzhuguangci", label: "德国以色列珠光瓷" },
+  { value: "deguo_weilan_lengchaici", label: "德国威兰冷釉瓷" },
+  { value: "delanxi_quanshougongchaobaocaigao", label: "德兰希全手工超薄彩锆" },
+  { value: "quanshougongdalilavayanghuagao", label: "全手工大立lava氧化锆" },
+  { value: "ruishiweidian_shidiancandianshuibozhanciyanghuagao", label: "瑞士维典睿典水波钻瓷氧化锆" },
+  { value: "ruishiweidian_candianci", label: "瑞士维典睿典瓷" }
+]
+
 
 export default {
   data() {
@@ -144,15 +159,26 @@ export default {
       cacheLastProgress: null, // 缓存上次选择的进度
       cacheLastTechnician: null, // 缓存上次选择的技工师
       form: {
+        customer_id: null,
         customer_name: "",
         wear_time: "",
+        customer_note: "",
+        technician_video: "",
         preparation_time: "",
         progress: "",
         technician: "",
         material: "",
         quantity: "",
         image: "",
-        remark: ""
+        remark: "",
+        doctor: "",
+        qr_code: "",
+        process_id: null,
+        technician_audio: "",
+        process_created_at: "",
+        process_updated_at: "",
+        edge_seating: null,
+        occlusion_status: null
       },
       progressLabel: "",
       technicianLabel: "",
@@ -220,7 +246,19 @@ export default {
   computed: {},
 
   methods: {
+    getMaterialLabel(materialValue) {
+      if (!materialValue) return "-"
+
+      const values = typeof materialValue === 'string' ? materialValue.split(',') : materialValue
+      const labels = values.map(val => {
+        const material = materialOptions.find(m => m.value === val)
+        return material ? material.label : val
+      })
+
+      return labels.join(', ')
+    },
     async fetchData() {
+      console.log("this.customerId", this.customerId);
       if (!this.customerId) {
         uni.showToast({
           title: "缺少客户ID",
@@ -234,7 +272,10 @@ export default {
       try {
         const res = await this.$api.getProcessDetailByCustomerId({ id: this.customerId });
         if (res.code === 0 && res.re) {
-          this.form = res.re
+          this.form = {
+            ...this.form,
+            ...res.re,
+          }
           this.cacheLastProgress = this.form.progress;
           this.cacheLastTechnician = this.form.technician;
           this.progressLabel = this.progressColumns[0].find(item => item.key === this.form.progress)?.label || "";

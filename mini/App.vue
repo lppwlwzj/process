@@ -1,24 +1,24 @@
 <script>
 export default {
-  onLaunch: function (options) {
-	  uni.redirectTo({
-	    url: "/pages/index/index"
-	  });
-    // if (
-    //   !["pages/zhibao/zhibao", "pages/zbQuery/zbQuery"].includes(options.path)
-    // ) {
-    //   const userInfo = uni.getStorageSync("userInfo"); //设置缓存
-    //   if (userInfo) {
-    //     uni.redirectTo({
-    //       url: "/pages/index/index"
-    //     });
-    //   } else {
-    //     uni.redirectTo({
-    //       url: "/pages/login/login"
-    //     });
-    //   }
-    // }
-  }
+  // onLaunch: function (options) {
+	//   uni.redirectTo({
+	//     url: "/pages/index/index"
+	//   });
+  //   // if (
+  //   //   !["pages/zhibao/zhibao", "pages/zbQuery/zbQuery"].includes(options.path)
+  //   // ) {
+  //   //   const userInfo = uni.getStorageSync("userInfo"); //设置缓存
+  //   //   if (userInfo) {
+  //   //     uni.redirectTo({
+  //   //       url: "/pages/index/index"
+  //   //     });
+  //   //   } else {
+  //   //     uni.redirectTo({
+  //   //       url: "/pages/login/login"
+  //   //     });
+  //   //   }
+  //   // }
+  // }
 };
 </script>
 
