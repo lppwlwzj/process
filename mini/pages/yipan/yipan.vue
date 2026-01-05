@@ -78,7 +78,7 @@
 
     <view class="yipan-button-container">
       <button class="yipan-action-btn" @click="goToYipan">
-        <view class="btn-text">客户Jinmd</view>
+        <view class="btn-text">客户进度表</view>
       </button>
     </view>
 

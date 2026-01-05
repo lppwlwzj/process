@@ -4,11 +4,24 @@ import { ElMessage, ElMessageBox } from "element-plus"
 import { VideoPlay } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
 import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi } from "@@/apis/process"
+import { getUserListApi } from "@@/apis/users"
 import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
 import ChairsideHistoryDialog from "./components/ChairsideHistoryDialog.vue"
 import type { FormInstance, FormRules } from "element-plus"
 import dayjs from 'dayjs'
 import { progressOptions, materialOptions } from "./constant"
+
+interface UserData {
+  id: number
+  username: string
+  usercount: string
+  role?: string
+}
+
+interface MaterialItem {
+  material: string
+  quantity: number | string
+}
 
 interface ProcessData {
   id: number
@@ -16,7 +29,9 @@ interface ProcessData {
   wear_time: string
   progress: string
   technician: string
+  materials?: MaterialItem[]
   material?: string
+  quantity?: string | number
   image?: string
   remark?: string
   technician_audio?: string
@@ -203,6 +218,23 @@ const selectedCustomer = ref({
   name: ""
 })
 
+const userMap = ref<Map<string, string>>(new Map())
+
+const loadUserList = async () => {
+  try {
+    const res = await getUserListApi() as ApiResponseData<UserData[]>
+    if (res.code === 0 && res.re) {
+      const map = new Map<string, string>()
+      res.re.forEach(user => {
+        map.set(user.usercount, user.username)
+      })
+      userMap.value = map
+    }
+  } catch (error) {
+    console.error("获取用户列表失败:", error)
+  }
+}
+
 const handleProgressRecord = (row: ProcessData) => {
   selectedCustomer.value = {
     id: row.id,
@@ -277,6 +309,7 @@ const handlePlayVideo = (videoUrl: string) => {
 
 
 onMounted(() => {
+  loadUserList()
   getTableData()
 })
 </script>
@@ -333,14 +366,14 @@ onMounted(() => {
           </el-table-column>
           <el-table-column prop="technician" label="技工师" align="center" />
           <el-table-column prop="chairside_doctor" label="椅旁医生" align="center" />
-          <el-table-column prop="material" label="材料" width="200" align="center" show-overflow-tooltip>
+          <el-table-column prop="materials" label="材料与数量" min-width="250" align="center">
             <template #default="{ row }">
-              {{ getMaterialLabel(row.material) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="quantity" label="数量" width="80" align="center">
-            <template #default="{ row }">
-              {{ row.quantity || '-' }}
+              <div v-if="row.materials && row.materials.length > 0">
+                <el-tag v-for="(item, index) in row.materials" :key="index" style="margin: 2px;">
+                  {{ getMaterialLabel(item.material) }}: {{ item.quantity }}颗
+                </el-tag>
+              </div>
+              <span v-else>-</span>
             </template>
           </el-table-column>
           <el-table-column prop="edge_seating" label="边缘就位" align="center" width="100">
@@ -527,10 +560,10 @@ onMounted(() => {
     </el-dialog> -->
 
     <ProcessHistoryDialog v-model:visible="historyDialogVisible" :customer-id="selectedCustomer.id"
-      :customer-name="selectedCustomer.name" />
+      :customer-name="selectedCustomer.name" :user-map="userMap" />
 
     <ChairsideHistoryDialog v-model:visible="chairsideHistoryDialogVisible" :customer-id="selectedCustomer.id"
-      :customer-name="selectedCustomer.name" />
+      :customer-name="selectedCustomer.name" :user-map="userMap" />
 
     <el-dialog v-model="videoDialogVisible" title="视频播放" width="800px" @close="videoDialogVisible = false">
       <div style="display: flex; justify-content: center; align-items: center; min-height: 400px;">

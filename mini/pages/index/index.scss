@@ -41,21 +41,20 @@ page {
   padding: 40rpx 30rpx;
   margin-bottom: 40rpx;
   box-shadow: 0 4rpx 16rpx rgba(255, 117, 140, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .customer-name {
   font-size: 40rpx;
   font-weight: 600;
   color: #1a1a1a;
-  display: block;
-  margin-bottom: 16rpx;
 }
 
 .wear-time-info {
   display: flex;
   align-items: center;
-  margin-top: 12rpx;
-  margin-bottom: 12rpx;
 }
 
 .wear-time-label {
@@ -198,6 +197,39 @@ page {
       color: #ccc;
     }
   }
+
+  .materials-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16rpx;
+  }
+
+  .material-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12rpx 0;
+    border-bottom: 1rpx solid #f0f0f0;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .material-name {
+      font-size: 28rpx;
+      color: #1a1a1a;
+      font-weight: 400;
+      flex: 1;
+    }
+
+    .material-quantity {
+      font-size: 28rpx;
+      color: #dd524d;
+      font-weight: 600;
+      margin-left: 20rpx;
+    }
+  }
 }
 
 .full-width-card {
@@ -247,7 +279,8 @@ page {
 }
 
 .preparation-time {
-  padding: 20rpx 36rpx;
+  font-size: 28rpx;
+  padding: 30rpx 36rpx;
   text-align: left;
   background: #ffffff;
 }

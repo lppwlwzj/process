@@ -4,17 +4,18 @@
     </view>
 
     <view class="preparation-time">
-      <text class="preparation-time-text">备牙时间:<span class="preparation-time-value">{{ formatDate(form.preparation_time)
-          }}</span></text>
+      <text class="preparation-time-text">备牙时间:{{
+        formatDateSimple(form.preparation_time)
+        }}</text>
     </view>
 
     <view class="form-container">
       <view class="customer-header">
+        <text class="customer-name">{{ form.customer_name }}</text>
         <view class="wear-time-info">
           <text class="wear-time-label">戴牙时间: </text>
           <text class="wear-time-value">{{ formatDateSimple(form.wear_time) }}</text>
         </view>
-        <text class="customer-name">{{ form.customer_name }}</text>
       </view>
 
       <view class="action-grid">
@@ -43,19 +44,26 @@
             <text class="card-arrow">›</text>
           </view>
         </view>
-        <view class="action-card note-card">
+        <view class="action-card note-card" v-for="(item, index) in getMaterialsList()" :key="index">
           <view class="card-content note-content">
             <text class="card-label note-label">材料</text>
-            <text class="note-value" :class="{ 'note-empty': !form.material }">
-
-              {{ getMaterialLabel(form.material) || '暂无材料' }}</text>
+            <text class="note-value" :class="{ 'note-empty': !item.material }">
+              {{ getMaterialLabel(item.material) || '暂无材料' }}
+            </text>
+          </view>
+          <view class="card-content note-content" style="margin-top: 8px;">
+            <text class="card-label note-label">数量</text>
+            <text class="note-value" :class="{ 'note-empty': !item.quantity }">{{ item.quantity || '暂无数量' }}颗</text>
           </view>
         </view>
-
-        <view class="action-card note-card">
+        <view class="action-card note-card" v-if="getMaterialsList().length === 0">
           <view class="card-content note-content">
+            <text class="card-label note-label">材料</text>
+            <text class="note-value note-empty">暂无材料</text>
+          </view>
+          <view class="card-content note-content" style="margin-top: 8px;">
             <text class="card-label note-label">数量</text>
-            <text class="note-value" :class="{ 'note-empty': !form.quantity }">{{ form.quantity || '暂无数量' }}</text>
+            <text class="note-value note-empty">暂无数量</text>
           </view>
         </view>
 
@@ -165,8 +173,7 @@ export default {
         preparation_time: "",
         progress: "",
         technician: "",
-        material: "",
-        quantity: "",
+        materials: [],
         image: "",
         remark: "",
         doctor: "",
@@ -247,6 +254,13 @@ export default {
   computed: {},
 
   methods: {
+    getMaterialsList() {
+      if (!this.form.materials || !Array.isArray(this.form.materials) || this.form.materials.length === 0) {
+        // 如果没有 materials，返回一个空数组（不显示任何卡片）
+        return []
+      }
+      return this.form.materials
+    },
     getMaterialLabel(materialValue) {
       if (!materialValue) return "-"
 
@@ -273,9 +287,25 @@ export default {
       try {
         const res = await this.$api.getProcessDetailByCustomerId({ id: this.customerId });
         if (res.code === 0 && res.re) {
+          // 处理 materials 字段，确保是数组格式
+          let materials = [];
+          if (res.re.materials) {
+            if (typeof res.re.materials === 'string') {
+              try {
+                materials = JSON.parse(res.re.materials);
+              } catch (e) {
+                console.error("解析 materials JSON 失败:", e);
+                materials = [];
+              }
+            } else if (Array.isArray(res.re.materials)) {
+              materials = res.re.materials;
+            }
+          }
+
           this.form = {
             ...this.form,
             ...res.re,
+            materials: materials
           }
           this.cacheLastProgress = this.form.progress;
           this.cacheLastTechnician = this.form.technician;

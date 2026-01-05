@@ -4,10 +4,12 @@ exports.list = (req, res) => {
   const { customer_name, progress, technician, currentPage = 1, pageSize = 10 } = req.body;
   let sql = `SELECT 
     cp.*,
+    c.materials,
     y.edge_seating,
     y.occlusion_status,
     y.chairside_video
     FROM customer_process cp
+    LEFT JOIN customer c ON cp.customer_id = c.id
     LEFT JOIN yipan y ON cp.customer_id = y.customer_id
     WHERE 1=1`;
   const params = [];
@@ -35,11 +37,34 @@ exports.list = (req, res) => {
 
     db.query(sql, params, (err, results) => {
       if (err) return res.cc(err);
+      
+      // 解析 materials JSON 字段
+      const parsedResults = results.map(item => {
+        let materials = [];
+        if (item.materials) {
+          try {
+            materials = typeof item.materials === 'string' 
+              ? JSON.parse(item.materials) 
+              : item.materials;
+            if (!Array.isArray(materials)) {
+              materials = [];
+            }
+          } catch (e) {
+            console.error("解析 materials JSON 失败:", e);
+            materials = [];
+          }
+        }
+        return {
+          ...item,
+          materials: materials
+        };
+      });
+      
       res.send({
         code: 0,
         message: "获取客户进度列表成功！",
         re: {
-          list: results,
+          list: parsedResults,
           total: total,
           currentPage: +currentPage,
           pageSize: +pageSize
@@ -190,8 +215,7 @@ exports.detail = (req, res) => {
       c.wear_time,
       c.preparation_time,
       c.doctor,
-      c.material,
-      c.quantity,
+      c.materials,
       c.image,
       c.qr_code,
       c.remark as customer_note,
@@ -214,14 +238,34 @@ exports.detail = (req, res) => {
   `;
   
   db.query(sql, id, (err, results) => {
- 
     if (err) return res.cc(err);
     if (results.length === 0) return res.cc("未找到该客户信息！");
+
+    // 解析 materials JSON 字段
+    let materials = [];
+    if (results[0].materials) {
+      try {
+        materials = typeof results[0].materials === 'string' 
+          ? JSON.parse(results[0].materials) 
+          : results[0].materials;
+        if (!Array.isArray(materials)) {
+          materials = [];
+        }
+      } catch (e) {
+        console.error("解析 materials JSON 失败:", e);
+        materials = [];
+      }
+    }
+
+    const result = {
+      ...results[0],
+      materials: materials
+    };
 
     res.send({
       code: 0,
       message: "获取成功！",
-      re: results[0]
+      re: result
     });
   });
 };

@@ -4,7 +4,7 @@ import { ElMessage } from "element-plus"
 import * as XLSX from "xlsx"
 import { getYipanHistoryApi } from "@@/apis/yipan_history"
 import { progressOptions } from "../constant"
-
+import dayjs from "dayjs"
 interface ChairsideHistoryRecord {
   id: number
   customer_id: number
@@ -21,6 +21,7 @@ const props = defineProps<{
   visible: boolean
   customerId: number
   customerName: string
+  userMap: Map<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -32,6 +33,12 @@ const tableData = ref<ChairsideHistoryRecord[]>([])
 
 const handleClose = () => {
   emit("update:visible", false)
+}
+
+// 通过 usercount 获取 username
+const getDoctorName = (usercount: string | null | undefined): string => {
+  if (!usercount) return "-"
+  return props.userMap.get(usercount) || usercount
 }
 
 const getProgressLabel = (key: string | null) => {
@@ -79,10 +86,10 @@ const handleExcelDownload = () => {
     // 准备 Excel 数据
     const excelData = tableData.value.map((row, index) => ({
       序号: index + 1,
-      椅旁医生技师: row.chairside_doctor || "-",
+      椅旁医生技师: getDoctorName(row.chairside_doctor),
       进度: getProgressLabel(row.progress),
-      开始时间: formatDateTime(row.start_time),
-      结束时间: formatDateTime(row.end_time),
+      开始时间: row.start_time ? dayjs(row.start_time).format('YYYY-MM-DD HH:mm:ss') : '-',
+      结束时间: row.end_time ? dayjs(row.end_time).format('YYYY-MM-DD HH:mm:ss') : '-',
       操作时长: formatDuration(row.duration_minutes)
     }))
 
@@ -132,7 +139,11 @@ watch(() => props.visible, (newVal) => {
     <div v-loading="loading">
       <el-table :data="tableData" border stripe>
         <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column prop="chairside_doctor" label="椅旁医生/技师" width="150" align="center" />
+        <el-table-column prop="chairside_doctor" label="椅旁医生/技师" width="150" align="center">
+          <template #default="{ row }">
+            {{ getDoctorName(row.chairside_doctor) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="progress" label="进度" width="120" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.progress">{{ getProgressLabel(row.progress) }}</el-tag>
@@ -141,12 +152,12 @@ watch(() => props.visible, (newVal) => {
         </el-table-column>
         <el-table-column prop="start_time" label="开始时间" width="180" align="center">
           <template #default="{ row }">
-            {{ formatDateTime(row.start_time) }}
+            {{ row.start_time ? dayjs(row.start_time).format('YYYY-MM-DD HH:mm:ss') : '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="end_time" label="结束时间" width="180" align="center">
           <template #default="{ row }">
-            {{ formatDateTime(row.end_time) }}
+            {{ row.end_time ? dayjs(row.end_time).format('YYYY-MM-DD HH:mm:ss') : '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="duration_minutes" label="操作时长" align="center">
