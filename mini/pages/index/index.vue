@@ -71,17 +71,25 @@
           </view>
         </view>
 
-        <view class="action-card note-card">
-          <!-- <view class="card-icon-wrapper">
-            <text class="card-icon">📝</text>
-          </view> -->
+        <view class="action-card" @click="handleUploadVideo">
+          <view class="card-icon-wrapper">
+            <text class="card-icon">▶</text>
+          </view>
+          <view class="card-content">
+            <view class="card-text">
+              <text class="card-label">上传视频</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="action-card note-card full-width-card">
           <view class="card-content note-content">
             <text class="card-label note-label">备注</text>
             <text class="note-value" :class="{ 'note-empty': !form.customer_note }">{{ form.customer_note || '暂无备注'
               }}</text>
           </view>
         </view>
-
+        <!-- 
 
         <view class="action-card image-card" @click="previewImage">
           <view class="image-wrapper" v-if="form.image">
@@ -91,7 +99,7 @@
             <text class="no-image-icon">📷</text>
             <text class="no-image-text">暂无图片</text>
           </view>
-        </view>
+        </view> -->
 
         <!-- <view class="action-card">
           <view class="card-icon-wrapper">
@@ -106,16 +114,6 @@
 
 
 
-        <view class="action-card" @click="handleUploadVideo">
-          <view class="card-icon-wrapper">
-            <text class="card-icon">▶</text>
-          </view>
-          <view class="card-content">
-            <view class="card-text">
-              <text class="card-label">上传视频</text>
-            </view>
-          </view>
-        </view>
       </view>
 
       <view class="yipan-button-container">
@@ -217,28 +215,31 @@ export default {
       console.log("option.scene", option.scene);
       this.customerId = option.scene;
       await this.fetchData();
-
+    } else if (option.customerId) {
+      console.log("option.customerId", option.customerId);
+      this.customerId = option.customerId;
+      await this.fetchData();
     }
     // H5 环境从 URL 参数获取
-    else {
-      // #ifdef H5
-      const urlParams = new URLSearchParams(window.location.search);
-      const customerIdFromUrl = urlParams.get('customerId');
-      if (customerIdFromUrl) {
-        this.customerId = customerIdFromUrl;
+    // else {
+    //   // #ifdef H5
+    //   const urlParams = new URLSearchParams(window.location.search);
+    //   const customerIdFromUrl = urlParams.get('customerId');
+    //   if (customerIdFromUrl) {
+    //     this.customerId = customerIdFromUrl;
 
-      }
-      // 也尝试从 hash 后面的参数获取
-      const hash = window.location.hash;
-      if (hash.includes('?')) {
-        const hashParams = new URLSearchParams(hash.split('?')[1]);
-        const customerIdFromHash = hashParams.get('customerId');
-        if (customerIdFromHash) {
-          this.customerId = customerIdFromHash;
-        }
-      }
-      // #endif
-    }
+    //   }
+    //   // 也尝试从 hash 后面的参数获取
+    //   const hash = window.location.hash;
+    //   if (hash.includes('?')) {
+    //     const hashParams = new URLSearchParams(hash.split('?')[1]);
+    //     const customerIdFromHash = hashParams.get('customerId');
+    //     if (customerIdFromHash) {
+    //       this.customerId = customerIdFromHash;
+    //     }
+    //   }
+    //   // #endif
+    // }
   },
 
   options: { styleIsolation: "shared" },
@@ -376,9 +377,26 @@ export default {
     },
     async updateVideoToDatabase(videoUrl) {
       try {
+        // 获取当前已有的视频URL
+        const currentVideos = this.form.technician_video || '';
+
+        // 用逗号拼接新视频URL（追加而不是覆盖）
+        let newVideos = '';
+        if (currentVideos) {
+          // 如果已有视频，追加到后面
+          newVideos = currentVideos + ',' + videoUrl;
+        } else {
+          // 如果没有视频，直接使用新URL
+          newVideos = videoUrl;
+        }
+
+        console.log("当前视频:", currentVideos);
+        console.log("新视频:", videoUrl);
+        console.log("合并后:", newVideos);
+
         const res = await this.$api.updateTechnicianVideo({
           customer_id: this.customerId,
-          technician_video: videoUrl
+          technician_video: newVideos
         });
 
         if (res.code === 0) {

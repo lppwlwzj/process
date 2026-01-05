@@ -78,7 +78,7 @@
 
     <view class="yipan-button-container">
       <button class="yipan-action-btn" @click="goToYipan">
-        <view class="btn-text">客户操作记录</view>
+        <view class="btn-text">客户Jinmd</view>
       </button>
     </view>
 
@@ -624,9 +624,26 @@ export default {
     },
     async updateVideoToDatabase(videoUrl) {
       try {
+        // 获取当前已有的视频URL
+        const currentVideos = this.form.chairside_video || '';
+
+        // 用逗号拼接新视频URL（追加而不是覆盖）
+        let newVideos = '';
+        if (currentVideos) {
+          // 如果已有视频，追加到后面
+          newVideos = currentVideos + ',' + videoUrl;
+        } else {
+          // 如果没有视频，直接使用新URL
+          newVideos = videoUrl;
+        }
+
+        console.log("当前视频:", currentVideos);
+        console.log("新视频:", videoUrl);
+        console.log("合并后:", newVideos);
+
         const res = await this.$api.updateChairsideVideo({
           customer_id: this.customerId,
-          chairside_video: videoUrl
+          chairside_video: newVideos
         });
 
         if (res.code === 0) {

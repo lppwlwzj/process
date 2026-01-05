@@ -7,6 +7,11 @@ import { getCustomerListApi, createCustomerApi, updateCustomerApi, deleteCustome
 import type { FormInstance, FormRules } from "element-plus"
 import dayjs from "dayjs"
 import { materialOptions } from "../process/constant"
+interface MaterialItem {
+  material: string
+  quantity: number | string
+}
+
 interface CustomerData {
   id: number
   customer_name: string
@@ -14,8 +19,7 @@ interface CustomerData {
   wear_time: string
   preparation_time: string
   doctor: string
-  material: string | string[]
-  quantity?: string | number
+  materials: MaterialItem[]
   image?: string
   qr_code?: string
   technician_video?: string
@@ -48,8 +52,7 @@ const formData = reactive<CustomerData>({
   wear_time: "",
   preparation_time: "",
   doctor: "",
-  material: [],
-  quantity: "",
+  materials: [{ material: "", quantity: "" }],
   image: "",
   qr_code: "",
   technician_video: "",
@@ -133,14 +136,26 @@ const handleCreate = () => {
 const handleUpdate = (row: CustomerData) => {
   dialogTitle.value = "编辑客户"
   const rowData = { ...row }
-  // 将字符串转换为数组
-  if (typeof rowData.material === 'string' && rowData.material) {
-    rowData.material = rowData.material.split(',')
-  } else if (!rowData.material) {
-    rowData.material = []
+  // 确保 materials 是数组格式
+  if (!rowData.materials || rowData.materials.length === 0) {
+    rowData.materials = [{ material: "", quantity: "" }]
   }
   Object.assign(formData, rowData)
   dialogVisible.value = true
+}
+
+// 添加材料行
+const addMaterialRow = () => {
+  formData.materials.push({ material: "", quantity: "" })
+}
+
+// 删除材料行
+const removeMaterialRow = (index: number) => {
+  if (formData.materials.length > 1) {
+    formData.materials.splice(index, 1)
+  } else {
+    ElMessage.warning("至少保留一个材料")
+  }
 }
 
 const handleConfirm = async () => {
@@ -150,10 +165,18 @@ const handleConfirm = async () => {
     if (valid) {
       try {
         loading.value = true
-        // 创建提交数据副本，将数组转换为字符串
-        const submitData = { ...formData }
-        if (Array.isArray(submitData.material)) {
-          submitData.material = submitData.material.join(',')
+        // 过滤掉空的材料行
+        const validMaterials = formData.materials.filter(m => m.material && m.quantity)
+        if (validMaterials.length === 0) {
+          ElMessage.warning("请至少添加一个有效的材料和数量")
+          loading.value = false
+          return
+        }
+
+        // 创建提交数据副本
+        const submitData = {
+          ...formData,
+          materials: validMaterials
         }
 
         if (formData.id) {
@@ -209,24 +232,18 @@ const resetForm = () => {
   formData.wear_time = ""
   formData.preparation_time = ""
   formData.doctor = ""
-  formData.material = []
-  formData.quantity = ""
+  formData.materials = [{ material: "", quantity: "" }]
   formData.image = ""
   formData.qr_code = ""
   formData.technician_video = ""
   formData.remark = ""
 }
 
-const getMaterialLabel = (materialValue: string | string[]) => {
+const getMaterialLabel = (materialValue: string) => {
   if (!materialValue) return "-"
 
-  const values = typeof materialValue === 'string' ? materialValue.split(',') : materialValue
-  const labels = values.map(val => {
-    const material = materialOptions.find(m => m.value === val)
-    return material ? material.label : val
-  })
-
-  return labels.join(', ')
+  const material = materialOptions.find(m => m.value === materialValue)
+  return material ? material.label : materialValue
 }
 
 const getStageType = (technician: string): "primary" | "success" | "warning" | "info" | "danger" | undefined => {
@@ -329,9 +346,14 @@ onMounted(() => {
             </template>
           </el-table-column>
           <el-table-column prop="doctor" label="医生" width="90" align="center" />
-          <el-table-column prop="material" label="材料" width="200" align="center" show-overflow-tooltip>
+          <el-table-column prop="materials" label="材料与数量" min-width="250" align="center">
             <template #default="{ row }">
-              {{ getMaterialLabel(row.material) }}
+              <div v-if="row.materials && row.materials.length > 0">
+                <el-tag v-for="(item, index) in row.materials" :key="index" style="margin: 2px;">
+                  {{ getMaterialLabel(item.material) }}: {{ item.quantity }}颗
+                </el-tag>
+              </div>
+              <span v-else>-</span>
             </template>
           </el-table-column>
           <el-table-column prop="qr_code" label="二维码" width="120" align="center">
@@ -347,7 +369,6 @@ onMounted(() => {
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column> -->
-          <el-table-column prop="quantity" label="数量" width="80" align="center" />
           <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
           <el-table-column fixed="right" label="操作" width="150" align="center">
             <template #default="{ row }">
@@ -365,8 +386,8 @@ onMounted(() => {
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="800px" @close="handleCloseDialog">
-      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="120px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" @close="handleCloseDialog">
+      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="90px">
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="客户姓名" prop="customer_name">
@@ -374,22 +395,24 @@ onMounted(() => {
             </el-form-item>
           </el-col>
         </el-row>
-        <el-row :gutter="20">
-
-          <el-col :span="12">
-            <el-form-item label="材料" prop="material">
-              <el-select v-model="formData.material" placeholder="请选择材料" multiple collapse-tags collapse-tags-tooltip>
-                <el-option v-for="item in materialOptions" :key="item.value" :label="item.label" :value="item.value" />
+        <!-- 材料与数量动态表单 -->
+        <el-form-item label="材料与数量">
+          <div style="width: 100%;">
+            <div v-for="(item, index) in formData.materials" :key="index"
+              style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
+              <el-select v-model="item.material" placeholder="请选择材料" style="flex: 2;">
+                <el-option v-for="option in materialOptions" :key="option.value" :label="option.label"
+                  :value="option.value" />
               </el-select>
-            </el-form-item>
-          </el-col>
-
-          <el-col :span="12">
-            <el-form-item label="数量" prop="quantity">
-              <el-input v-model="formData.quantity" placeholder="请输入数量" />
-            </el-form-item>
-          </el-col>
-        </el-row>
+              <el-input-number v-model="item.quantity" :min="1" placeholder="数量" style="flex: 1;" />
+              <el-button type="danger" :icon="Delete" circle @click="removeMaterialRow(index)"
+                :disabled="formData.materials.length === 1" />
+            </div>
+            <el-button type="primary" :icon="CirclePlus" @click="addMaterialRow" style="width: 100%;">
+              新增材料
+            </el-button>
+          </div>
+        </el-form-item>
 
 
         <el-row :gutter="20">

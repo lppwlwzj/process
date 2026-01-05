@@ -260,6 +260,11 @@ const getProgressLabel = (progressKey: string) => {
   return option ? option.label : progressKey
 }
 
+const getVideoList = (videoUrls: string): string[] => {
+  if (!videoUrls) return []
+  return videoUrls.split(',').map(url => url.trim()).filter(url => url)
+}
+
 const handlePlayVideo = (videoUrl: string) => {
   if (!videoUrl) {
     ElMessage.warning("暂无视频")
@@ -268,6 +273,8 @@ const handlePlayVideo = (videoUrl: string) => {
   currentVideoUrl.value = videoUrl
   videoDialogVisible.value = true
 }
+
+
 
 onMounted(() => {
   getTableData()
@@ -357,17 +364,33 @@ onMounted(() => {
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="technician_video" label="进度视频" width="100" align="center">
+          <el-table-column prop="technician_video" label="进度视频" width="150" align="center">
             <template #default="{ row }">
-              <el-button v-if="row.technician_video" type="primary" :icon="VideoPlay" circle size="small"
-                @click="handlePlayVideo(row.technician_video)" />
+              <div v-if="row.technician_video"
+                style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
+                <el-button v-for="(videoUrl, index) in getVideoList(row.technician_video)" :key="index" type="primary"
+                  size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
+                  <el-icon style="margin-right: 2px;">
+                    <VideoPlay />
+                  </el-icon>
+                  {{ index + 1 }}
+                </el-button>
+              </div>
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="chairside_video" label="椅旁视频" width="100" align="center">
+          <el-table-column prop="chairside_video" label="椅旁视频" width="150" align="center">
             <template #default="{ row }">
-              <el-button v-if="row.chairside_video" type="primary" :icon="VideoPlay" circle size="small"
-                @click="handlePlayVideo(row.chairside_video)" />
+              <div v-if="row.chairside_video"
+                style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
+                <el-button v-for="(videoUrl, index) in getVideoList(row.chairside_video)" :key="index" type="primary"
+                  size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
+                  <el-icon style="margin-right: 2px;">
+                    <VideoPlay />
+                  </el-icon>
+                  {{ index + 1 }}
+                </el-button>
+              </div>
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
@@ -375,6 +398,7 @@ onMounted(() => {
             <template #default="{ row }">
               <el-button type="primary" text size="small" @click="handleProgressRecord(row)">进度记录</el-button>
               <el-button type="primary" text size="small" @click="handleChairsideRecord(row)">椅旁记录</el-button>
+
               <!-- <el-button type="primary" text size="small" @click="handleUpdate(row)">编辑</el-button> -->
               <el-button type="danger" text size="small" @click="handleDelete(row)">删除</el-button>
             </template>

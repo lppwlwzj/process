@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, watch } from "vue"
 import { ElMessage } from "element-plus"
+import * as XLSX from "xlsx"
 import { getYipanHistoryApi } from "@@/apis/yipan_history"
 import { progressOptions } from "../constant"
 
@@ -68,6 +69,56 @@ const formatDateTime = (dateTime: string) => {
   return dateTime.replace("T", " ").substring(0, 19)
 }
 
+const handleExcelDownload = () => {
+  if (tableData.value.length === 0) {
+    ElMessage.warning("暂无数据可导出")
+    return
+  }
+
+  try {
+    // 准备 Excel 数据
+    const excelData = tableData.value.map((row, index) => ({
+      序号: index + 1,
+      椅旁医生技师: row.chairside_doctor || "-",
+      进度: getProgressLabel(row.progress),
+      开始时间: formatDateTime(row.start_time),
+      结束时间: formatDateTime(row.end_time),
+      操作时长: formatDuration(row.duration_minutes)
+    }))
+
+    // 创建工作簿
+    const wb = XLSX.utils.book_new()
+
+    // 创建工作表
+    const ws = XLSX.utils.json_to_sheet(excelData)
+
+    // 设置列宽
+    const colWidths = [
+      { wch: 8 },   // 序号
+      { wch: 15 },  // 椅旁医生/技师
+      { wch: 12 },  // 进度
+      { wch: 20 },  // 开始时间
+      { wch: 20 },  // 结束时间
+      { wch: 15 }   // 操作时长
+    ]
+    ws["!cols"] = colWidths
+
+    // 将工作表添加到工作簿
+    XLSX.utils.book_append_sheet(wb, ws, "椅旁记录")
+
+    // 生成文件名
+    const fileName = `${props.customerName}_椅旁记录_${new Date().toISOString().split("T")[0]}.xlsx`
+
+    // 导出文件
+    XLSX.writeFile(wb, fileName)
+
+    ElMessage.success("导出成功")
+  } catch (error) {
+    console.error("导出 Excel 失败:", error)
+    ElMessage.error("导出失败，请重试")
+  }
+}
+
 watch(() => props.visible, (newVal) => {
   if (newVal) {
     loadHistoryData()
@@ -76,7 +127,8 @@ watch(() => props.visible, (newVal) => {
 </script>
 
 <template>
-  <el-dialog :model-value="visible" :title="`${customerName} - 椅旁记录`" width="880px" @close="handleClose">
+  <el-dialog :model-value="props.visible" :title="`${props.customerName} - 椅旁记录`" width="880px" @close="handleClose">
+    <el-button type="primary" @click="handleExcelDownload">椅旁记录excel下载</el-button>
     <div v-loading="loading">
       <el-table :data="tableData" border stripe>
         <el-table-column type="index" label="序号" width="60" align="center" />

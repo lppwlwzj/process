@@ -200,6 +200,10 @@ page {
   }
 }
 
+.full-width-card {
+  grid-column: span 2;
+}
+
 .image-card {
   padding: 0;
   overflow: hidden;
