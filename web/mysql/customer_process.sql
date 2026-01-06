@@ -4,7 +4,7 @@ CREATE TABLE `customer_process` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `customer_id` int(11) NOT NULL COMMENT '客户ID',
   `customer_name` varchar(50) NOT NULL COMMENT '客户名称',
-  `wear_time` date DEFAULT NULL COMMENT '戴牙时间',
+  `wear_time` varchar(50) DEFAULT NULL COMMENT '戴牙时间',
   `progress` varchar(50) DEFAULT NULL COMMENT '进度（未开始、进行中、已完成）',
   `technician` varchar(50) DEFAULT NULL COMMENT '技工师',
   `material` varchar(100) DEFAULT NULL COMMENT '材料',

@@ -5,7 +5,7 @@
 
     <view class="preparation-time">
       <text class="preparation-time-text">备牙时间:{{
-        formatDateSimple(form.preparation_time)
+  form.preparation_time
         }}</text>
     </view>
 
@@ -15,7 +15,7 @@
         <view>
           <div class="wear-time-label">戴牙时间: </div>
           <!-- <div class="wear-time-value">10-01</div> -->
-          <div class="wear-time-value">{{ formatDateSimple(form.wear_time) }}</div>
+          <div class="wear-time-value">{{ form.wear_time }}</div>
         </view>
       </view>
 
@@ -499,10 +499,10 @@ export default {
 
     formatDateSimple(dateStr) {
       if (!dateStr) return '';
-	  const chinese = moment(dateStr)
-	                    .format('MM-DD')          // 先拿到 “10-01”
-	                    .replace(/(\d+)-(\d+)/, '$1月$2号'); // → “10月01号”
-						return chinese;
+      const chinese = moment(dateStr)
+        .format('MM-DD')          // 先拿到 “10-01”
+        .replace(/(\d+)-(\d+)/, '$1月$2号'); // → “10月01号”
+      return chinese;
     },
 
     previewImage() {

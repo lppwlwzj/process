@@ -80,19 +80,49 @@ exports.create = (req, res) => {
     
     const customerId = results.insertId;
     
-    // 同时在 customer_process 表中创建记录
-    const processSQL = `INSERT INTO customer_process (customer_id, customer_name, wear_time, progress, material, remark) VALUES (?, ?, ?, ?, ?, ?)`;
-    db.query(processSQL, [customerId, customer_name, wear_time, 'not_started', materialStr, remark], function (err) {
+    // 同时在 customer_process 表中创建记录（先检查是否已存在，避免重复）
+    const checkProcessSQL = `SELECT id FROM customer_process WHERE customer_id=? LIMIT 1`;
+    db.query(checkProcessSQL, customerId, function (err, processResults) {
       if (err) {
-        console.error("创建客户进度记录失败:", err);
+        console.error("检查客户进度记录失败:", err);
+        return;
+      }
+      
+      if (processResults && processResults.length > 0) {
+        // 如果记录已存在，更新而不是插入
+        const updateProcessSQL = `UPDATE customer_process SET customer_name=?, wear_time=?, material=?, remark=? WHERE customer_id=?`;
+        db.query(updateProcessSQL, [customer_name, wear_time, materialStr, remark, customerId], function (err) {
+          if (err) {
+            console.error("更新客户进度记录失败:", err);
+          }
+        });
+      } else {
+        // 如果记录不存在，插入新记录
+        const insertProcessSQL = `INSERT INTO customer_process (customer_id, customer_name, wear_time, progress, material, remark) VALUES (?, ?, ?, ?, ?, ?)`;
+        db.query(insertProcessSQL, [customerId, customer_name, wear_time, 'not_started', materialStr, remark], function (err) {
+          if (err) {
+            console.error("创建客户进度记录失败:", err);
+          }
+        });
       }
     });
     
-    // 同时在 yipan 表中创建记录
-    const yipanSQL = `INSERT INTO yipan (customer_id, customer_name) VALUES (?, ?)`;
-    db.query(yipanSQL, [customerId, customer_name], function (err) {
+    // 同时在 yipan 表中创建记录（先检查是否已存在，避免重复）
+    const checkYipanSQL = `SELECT id FROM yipan WHERE customer_id=? LIMIT 1`;
+    db.query(checkYipanSQL, customerId, function (err, yipanResults) {
       if (err) {
-        console.error("创建椅旁记录失败:", err);
+        console.error("检查椅旁记录失败:", err);
+        return;
+      }
+      
+      if (!yipanResults || yipanResults.length === 0) {
+        // 如果记录不存在，插入新记录
+        const insertYipanSQL = `INSERT INTO yipan (customer_id, customer_name) VALUES (?, ?)`;
+        db.query(insertYipanSQL, [customerId, customer_name], function (err) {
+          if (err) {
+            console.error("创建椅旁记录失败:", err);
+          }
+        });
       }
     });
     
