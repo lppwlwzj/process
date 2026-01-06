@@ -19,7 +19,7 @@ exports.addZhibao = (req, res) => {
     business,
     imgQr
   } = req.body;
-  //   const createtime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+  //   const createtime = moment(new Date()).format("MM-DD HH:mm:ss");
   //   const _designList = JSON.stringify(designList);
   const sql = `insert into zhibao (
     patient,

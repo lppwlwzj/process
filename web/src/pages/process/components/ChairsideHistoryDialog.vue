@@ -88,8 +88,8 @@ const handleExcelDownload = () => {
       序号: index + 1,
       椅旁医生技师: getDoctorName(row.chairside_doctor),
       进度: getProgressLabel(row.progress),
-      开始时间: row.start_time ? dayjs(row.start_time).format('YYYY-MM-DD HH:mm:ss') : '-',
-      结束时间: row.end_time ? dayjs(row.end_time).format('YYYY-MM-DD HH:mm:ss') : '-',
+      开始时间: row.start_time ? dayjs(row.start_time).format('MM-DD HH:mm:ss') : '-',
+      结束时间: row.end_time ? dayjs(row.end_time).format('MM-DD HH:mm:ss') : '-',
       操作时长: formatDuration(row.duration_minutes)
     }))
 
@@ -152,12 +152,12 @@ watch(() => props.visible, (newVal) => {
         </el-table-column>
         <el-table-column prop="start_time" label="开始时间" width="180" align="center">
           <template #default="{ row }">
-            {{ row.start_time ? dayjs(row.start_time).format('YYYY-MM-DD HH:mm:ss') : '-' }}
+            {{ row.start_time ? dayjs(row.start_time).format('MM-DD HH:mm:ss') : '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="end_time" label="结束时间" width="180" align="center">
           <template #default="{ row }">
-            {{ row.end_time ? dayjs(row.end_time).format('YYYY-MM-DD HH:mm:ss') : '-' }}
+            {{ row.end_time ? dayjs(row.end_time).format('MM-DD HH:mm:ss') : '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="duration_minutes" label="操作时长" align="center">

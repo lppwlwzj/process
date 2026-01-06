@@ -88,7 +88,7 @@ const handleExcelDownload = () => {
     const excelData = tableData.value.map((row) => ({
       操作次数: row.operation_count || "-",
       当前进度: getProgressLabel(row.progress),
-      开始时间: row.start_time ? dayjs(row.start_time).format('YYYY-MM-DD HH:mm:ss') : '-',
+      开始时间: row.start_time ? dayjs(row.start_time).format('MM-DD HH:mm:ss') : '-',
       技工师: getTechnicianName(row.technician),
       上次技工师: getTechnicianName(row.previous_technician),
       上次进度: row.previous_progress ? getProgressLabel(row.previous_progress) : "-",
@@ -149,7 +149,7 @@ watch(() => props.visible, (newVal) => {
         </el-table-column>
         <el-table-column prop="start_time" label="开始时间" width="180" align="center">
           <template #default="{ row }">
-            {{ row.start_time ? dayjs(row.start_time).format('YYYY-MM-DD HH:mm:ss') : '-' }}
+            {{ row.start_time ? dayjs(row.start_time).format('MM-DD HH:mm:ss') : '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="technician" label="技工师" width="120" align="center">

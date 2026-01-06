@@ -9,7 +9,7 @@ const db = require("../db/index");
 
 exports.addKehu = (req, res) => {
   const { kehu, dateTime, doctor, proxy, reason, content,imgList } = req.body;
-  const createtime = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+  const createtime = moment(new Date()).format("MM-DD HH:mm:ss");
   const sql = `insert into kehu (
 		    kehu,
         dateTime,

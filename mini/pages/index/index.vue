@@ -12,9 +12,10 @@
     <view class="form-container">
       <view class="customer-header">
         <text class="customer-name">{{ form.customer_name }}</text>
-        <view class="wear-time-info">
-          <text class="wear-time-label">戴牙时间: </text>
-          <text class="wear-time-value">{{ formatDateSimple(form.wear_time) }}</text>
+        <view>
+          <div class="wear-time-label">戴牙时间: </div>
+          <!-- <div class="wear-time-value">10-01</div> -->
+          <div class="wear-time-value">{{ formatDateSimple(form.wear_time) }}</div>
         </view>
       </view>
 
@@ -44,19 +45,17 @@
             <text class="card-arrow">›</text>
           </view>
         </view>
-        <view class="action-card note-card" v-for="(item, index) in getMaterialsList()" :key="index">
+        <!-- <view class="action-card note-card" v-for="(item, index) in getMaterialsList()" :key="index">
           <view class="card-content note-content">
-            <text class="card-label note-label">材料</text>
             <text class="note-value" :class="{ 'note-empty': !item.material }">
               {{ getMaterialLabel(item.material) || '暂无材料' }}
             </text>
           </view>
           <view class="card-content note-content" style="margin-top: 8px;">
-            <text class="card-label note-label">数量</text>
             <text class="note-value" :class="{ 'note-empty': !item.quantity }">{{ item.quantity || '暂无数量' }}颗</text>
           </view>
-        </view>
-        <view class="action-card note-card" v-if="getMaterialsList().length === 0">
+        </view> -->
+        <!--    <view class="action-card note-card" v-if="getMaterialsList().length === 0">
           <view class="card-content note-content">
             <text class="card-label note-label">材料</text>
             <text class="note-value note-empty">暂无材料</text>
@@ -65,7 +64,7 @@
             <text class="card-label note-label">数量</text>
             <text class="note-value note-empty">暂无数量</text>
           </view>
-        </view>
+        </view> -->
 
         <view class="action-card" @click="handleStart"
           :class="{ disabled: !form.progress || !form.technician || form.progress === 'not_started' }">
@@ -500,7 +499,10 @@ export default {
 
     formatDateSimple(dateStr) {
       if (!dateStr) return '';
-      return moment(dateStr).format('YYYY-MM-DD');
+	  const chinese = moment(dateStr)
+	                    .format('MM-DD')          // 先拿到 “10-01”
+	                    .replace(/(\d+)-(\d+)/, '$1月$2号'); // → “10月01号”
+						return chinese;
     },
 
     previewImage() {

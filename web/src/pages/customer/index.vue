@@ -337,12 +337,12 @@ onMounted(() => {
           </el-table-column>
           <el-table-column prop="wear_time" label="戴牙时间" width="110" align="center">
             <template #default="{ row }">
-              {{ dayjs(row.wear_time).format('YYYY-MM-DD') }}
+              {{ dayjs(row.wear_time).format('MM-DD') }}
             </template>
           </el-table-column>
           <el-table-column prop="preparation_time" label="备牙时间" width="120" align="center">
             <template #default="{ row }">
-              {{ row.preparation_time ? dayjs(row.preparation_time).format('YYYY-MM-DD') : '-' }}
+              {{ row.preparation_time ? dayjs(row.preparation_time).format('MM-DD') : '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="doctor" label="医生" width="90" align="center" />
@@ -418,15 +418,15 @@ onMounted(() => {
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="备牙时间" prop="wear_time">
-              <el-date-picker v-model="formData.preparation_time" type="date" placeholder="选择日期" format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD" style="width: 100%" />
+              <el-date-picker v-model="formData.preparation_time" type="date" placeholder="选择日期" format="MM-DD"
+                value-format="MM-DD" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="截牙时间" prop="wear_time">
               <el-date-picker v-model="formData.wear_time" type="date" placeholder="选择日期"
-format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD" style="width: 100%" />
+format="MM-DD"
+                value-format="MM-DD" style="width: 100%" />
             </el-form-item>
           </el-col>
         </el-row>

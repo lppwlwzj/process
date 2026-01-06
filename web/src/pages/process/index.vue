@@ -351,12 +351,12 @@ onMounted(() => {
           <el-table-column prop="customer_name" label="客户名称" align="center" />
           <el-table-column prop="wear_time" label="戴牙时间" align="center">
             <template #default="{ row }">
-              {{ row.wear_time ? dayjs(row.wear_time).format('YYYY-MM-DD') : '-' }}
+              {{ row.wear_time ? dayjs(row.wear_time).format('MM-DD') : '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="preparation_time" label="备牙时间" align="center">
             <template #default="{ row }">
-              {{ row.preparation_time ? dayjs(row.preparation_time).format('YYYY-MM-DD') : '-' }}
+              {{ row.preparation_time ? dayjs(row.preparation_time).format('MM-DD') : '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="progress" label="进度" align="center">
@@ -456,7 +456,7 @@ onMounted(() => {
           <el-col :span="12">
             <el-form-item label="戴牙时间" prop="wear_time">
               <el-date-picker v-model="formData.wear_time" type="date" placeholder="请选择戴牙时间" style="width: 100%"
-                value-format="YYYY-MM-DD" />
+                value-format="MM-DD" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -508,13 +508,13 @@ onMounted(() => {
           <el-col :span="12">
             <el-form-item label="开始椅旁时间" prop="start_chairside_time">
               <el-date-picker v-model="formData.start_chairside_time" type="datetime" placeholder="请选择开始椅旁时间"
-                style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" />
+                style="width: 100%" value-format="MM-DD HH:mm:ss" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="完成椅旁时间" prop="complete_chairside_time">
               <el-date-picker v-model="formData.complete_chairside_time" type="datetime" placeholder="请选择完成椅旁时间"
-                style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" />
+                style="width: 100%" value-format="MM-DD HH:mm:ss" />
             </el-form-item>
           </el-col>
         </el-row>
