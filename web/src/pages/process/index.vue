@@ -1,14 +1,13 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
-import { VideoPlay } from "@element-plus/icons-vue"
+import { VideoPlay, Search, Refresh, Delete, Upload } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
-import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi } from "@@/apis/process"
+import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateTechnicianVideoApi, updateChairsideVideoApi, updateWebVideoApi, uploadFileApi } from "@@/apis/process"
 import { getUserListApi } from "@@/apis/users"
 import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
 import ChairsideHistoryDialog from "./components/ChairsideHistoryDialog.vue"
 import type { FormInstance, FormRules } from "element-plus"
-import dayjs from 'dayjs'
 import { progressOptions, materialOptions } from "./constant"
 
 interface UserData {
@@ -25,6 +24,7 @@ interface MaterialItem {
 
 interface ProcessData {
   id: number
+  customer_id?: number
   customer_name: string
   wear_time: string
   progress: string
@@ -34,10 +34,12 @@ interface ProcessData {
   quantity?: string | number
   image?: string
   remark?: string
+  customer_remark?: string
   technician_audio?: string
   technician_video?: string
   chairside_audio?: string
   chairside_video?: string
+  web_video?: string
   start_chairside_time?: string
   complete_chairside_time?: string
   chairside_doctor?: string
@@ -50,11 +52,13 @@ const loading = ref(false)
 const { paginationData, handleCurrentChange: baseHandleCurrentChange, handleSizeChange: baseHandleSizeChange } = usePagination()
 
 const tableData = ref<ProcessData[]>([])
+const selectedRows = ref<ProcessData[]>([])
 const searchFormRef = ref()
 const searchData = reactive({
   customer_name: "",
   progress: "",
-  technician: ""
+  technician: "",
+  remark: ""
 })
 
 const dialogVisible = ref(false)
@@ -104,7 +108,8 @@ const getTableData = async () => {
       pageSize: paginationData.pageSize,
       customer_name: searchData.customer_name,
       progress: searchData.progress,
-      technician: searchData.technician
+      technician: searchData.technician,
+      remark: searchData.remark
     })
     if (res.re) {
       tableData.value = res.re.list
@@ -200,6 +205,38 @@ const handleDelete = async (row: ProcessData) => {
     } catch (error) {
       console.error("删除客户进度失败:", error)
       ElMessage.error("删除客户进度失败")
+    } finally {
+      loading.value = false
+    }
+  })
+}
+
+const handleSelectionChange = (selection: ProcessData[]) => {
+  selectedRows.value = selection
+}
+
+const handleBatchDelete = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning("请选择要删除的记录")
+    return
+  }
+
+  const customerNames = selectedRows.value.map(row => row.customer_name).join("、")
+  ElMessageBox.confirm(`确认删除 ${selectedRows.value.length} 条客户进度记录：${customerNames}？`, "批量删除", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(async () => {
+    try {
+      loading.value = true
+      const ids = selectedRows.value.map(row => row.id)
+      await batchDeleteProcessApi(ids)
+      ElMessage.success(`成功删除 ${selectedRows.value.length} 条记录`)
+      selectedRows.value = []
+      getTableData()
+    } catch (error) {
+      console.error("批量删除客户进度失败:", error)
+      ElMessage.error("批量删除客户进度失败")
     } finally {
       loading.value = false
     }
@@ -306,6 +343,218 @@ const handlePlayVideo = (videoUrl: string) => {
   videoDialogVisible.value = true
 }
 
+const appendVideoToUrlList = (currentVideos: string, newVideoUrl: string): string => {
+  if (!currentVideos) return newVideoUrl
+  const videoList = getVideoList(currentVideos)
+  videoList.push(newVideoUrl)
+  return videoList.join(',')
+}
+
+const removeVideoFromUrlList = (currentVideos: string, videoUrlToRemove: string, index: number): string => {
+  if (!currentVideos) return ""
+  const videoList = getVideoList(currentVideos);
+  videoList.splice(index, 1)
+  console.log("videoList-->", videoList)
+  return videoList.join(',')
+}
+
+const handleUploadWebVideo = async (row: ProcessData, file: File) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
+
+  const customerId = row.customer_id
+  try {
+    loading.value = true
+    const uploadRes = await uploadFileApi(file, customerId)
+    if (uploadRes.code === 0 && uploadRes.re?.img_url) {
+      const newVideoUrl = uploadRes.re.img_url
+      const currentVideos = row.web_video || ""
+      const updatedVideos = appendVideoToUrlList(currentVideos, newVideoUrl)
+
+      await updateWebVideoApi({
+        customer_id: customerId,
+        web_video: updatedVideos
+      })
+
+      ElMessage.success("上传成功")
+      getTableData()
+    } else {
+      ElMessage.error(uploadRes.message || "上传失败")
+    }
+  } catch (error) {
+    console.error("上传视频失败:", error)
+    ElMessage.error("上传视频失败")
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleUploadTechnicianVideo = async (row: ProcessData, file: File) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
+
+  const customerId = row.customer_id
+  try {
+    loading.value = true
+    const uploadRes = await uploadFileApi(file, customerId)
+    if (uploadRes.code === 0 && uploadRes.re?.img_url) {
+      const newVideoUrl = uploadRes.re.img_url
+      const currentVideos = row.technician_video || ""
+      const updatedVideos = appendVideoToUrlList(currentVideos, newVideoUrl)
+
+      await updateTechnicianVideoApi({
+        customer_id: customerId,
+        technician_video: updatedVideos
+      })
+
+      ElMessage.success("上传成功")
+      getTableData()
+    } else {
+      ElMessage.error(uploadRes.message || "上传失败")
+    }
+  } catch (error) {
+    console.error("上传进度视频失败:", error)
+    ElMessage.error("上传进度视频失败")
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleUploadChairsideVideo = async (row: ProcessData, file: File) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
+
+  const customerId = row.customer_id
+  try {
+    loading.value = true
+    const uploadRes = await uploadFileApi(file, customerId)
+    if (uploadRes.code === 0 && uploadRes.re?.img_url) {
+      const newVideoUrl = uploadRes.re.img_url
+      const currentVideos = row.chairside_video || ""
+      const updatedVideos = appendVideoToUrlList(currentVideos, newVideoUrl)
+
+      await updateChairsideVideoApi({
+        customer_id: customerId,
+        chairside_video: updatedVideos
+      })
+
+      ElMessage.success("上传成功")
+      getTableData()
+    } else {
+      ElMessage.error(uploadRes.message || "上传失败")
+    }
+  } catch (error) {
+    console.error("上传椅旁视频失败:", error)
+    ElMessage.error("上传椅旁视频失败")
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleDeleteTechnicianVideo = async (row: ProcessData, videoUrl: string, index: number) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
+
+  const customerId = row.customer_id
+  ElMessageBox.confirm("确认删除该视频？", "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(async () => {
+    try {
+      loading.value = true
+      const currentVideos = row.technician_video || ""
+      const updatedVideos = removeVideoFromUrlList(currentVideos, videoUrl, index);
+      await updateTechnicianVideoApi({
+        customer_id: customerId,
+        technician_video: updatedVideos
+      })
+
+      ElMessage.success("删除成功")
+      getTableData()
+    } catch (error) {
+      console.error("删除进度视频失败:", error)
+      ElMessage.error("删除进度视频失败")
+    } finally {
+      loading.value = false
+    }
+  })
+}
+
+const handleDeleteWebVideo = async (row: ProcessData, videoUrl: string, index: number) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
+
+  const customerId = row.customer_id
+  ElMessageBox.confirm("确认删除该视频？", "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(async () => {
+    try {
+      loading.value = true
+      const currentVideos = row.web_video || ""
+      const updatedVideos = removeVideoFromUrlList(currentVideos, videoUrl, index)
+
+      await updateWebVideoApi({
+        customer_id: customerId,
+        web_video: updatedVideos
+      })
+
+      ElMessage.success("删除成功")
+      getTableData()
+    } catch (error) {
+      console.error("删除视频失败:", error)
+      ElMessage.error("删除视频失败")
+    } finally {
+      loading.value = false
+    }
+  })
+}
+
+const handleDeleteChairsideVideo = async (row: ProcessData, videoUrl: string, index: number) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
+
+  const customerId = row.customer_id
+  ElMessageBox.confirm("确认删除该视频？", "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(async () => {
+    try {
+      loading.value = true
+      const currentVideos = row.chairside_video || ""
+      const updatedVideos = removeVideoFromUrlList(currentVideos, videoUrl, index)
+
+      await updateChairsideVideoApi({
+        customer_id: customerId,
+        chairside_video: updatedVideos
+      })
+
+      ElMessage.success("删除成功")
+      getTableData()
+    } catch (error) {
+      console.error("删除椅旁视频失败:", error)
+      ElMessage.error("删除椅旁视频失败")
+    } finally {
+      loading.value = false
+    }
+  })
+}
+
 
 
 onMounted(() => {
@@ -333,6 +582,9 @@ onMounted(() => {
             <el-option v-for="item in technicianOptions" :key="item" :label="item" :value="item" />
           </el-select>
         </el-form-item>
+        <el-form-item prop="remark" label="备注">
+          <el-input v-model="searchData.remark" placeholder="请输入备注" />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
@@ -340,30 +592,61 @@ onMounted(() => {
       </el-form>
     </el-card> -->
     <el-card shadow="never">
-      <!-- <div class="toolbar-wrapper">
+      <div class="toolbar-wrapper">
         <div>
-          <el-button type="primary" :icon="CirclePlus" @click="handleCreate">新增客户进度</el-button>
+          <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchDelete">
+            批量删除 ({{ selectedRows.length }})
+          </el-button>
         </div>
-      </div> -->
+      </div>
       <div class="table-wrapper">
-        <el-table :data="tableData" v-loading="loading">
-          <el-table-column prop="id" label="ID" width="80" align="center" />
-          <el-table-column prop="customer_name" label="客户名称" align="center" />
-          <el-table-column prop="wear_time" label="戴牙时间" align="center">
-            <template #default="{ row }">
-              {{ row.wear_time ? dayjs(row.wear_time).format('MM-DD') : '-' }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="preparation_time" label="备牙时间" align="center">
-            <template #default="{ row }">
-              {{ row.preparation_time ? dayjs(row.preparation_time).format('MM-DD') : '-' }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="progress" label="进度" align="center">
+        <el-table :data="tableData" v-loading="loading" @selection-change="handleSelectionChange">
+          <el-table-column type="selection" width="45" align="center" fixed="left" />
+          <!-- <el-table-column prop="id" label="ID" width="60" align="center" fixed="left" /> -->
+          <el-table-column prop="customer_name" label="客户名称" align="center" fixed="left" />
+          <el-table-column prop="progress" label="进度" align="center" fixed="left">
             <template #default="{ row }">
               <el-tag :type="getProgressType(row.progress)">{{ getProgressLabel(row.progress) }}</el-tag>
             </template>
           </el-table-column>
+          <el-table-column prop="wear_time" label="戴牙时间" align="center" fixed="left">
+            <template #default="{ row }">
+              {{ row.wear_time ? row.wear_time : '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="remark" label="备注" min-width="180" align="left">
+            <template #default="{ row }">
+              <span v-if="row.remark" style="white-space: normal; word-break: break-word;">{{ row.remark }}</span>
+              <span v-else-if="row.customer_remark" style="white-space: normal; word-break: break-word;">{{
+                row.customer_remark }}</span>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="web_video" label="视频" min-width="280" align="left">
+            <template #default="{ row }">
+              <div v-if="row.web_video"
+                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
+                <div v-for="(videoUrl, index) in getVideoList(row.web_video)" :key="index"
+                  style="display: flex; align-items: center; gap: 4px;">
+                  <el-button type="primary" size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
+                    <el-icon style="margin-right: 0px;">
+                      <VideoPlay />
+                    </el-icon>
+                    {{ index + 1 }}
+                  </el-button>
+                  <el-button type="danger" size="small" :icon="Delete" circle
+                    @click="handleDeleteWebVideo(row, videoUrl, index)" style="padding: 4px;" />
+                </div>
+              </div>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="preparation_time" label="备牙时间" align="center">
+            <template #default="{ row }">
+              {{ row.preparation_time ? row.preparation_time : '-' }}
+            </template>
+          </el-table-column>
+
           <el-table-column prop="technician" label="技工师" align="center" />
           <el-table-column prop="chairside_doctor" label="椅旁医生" align="center" />
           <el-table-column prop="materials" label="材料与数量" min-width="250" align="center">
@@ -397,43 +680,81 @@ onMounted(() => {
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="technician_video" label="进度视频" width="150" align="center">
+
+          <el-table-column prop="web_video" label="视频" min-width="280" align="left">
+            <template #default="{ row }">
+              <div v-if="row.web_video"
+                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
+                <div v-for="(videoUrl, index) in getVideoList(row.web_video)" :key="index"
+                  style="display: flex; align-items: center; gap: 4px;">
+                  <el-button type="primary" size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
+                    <el-icon style="margin-right: 0px;">
+                      <VideoPlay />
+                    </el-icon>
+                    {{ index + 1 }}
+                  </el-button>
+                  <el-button type="danger" size="small" :icon="Delete" circle
+                    @click="handleDeleteWebVideo(row, videoUrl, index)" style="padding: 4px;" />
+                </div>
+              </div>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="technician_video" label="进度视频" min-width="280" align="left">
             <template #default="{ row }">
               <div v-if="row.technician_video"
-                style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
-                <el-button v-for="(videoUrl, index) in getVideoList(row.technician_video)" :key="index" type="primary"
-                  size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
-                  <el-icon style="margin-right: 2px;">
-                    <VideoPlay />
-                  </el-icon>
-                  {{ index + 1 }}
-                </el-button>
+                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
+                <div v-for="(videoUrl, index) in getVideoList(row.technician_video)" :key="index"
+                  style="display: flex; align-items: center; gap: 4px;">
+                  <el-button type="primary" size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
+                    <el-icon style="margin-right: 0px;">
+                      <VideoPlay />
+                    </el-icon>
+                    {{ index + 1 }}
+                  </el-button>
+                  <el-button type="danger" size="small" :icon="Delete" circle
+                    @click="handleDeleteTechnicianVideo(row, videoUrl, index)" style="padding: 4px;" />
+                </div>
               </div>
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="chairside_video" label="椅旁视频" width="150" align="center">
+          <el-table-column prop="chairside_video" label="椅旁视频" min-width="270" align="left">
             <template #default="{ row }">
               <div v-if="row.chairside_video"
-                style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
-                <el-button v-for="(videoUrl, index) in getVideoList(row.chairside_video)" :key="index" type="primary"
-                  size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
-                  <el-icon style="margin-right: 2px;">
-                    <VideoPlay />
-                  </el-icon>
-                  {{ index + 1 }}
-                </el-button>
+                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
+                <div v-for="(videoUrl, index) in getVideoList(row.chairside_video)" :key="index"
+                  style="display: flex; align-items: center; gap: 4px;">
+                  <el-button type="primary" size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
+                    <el-icon style="margin-right: 0px;">
+                      <VideoPlay />
+                    </el-icon>
+                    {{ index + 1 }}
+                  </el-button>
+                  <el-button type="danger" size="small" :icon="Delete" circle
+                    @click="handleDeleteChairsideVideo(row, videoUrl, index)" style="padding: 4px;" />
+                </div>
               </div>
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="240" align="center">
-            <template #default="{ row }">
-              <el-button type="primary" text size="small" @click="handleProgressRecord(row)">进度记录</el-button>
-              <el-button type="primary" text size="small" @click="handleChairsideRecord(row)">椅旁记录</el-button>
 
-              <!-- <el-button type="primary" text size="small" @click="handleUpdate(row)">编辑</el-button> -->
-              <el-button type="danger" text size="small" @click="handleDelete(row)">删除</el-button>
+          <el-table-column label="操作" width="210" align="center">
+            <template #default="{ row }">
+              <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                <div style="display: flex; gap: 4px;">
+                  <el-button type="primary" text size="small" @click="handleProgressRecord(row)">进度记录</el-button>
+                  <el-button type="primary" text size="small" @click="handleChairsideRecord(row)">椅旁记录</el-button>
+                </div>
+                <div style="display: flex; gap: 4px;">
+                  <el-upload :show-file-list="false"
+                    :before-upload="(file) => { handleUploadWebVideo(row, file); return false; }" accept="video/mp4"
+                    style="display: inline-block;">
+                    <el-button type="success" text size="small" :icon="Upload">上传视频</el-button>
+                  </el-upload>
+                </div>
+                <el-button type="danger" text size="small" @click="handleDelete(row)">删除</el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>

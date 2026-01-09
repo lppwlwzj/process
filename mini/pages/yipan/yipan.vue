@@ -74,6 +74,11 @@
           <view class="btn-text">上传视频</view>
         </button>
       </view>
+      <!-- <view class="action-card note-card full-width-card">
+        <view class="card-content note-content">
+          <video-list label="椅旁视频" :videos="form.chairside_video || ''"></video-list>
+        </view>
+      </view> -->
     </view>
 
     <view class="yipan-button-container">
@@ -88,7 +93,12 @@
 </template>
 
 <script>
+import VideoList from '../../components/video-list.vue';
+
 export default {
+  components: {
+    VideoList
+  },
   data() {
     return {
       statusBarHeight: +(+uni.getSystemInfoSync().statusBarHeight + 10) + "px",

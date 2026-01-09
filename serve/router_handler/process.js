@@ -1,10 +1,12 @@
 const db = require('../db/index')
 
 exports.list = (req, res) => {
-  const { customer_name, progress, technician, currentPage = 1, pageSize = 10 } = req.body;
+  const { customer_name, progress, technician, remark, currentPage = 1, pageSize = 10 } = req.body;
   let sql = `SELECT 
     cp.*,
     c.materials,
+    c.preparation_time,
+    c.remark as customer_remark,
     y.edge_seating,
     y.occlusion_status,
     y.chairside_video
@@ -26,13 +28,17 @@ exports.list = (req, res) => {
     sql += ` AND cp.technician = ?`;
     params.push(technician);
   }
+  if (remark) {
+    sql += ` AND (cp.remark LIKE ? OR c.remark LIKE ?)`;
+    params.push(`%${remark}%`, `%${remark}%`);
+  }
 
   const countSql = `SELECT COUNT(*) as total FROM (${sql}) as temp`;
   db.query(countSql, params, (err, countResults) => {
     if (err) return res.cc(err);
     const total = countResults[0].total;
 
-    sql += ` ORDER BY cp.created_at DESC LIMIT ?, ?`;
+    sql += ` ORDER BY cp.wear_time IS NULL, cp.wear_time ASC LIMIT ?, ?`;
     params.push((currentPage - 1) * pageSize, pageSize);
 
     db.query(sql, params, (err, results) => {
@@ -204,6 +210,27 @@ exports.delete = (req, res) => {
   });
 };
 
+exports.batchDelete = (req, res) => {
+  const { ids } = req.body;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.cc("缺少客户进度ID列表！");
+  }
+
+  const placeholders = ids.map(() => '?').join(',');
+  const sql = `DELETE FROM customer_process WHERE id IN (${placeholders})`;
+  
+  db.query(sql, ids, (err, results) => {
+    if (err) return res.cc(err);
+    if (results.affectedRows === 0) return res.cc("删除客户进度失败！");
+
+    res.send({
+      code: 0,
+      message: `成功删除 ${results.affectedRows} 条记录！`,
+      re: null
+    });
+  });
+};
+
 exports.detail = (req, res) => {
   const { id } = req.body;
   if (!id) return res.cc("缺少客户ID！");
@@ -224,6 +251,7 @@ exports.detail = (req, res) => {
       cp.technician,
       cp.remark,
       cp.technician_audio,
+      cp.web_video,
       cp.technician_video,
       cp.created_at as process_created_at,
       cp.updated_at as process_updated_at,
@@ -274,7 +302,7 @@ exports.updateTechnicianVideo = (req, res) => {
   const { customer_id, technician_video } = req.body;
   
   if (!customer_id) return res.cc("缺少客户ID！");
-  if (!technician_video) return res.cc("缺少视频URL！");
+  if (technician_video === undefined || technician_video === null) return res.cc("缺少视频URL！");
   
   const checkSql = `SELECT id, customer_name FROM customer_process WHERE customer_id=? LIMIT 1`;
   
@@ -312,3 +340,44 @@ exports.updateTechnicianVideo = (req, res) => {
   });
 };
 
+exports.updateWebVideo = (req, res) => {
+  const { customer_id, web_video } = req.body;
+  
+  if (!customer_id) return res.cc("缺少客户ID！");
+  if (web_video === undefined || web_video === null) return res.cc("缺少视频URL！");
+  
+  const checkSql = `SELECT id, customer_name FROM customer_process WHERE customer_id=? LIMIT 1`;
+  
+  db.query(checkSql, [customer_id], (err, results) => {
+    if (err) return res.cc(err);
+    
+    if (results.length > 0) {
+      const updateSql = `UPDATE customer_process SET web_video=? WHERE customer_id=?`;
+      db.query(updateSql, [web_video, customer_id], (err, updateResults) => {
+        if (err) return res.cc(err);
+        res.send({
+          code: 0,
+          message: "更新视频成功！",
+          re: null
+        });
+      });
+    } else {
+      const getCustomerSql = `SELECT customer_name FROM customer WHERE id=? LIMIT 1`;
+      db.query(getCustomerSql, [customer_id], (err, customerResults) => {
+        if (err) return res.cc(err);
+        if (customerResults.length === 0) return res.cc("客户不存在！");
+        
+        const customer_name = customerResults[0].customer_name;
+        const insertSql = `INSERT INTO customer_process (customer_id, customer_name, progress, web_video) VALUES (?, ?, ?, ?)`;
+        db.query(insertSql, [customer_id, customer_name, 'not_started', web_video], (err, insertResults) => {
+          if (err) return res.cc(err);
+          res.send({
+            code: 0,
+            message: "保存视频成功！",
+            re: null
+          });
+        });
+      });
+    }
+  });
+};

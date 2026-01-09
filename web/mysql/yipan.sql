@@ -10,7 +10,7 @@ CREATE TABLE `yipan` (
   `edge_seating` tinyint(1) DEFAULT NULL COMMENT '边缘是否就位（0-未就位，1-已就位）',
   `occlusion_status` tinyint(1) DEFAULT NULL COMMENT '咬合是否正常（0-不正常，1-正常）',
   `chairside_audio` varchar(255) DEFAULT NULL COMMENT '椅旁录音URL',
-  `chairside_video` varchar(255) DEFAULT NULL COMMENT '椅旁视频URL',
+  `chairside_video` TEXT DEFAULT NULL COMMENT '椅旁视频URL',
   `start_time` datetime DEFAULT NULL COMMENT '开始椅旁时间（有值表示正在进行椅旁操作）',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

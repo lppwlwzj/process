@@ -3,7 +3,7 @@ import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { CirclePlus, Edit, Delete, VideoPlay } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
-import { getCustomerListApi, createCustomerApi, updateCustomerApi, deleteCustomerApi, generateQrCodeApi } from "@@/apis/customers"
+import { getCustomerListApi, createCustomerApi, updateCustomerApi, deleteCustomerApi, batchDeleteCustomerApi, generateQrCodeApi } from "@@/apis/customers"
 import type { FormInstance, FormRules } from "element-plus"
 import dayjs from "dayjs"
 import { materialOptions } from "../process/constant"
@@ -33,6 +33,7 @@ const { paginationData, handleCurrentChange: baseHandleCurrentChange, handleSize
 
 const allTableData = ref<CustomerData[]>([])
 const tableData = ref<CustomerData[]>([])
+const selectedRows = ref<CustomerData[]>([])
 const searchFormRef = ref()
 const searchData = reactive({
   customer_name: "",
@@ -44,6 +45,8 @@ const dialogVisible = ref(false)
 const dialogTitle = ref("")
 const videoDialogVisible = ref(false)
 const currentVideoUrl = ref("")
+const imageDialogVisible = ref(false)
+const currentImageUrl = ref("")
 const formRef = ref<FormInstance>()
 const formData = reactive<CustomerData>({
   id: 0,
@@ -172,7 +175,6 @@ const handleConfirm = async () => {
           loading.value = false
           return
         }
-
         // 创建提交数据副本
         const submitData = {
           ...formData,
@@ -213,6 +215,38 @@ const handleDelete = async (row: CustomerData) => {
     } catch (error) {
       console.error("删除客户失败:", error)
       ElMessage.error("删除客户失败")
+    } finally {
+      loading.value = false
+    }
+  })
+}
+
+const handleSelectionChange = (selection: CustomerData[]) => {
+  selectedRows.value = selection
+}
+
+const handleBatchDelete = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning("请选择要删除的记录")
+    return
+  }
+
+  const customerNames = selectedRows.value.map(row => row.customer_name).join("、")
+  ElMessageBox.confirm(`确认删除 ${selectedRows.value.length} 条客户记录：${customerNames}？`, "批量删除", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(async () => {
+    try {
+      loading.value = true
+      const ids = selectedRows.value.map(row => row.id)
+      await batchDeleteCustomerApi(ids)
+      ElMessage.success(`成功删除 ${selectedRows.value.length} 条记录`)
+      selectedRows.value = []
+      getTableData()
+    } catch (error) {
+      console.error("批量删除客户失败:", error)
+      ElMessage.error("批量删除客户失败")
     } finally {
       loading.value = false
     }
@@ -290,6 +324,15 @@ const handlePlayVideo = (row: CustomerData) => {
   videoDialogVisible.value = true
 }
 
+const handleViewImage = (imageUrl: string) => {
+  if (!imageUrl) {
+    ElMessage.warning("暂无图片")
+    return
+  }
+  currentImageUrl.value = imageUrl
+  imageDialogVisible.value = true
+}
+
 onMounted(() => {
   getTableData()
 })
@@ -323,26 +366,33 @@ onMounted(() => {
 
     <el-card shadow="never">
       <div class="toolbar-wrapper">
-        <el-button type="primary" :icon="CirclePlus" @click="handleCreate">新增客户</el-button>
+        <div>
+          <el-button type="primary" :icon="CirclePlus" @click="handleCreate">新增客户</el-button>
+          <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchDelete"
+            style="margin-left: 10px;">
+            批量删除 ({{ selectedRows.length }})
+          </el-button>
+        </div>
       </div>
 
       <div class="table-wrapper">
-        <el-table :data="tableData" v-loading="loading" stripe>
+        <el-table :data="tableData" v-loading="loading" stripe @selection-change="handleSelectionChange">
+          <el-table-column type="selection" width="45" align="center" />
           <el-table-column prop="id" label="ID" width="60" align="center" />
           <el-table-column prop="customer_name" label="客户姓名" width="100" align="center" />
-          <el-table-column prop="technician" label="阶段进度" width="110" align="center">
+          <!-- <el-table-column prop="technician" label="阶段进度" width="110" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.technician" :type="getStageType(row.technician) || undefined">{{ row.technician }}</el-tag>
             </template>
-          </el-table-column>
+          </el-table-column> -->
           <el-table-column prop="wear_time" label="戴牙时间" width="110" align="center">
             <template #default="{ row }">
-              {{ dayjs(row.wear_time).format('MM-DD') }}
+              {{ row.wear_time ? row.wear_time : '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="preparation_time" label="备牙时间" width="120" align="center">
             <template #default="{ row }">
-              {{ row.preparation_time ? dayjs(row.preparation_time).format('MM-DD') : '-' }}
+              {{ row.preparation_time ? row.preparation_time : '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="doctor" label="医生" width="90" align="center" />
@@ -358,7 +408,8 @@ onMounted(() => {
           </el-table-column>
           <el-table-column prop="qr_code" label="二维码" width="120" align="center">
             <template #default="{ row }">
-              <el-image v-if="row.qr_code" :src="row.qr_code" style="width: 50px; height: 50px;" />
+              <el-image v-if="row.qr_code" :src="row.qr_code" style="width: 50px; height: 50px; cursor: pointer;"
+                @click="handleViewImage(row.qr_code)" />
               <el-button v-else type="primary" size="small" @click="handleGenerateQrCode(row)">生成</el-button>
             </template>
           </el-table-column>
@@ -460,6 +511,12 @@ format="MM-DD"
     <el-dialog v-model="videoDialogVisible" title="视频播放" width="800px" @close="videoDialogVisible = false">
       <div style="display: flex; justify-content: center; align-items: center; min-height: 400px;">
         <video v-if="currentVideoUrl" :src="currentVideoUrl" controls style="width: 100%; max-height: 600px;" />
+      </div>
+    </el-dialog>
+    <el-dialog v-model="imageDialogVisible" title="图片预览" width="800px" @close="imageDialogVisible = false">
+      <div style="display: flex; justify-content: center; align-items: center; min-height: 400px;">
+        <img v-if="currentImageUrl" :src="currentImageUrl"
+          style="max-width: 100%; max-height: 600px; object-fit: contain;" />
       </div>
     </el-dialog>
   </div>

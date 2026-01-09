@@ -6,6 +6,7 @@ router.post('/list', customer_handler.list)
 router.post('/create', customer_handler.create)
 router.post('/update', customer_handler.update)
 router.post('/delete', customer_handler.delete)
+router.post('/batchDelete', customer_handler.batchDelete)
 router.post('/detail', customer_handler.detail)
 
 module.exports = router

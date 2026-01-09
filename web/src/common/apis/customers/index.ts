@@ -35,6 +35,15 @@ export function deleteCustomerApi(id: number) {
   })
 }
 
+/** 批量删除客户 */
+export function batchDeleteCustomerApi(ids: number[]) {
+  return request<any>({
+    url: "customer/batchDelete",
+    method: "post",
+    data: { ids }
+  })
+}
+
 /** 获取客户详情 */
 export function getCustomerDetailApi(id: number) {
   return request<any>({

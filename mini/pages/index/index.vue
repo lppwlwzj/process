@@ -5,7 +5,7 @@
 
     <view class="preparation-time">
       <text class="preparation-time-text">备牙时间:{{
-  form.preparation_time
+  formatDateSimple(form.preparation_time)
         }}</text>
     </view>
 
@@ -15,7 +15,7 @@
         <view>
           <div class="wear-time-label">戴牙时间: </div>
           <!-- <div class="wear-time-value">10-01</div> -->
-          <div class="wear-time-value">{{ form.wear_time }}</div>
+          <div class="wear-time-value">{{ formatDateSimple(form.wear_time) }}</div>
         </view>
       </view>
 
@@ -91,9 +91,15 @@
 
         <view class="action-card note-card full-width-card">
           <view class="card-content note-content">
-            <text class="card-label note-label">备注</text>
+            <text class="card-label note-label">文字备注</text>
             <text class="note-value" :class="{ 'note-empty': !form.customer_note }">{{ form.customer_note || '暂无备注'
               }}</text>
+          </view>
+
+        </view>
+        <view class="action-card note-card full-width-card">
+          <view class="card-content note-content">
+            <video-list label="视频备注" :videos="form.web_video || ''"></video-list>
           </view>
         </view>
         <!-- 
@@ -141,22 +147,27 @@
 </template>
 
 <script>
-import moment from 'moment';
+import VideoList from '../../components/video-list.vue';
+
 export const materialOptions = [
   { value: "guochan_quancitiemin", label: "国产全瓷贴面" },
+  { value: "derendun_zhugongzhuguangci", label: "德国进口珠光瓷" },
+  { value: "deguo_weilan_lengchaici", label: "欧洲进口冷釉瓷" },
+  { value: "delanxi_quanshougongchaobaocaigao", label: "］欧洲进口全手工超薄彩锆" },
+  { value: "ruishiweidian_candianci", label: "瑞典进口睿典瓷" },
   { value: "deguo_aidisiteyanghuagao", label: "德国爱迪特氧化锆" },
   { value: "deguo_weilandeyanghuagao", label: "德国威兰德氧化锆" },
   { value: "meiguo_shidan_lawawayanghuagao", label: "美国3M拉瓦氧化锆" },
-  { value: "derendun_zhugongzhuguangci", label: "德国以色列珠光瓷" },
-  { value: "deguo_weilan_lengchaici", label: "德国威兰冷釉瓷" },
-  { value: "delanxi_quanshougongchaobaocaigao", label: "德兰希全手工超薄彩锆" },
-  { value: "quanshougongdalilavayanghuagao", label: "全手工大立lava氧化锆" },
-  { value: "ruishiweidian_shidiancandianshuibozhanciyanghuagao", label: "瑞士维典睿典水波钻瓷氧化锆" },
-  { value: "ruishiweidian_candianci", label: "瑞士维典睿典瓷" }
+  { value: "quanshougongdalilavayanghuagao", label: "全手工人工定制lava氧化锆" },
+  { value: "ruishiweidian_shidiancandianshuibozhanciyanghuagao", label: "独家定制睿典水波钻瓷氧化锆" }
 ]
 
 
+
 export default {
+  components: {
+    VideoList
+  },
   data() {
     return {
       statusBarHeight: +(+uni.getSystemInfoSync().statusBarHeight + 10) + "px",
@@ -169,6 +180,7 @@ export default {
         wear_time: "",
         customer_note: "",
         technician_video: "",
+        web_video: "",
         preparation_time: "",
         progress: "",
         technician: "",
@@ -499,10 +511,13 @@ export default {
 
     formatDateSimple(dateStr) {
       if (!dateStr) return '';
-      const chinese = moment(dateStr)
-        .format('MM-DD')          // 先拿到 “10-01”
-        .replace(/(\d+)-(\d+)/, '$1月$2号'); // → “10月01号”
-      return chinese;
+      const date = dateStr.split('-');
+      if (!date.length) return '';
+      return `${date[0]}月${date[1]}号`;
+      // const chinese = moment(dateStr)
+      //   .format('MM-DD')          // 先拿到 “10-01”
+      //   .replace(/(\d+)-(\d+)/, '$1月$2号'); // → “10月01号”
+      // return chinese;
     },
 
     previewImage() {

@@ -185,6 +185,27 @@ exports.delete = (req, res) => {
   });
 };
 
+exports.batchDelete = (req, res) => {
+  const { ids } = req.body;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.cc("缺少客户ID列表！");
+  }
+
+  const placeholders = ids.map(() => '?').join(',');
+  const sql = `DELETE FROM customer WHERE id IN (${placeholders})`;
+  
+  db.query(sql, ids, (err, results) => {
+    if (err) return res.cc(err);
+    if (results.affectedRows === 0) return res.cc("删除客户失败！");
+
+    res.send({
+      code: 0,
+      message: `成功删除 ${results.affectedRows} 条记录！`,
+      re: null
+    });
+  });
+};
+
 // 获取客户详情
 exports.detail = (req, res) => {
   const { id } = req.body;

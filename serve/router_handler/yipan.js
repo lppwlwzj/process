@@ -212,7 +212,7 @@ exports.updateChairsideVideo = (req, res) => {
   const { customer_id, chairside_video } = req.body;
   
   if (!customer_id) return res.cc("缺少客户ID！");
-  if (!chairside_video) return res.cc("缺少视频URL！");
+  if (chairside_video === undefined || chairside_video === null) return res.cc("缺少视频URL！");
   
   const checkSql = `SELECT id, customer_name FROM yipan WHERE customer_id=? LIMIT 1`;
   

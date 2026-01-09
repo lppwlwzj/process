@@ -32,8 +32,8 @@ const loading = ref(false)
 
 /** 登录表单数据 */
 const loginFormData: LoginRequestData = reactive({
-  username: "admin",
-  password: "12345678",
+  username: "",
+  password: "",
   code: ""
 })
 
@@ -43,8 +43,7 @@ const loginFormRules: FormRules = {
     { required: true, message: "请输入用户名", trigger: "blur" }
   ],
   password: [
-    { required: true, message: "请输入密码", trigger: "blur" },
-    { min: 8, max: 16, message: "长度在 8 到 16 个字符", trigger: "blur" }
+    { required: true, message: "请输入密码", trigger: "blur" }
   ],
   // code: [
   //   { required: true, message: "请输入验证码", trigger: "blur" }
@@ -58,23 +57,22 @@ function handleLogin() {
       ElMessage.error("表单校验不通过")
       return
     }
-    // TODO:登录
-    // loading.value = true
-    // loginApi(loginFormData).then(({ data }) => {
-    //   userStore.setToken(data.token)
-    //   router.push(route.query.redirect ? decodeURIComponent(route.query.redirect as string) : "/")
-    // }).catch(() => {
-    //   // createCode()
-    //   loginFormData.password = ""
-    // }).finally(() => {
-    //   loading.value = false
-    // })
-    
-    // 临时模拟登录：设置一个假 token
-    userStore.setToken("mock-token-for-dev")
-    
-    // 跳转到目标页面
-    router.push(route.query.redirect ? decodeURIComponent(route.query.redirect as string) : "/")
+    loading.value = true
+    loginApi(loginFormData).then((res) => {
+      if (res.code === 0 && res.re) {
+        userStore.setToken(res.re.token)
+        ElMessage.success("登录成功")
+        router.push(route.query.redirect ? decodeURIComponent(route.query.redirect as string) : "/")
+      } else {
+        ElMessage.error(res.message || "登录失败")
+        loginFormData.password = ""
+      }
+    }).catch((error) => {
+      ElMessage.error(error.message || "登录失败，请重试")
+      loginFormData.password = ""
+    }).finally(() => {
+      loading.value = false
+    })
   })
 }
 
@@ -99,9 +97,9 @@ function handleLogin() {
     <ThemeSwitch v-if="settingsStore.showThemeSwitch" class="theme-switch" />
     <Owl :close-eyes="isFocus" />
     <div class="login-card">
-      <div class="title">
+      <!-- <div class="title">
         <img src="@@/assets/images/layouts/logo-text-2.png">
-      </div>
+      </div> -->
       <div class="content">
         <el-form ref="loginFormRef" :model="loginFormData" :rules="loginFormRules" @keyup.enter="handleLogin">
           <el-form-item prop="username">

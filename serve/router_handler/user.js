@@ -22,43 +22,43 @@ const uploadFileToCOS = require("../common/cosUpload");
 // 登录的处理函数
 exports.login = (req, res) => {
   const userinfo = req.body;
-  const sql = `select * from user where usercount=?`;
-  // 执行 SQL 语句，查询用户的数据
-  db.query(sql, userinfo.usercount, function (err, results) {
-    // 执行 SQL 语句失败
-    if (err) return res.cc(err);
-    // 执行 SQL 语句成功，但是查询到数据条数不等于 1
-    if (results.length !== 1) return res.cc("用户不存在！");
-    const { password, usercount, username } = results[0] || {};
+  
+  // 写死账号密码验证：账号 123，密码 123
+  if (userinfo.username !== "ykmy111" && userinfo.usercount !== "ykmy111") {
+    return res.cc("用户不存在！");
+  }
+  
+  if (userinfo.password !== "111520") {
+    return res.cc("密码错误！");
+  }
 
-    // 如果对比的结果等于 false, 则证明用户输入的密码错误
-    if (userinfo.password !== password) {
-      return res.cc("密码错误！");
-    }
+  // 构造用户信息
+  const user = {
+    id: 1,
+    username: "ykmy111",
+    usercount: "111520",
+    role: "admin"
+  };
+  
+  // 生成 Token 字符串，有效期 3 天
+  const tokenStr = jwt.sign(user, config.jwtSecretKey, {
+    expiresIn: "31d" // token 有效期为 3 天
+  });
 
-    // 剔除完毕之后，user 中只保留了用户的 id, userName, nickname, email 这四个属性的值
-    const user = { ...results[0], password: "" };
-    // 生成 Token 字符串
-    const tokenStr = jwt.sign(user, config.jwtSecretKey, {
-      expiresIn: "10h" // token 有效期为 10 个小时
-    });
+  req.app.logger(tokenStr, "登录了");
 
-    req.app.logger(tokenStr, "登录了");
-
-    // 将生成的 Token 字符串响应给客户端
-    res.send({
-      code: 0,
-      message: "登录成功！",
-      // 为了方便客户端使用 Token，在服务器端直接拼接上 Bearer 的前缀
-      re: {
-        token: "Bearer " + tokenStr,
-        userinfo: {
-          usercount,
-          username,
-          password
-        }
+  // 将生成的 Token 字符串响应给客户端
+  res.send({
+    code: 0,
+    message: "登录成功！",
+    // 为了方便客户端使用 Token，在服务器端直接拼接上 Bearer 的前缀
+    re: {
+      token: "Bearer " + tokenStr,
+      userinfo: {
+        usercount: "123",
+        username: "123"
       }
-    });
+    }
   });
 };
 exports.list = (req, res) => {
