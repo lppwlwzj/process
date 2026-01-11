@@ -90,16 +90,16 @@ exports.create = (req, res) => {
       
       if (processResults && processResults.length > 0) {
         // 如果记录已存在，更新而不是插入
-        const updateProcessSQL = `UPDATE customer_process SET customer_name=?, wear_time=?, material=?, remark=? WHERE customer_id=?`;
-        db.query(updateProcessSQL, [customer_name, wear_time, materialStr, remark, customerId], function (err) {
+        const updateProcessSQL = `UPDATE customer_process SET customer_name=?, material=?, remark=? WHERE customer_id=?`;
+        db.query(updateProcessSQL, [customer_name, materialStr, remark, customerId], function (err) {
           if (err) {
             console.error("更新客户进度记录失败:", err);
           }
         });
       } else {
         // 如果记录不存在，插入新记录
-        const insertProcessSQL = `INSERT INTO customer_process (customer_id, customer_name, wear_time, progress, material, remark) VALUES (?, ?, ?, ?, ?, ?)`;
-        db.query(insertProcessSQL, [customerId, customer_name, wear_time, 'not_started', materialStr, remark], function (err) {
+        const insertProcessSQL = `INSERT INTO customer_process (customer_id, customer_name, progress, material, remark) VALUES (?, ?, ?, ?, ?)`;
+        db.query(insertProcessSQL, [customerId, customer_name, 'not_started', materialStr, remark], function (err) {
           if (err) {
             console.error("创建客户进度记录失败:", err);
           }
@@ -172,15 +172,20 @@ exports.delete = (req, res) => {
   const { id } = req.body;
   if (!id) return res.cc("缺少客户ID！");
   
-  const sql = `DELETE FROM customer WHERE id=?`;
-  db.query(sql, id, function (err, results) {
+  const deleteProcessSql = `DELETE FROM customer_process WHERE customer_id=?`;
+  db.query(deleteProcessSql, id, function (err, processResults) {
     if (err) return res.cc(err);
-    if (results.affectedRows !== 1) return res.cc("删除客户失败！");
     
-    res.send({
-      code: 0,
-      message: "删除成功！",
-      re: null
+    const sql = `DELETE FROM customer WHERE id=?`;
+    db.query(sql, id, function (err, results) {
+      if (err) return res.cc(err);
+      if (results.affectedRows !== 1) return res.cc("删除客户失败！");
+      
+      res.send({
+        code: 0,
+        message: "删除成功！",
+        re: null
+      });
     });
   });
 };
@@ -192,16 +197,21 @@ exports.batchDelete = (req, res) => {
   }
 
   const placeholders = ids.map(() => '?').join(',');
-  const sql = `DELETE FROM customer WHERE id IN (${placeholders})`;
+  const deleteProcessSql = `DELETE FROM customer_process WHERE customer_id IN (${placeholders})`;
   
-  db.query(sql, ids, (err, results) => {
+  db.query(deleteProcessSql, ids, (err, processResults) => {
     if (err) return res.cc(err);
-    if (results.affectedRows === 0) return res.cc("删除客户失败！");
+    
+    const sql = `DELETE FROM customer WHERE id IN (${placeholders})`;
+    db.query(sql, ids, (err, results) => {
+      if (err) return res.cc(err);
+      if (results.affectedRows === 0) return res.cc("删除客户失败！");
 
-    res.send({
-      code: 0,
-      message: `成功删除 ${results.affectedRows} 条记录！`,
-      re: null
+      res.send({
+        code: 0,
+        message: `成功删除 ${results.affectedRows} 条记录！`,
+        re: null
+      });
     });
   });
 };

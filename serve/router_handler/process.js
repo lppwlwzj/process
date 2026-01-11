@@ -5,6 +5,7 @@ exports.list = (req, res) => {
   let sql = `SELECT 
     cp.*,
     c.materials,
+    c.wear_time,
     c.preparation_time,
     c.remark as customer_remark,
     y.edge_seating,
@@ -38,11 +39,51 @@ exports.list = (req, res) => {
     if (err) return res.cc(err);
     const total = countResults[0].total;
 
-    sql += ` ORDER BY cp.wear_time IS NULL, cp.wear_time ASC LIMIT ?, ?`;
+    sql += ` ORDER BY 
+      CASE
+        WHEN cp.progress != 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN 1
+        WHEN c.wear_time = DATE_FORMAT(CURDATE(), '%m-%d') THEN 2
+        WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN 4
+        ELSE 3
+      END ASC,
+      CASE
+        WHEN cp.progress != 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN c.wear_time
+        WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN NULL
+        WHEN c.wear_time = DATE_FORMAT(CURDATE(), '%m-%d') THEN NULL
+        WHEN c.wear_time IS NULL THEN '99-99'
+        ELSE c.wear_time
+      END ASC,
+      CASE
+        WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN c.wear_time
+        ELSE NULL
+      END DESC
+      LIMIT ?, ?`;
     params.push((currentPage - 1) * pageSize, pageSize);
+    
+    // console.log('=== 排序SQL ===');
+    // console.log('今天日期:', new Date().toISOString().slice(0, 10));
+    // console.log('SQL:', sql);
+    // console.log('Params:', params);
+    
+    // const debugSql = `SELECT cp.customer_name, cp.progress, c.wear_time, cp.customer_id, c.id as customer_table_id FROM customer_process cp LEFT JOIN customer c ON cp.customer_id = c.id WHERE cp.progress != 'completed' AND c.wear_time IS NOT NULL`;
+    // db.query(debugSql, [], (err, debugResults) => {
+    //   if (!err) {
+    //     console.log('\n=== 所有 progress != completed 的数据 ===');
+    //     debugResults.forEach(item => {
+    //       console.log(`${item.customer_name} - wear_time: ${item.wear_time} - progress: ${item.progress} - customer_id: ${item.customer_id} - customer_table_id: ${item.customer_table_id}`);
+    //     });
+    //     console.log('===============\n');
+    //   }
+    // });
 
     db.query(sql, params, (err, results) => {
       if (err) return res.cc(err);
+      
+      // console.log('=== 查询结果 ===');
+      // results.forEach((item, index) => {
+      //   console.log(`[${index}] ${item.customer_name} - wear_time: ${item.wear_time} - progress: ${item.progress}`);
+      // });
+      // console.log('===============\n');
       
       // 解析 materials JSON 字段
       const parsedResults = results.map(item => {
@@ -83,7 +124,6 @@ exports.list = (req, res) => {
 exports.create = (req, res) => {
   const {
     customer_name,
-    wear_time,
     progress,
     technician,
     material,
@@ -104,11 +144,10 @@ exports.create = (req, res) => {
     return res.cc("客户名称和进度不能为空！");
   }
 
-  const sql = `INSERT INTO customer_process (customer_name, wear_time, progress, technician, material, quantity, image, remark, technician_audio, technician_video, chairside_audio, chairside_video, start_chairside_time, complete_chairside_time, chairside_doctor, daily_wear_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  const sql = `INSERT INTO customer_process (customer_name, progress, technician, material, quantity, image, remark, technician_audio, technician_video, chairside_audio, chairside_video, start_chairside_time, complete_chairside_time, chairside_doctor, daily_wear_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   db.query(sql, [
     customer_name,
-    wear_time || null,
     'not_started',
     technician || null,
     material || null,
@@ -139,7 +178,6 @@ exports.update = (req, res) => {
   const {
     id,
     customer_name,
-    wear_time,
     progress,
     technician,
     material,
@@ -161,11 +199,10 @@ exports.update = (req, res) => {
     return res.cc("客户名称和进度不能为空！");
   }
 
-  const sql = `UPDATE customer_process SET customer_name=?, wear_time=?, progress=?, technician=?, material=?, quantity=?, image=?, remark=?, technician_audio=?, technician_video=?, chairside_audio=?, chairside_video=?, start_chairside_time=?, complete_chairside_time=?, chairside_doctor=?, daily_wear_status=? WHERE id=?`;
+  const sql = `UPDATE customer_process SET customer_name=?, progress=?, technician=?, material=?, quantity=?, image=?, remark=?, technician_audio=?, technician_video=?, chairside_audio=?, chairside_video=?, start_chairside_time=?, complete_chairside_time=?, chairside_doctor=?, daily_wear_status=? WHERE id=?`;
 
   db.query(sql, [
     customer_name,
-    wear_time || null,
     progress,
     technician || null,
     material || null,

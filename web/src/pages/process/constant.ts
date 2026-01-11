@@ -21,8 +21,8 @@ export const materialOptions = [
   { value: "delanxi_quanshougongchaobaocaigao", label: "全手工超薄" },
   { value: "ruishiweidian_candianci", label: "睿典瓷" },
   { value: "deguo_aidisiteyanghuagao", label: "爱迪特氧化锆" },
-  { value: "deguo_weilandeyanghuagao", label: "威兰德氧化锆" },
-  { value: "meiguo_shidan_lawawayanghuagao", label: "3M拉瓦氧化锆" },
+  { value: "deguo_weilandeyanghuagao", label: "VITA氧化锆" },
+  { value: "meiguo_shidan_lawawayanghuagao", label: "阿曼吉尔巴赫拉瓦氧化锆" },
   { value: "quanshougongdalilavayanghuagao", label: "人工定制lava氧化锆" },
   { value: "ruishiweidian_shidiancandianshuibozhanciyanghuagao", label: "睿典钻瓷氧化锆" }
 ]

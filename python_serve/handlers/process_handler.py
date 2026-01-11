@@ -17,6 +17,7 @@ def list_processes(data):
     sql = """SELECT 
         cp.*,
         c.materials,
+        c.wear_time,
         c.preparation_time,
         c.remark as customer_remark,
         y.edge_seating,
@@ -42,12 +43,30 @@ def list_processes(data):
         params.append(f"%{remark}%")
         params.append(f"%{remark}%")
     
-    count_sql = f"SELECT COUNT(*) as total FROM ({sql}) as temp"
-    try:
+        count_sql = f"SELECT COUNT(*) as total FROM ({sql}) as temp"
+        try:
         count_results = db.query(count_sql, tuple(params))
         total = count_results[0]['total'] if count_results else 0
         
-        sql += " ORDER BY cp.wear_time IS NULL, cp.wear_time ASC LIMIT %s, %s"
+        sql += """ ORDER BY 
+      CASE
+        WHEN cp.progress != 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN 1
+        WHEN c.wear_time = DATE_FORMAT(CURDATE(), '%m-%d') THEN 2
+        WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN 4
+        ELSE 3
+      END ASC,
+      CASE
+        WHEN cp.progress != 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN c.wear_time
+        WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN NULL
+        WHEN c.wear_time = DATE_FORMAT(CURDATE(), '%m-%d') THEN NULL
+        WHEN c.wear_time IS NULL THEN '99-99'
+        ELSE c.wear_time
+      END ASC,
+      CASE
+        WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN c.wear_time
+        ELSE NULL
+      END DESC
+      LIMIT %s, %s"""
         params.append((current_page - 1) * page_size)
         params.append(page_size)
         
