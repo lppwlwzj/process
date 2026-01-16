@@ -3,48 +3,26 @@ DROP TABLE IF EXISTS `customer_process`;
 CREATE TABLE `customer_process` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `customer_id` int(11) NOT NULL COMMENT '客户ID',
-  `customer_name` varchar(50) NOT NULL COMMENT '客户名称',
   `progress` varchar(50) DEFAULT NULL COMMENT '进度（未开始、进行中、已完成）',
   `technician` varchar(50) DEFAULT NULL COMMENT '技工师',
-  `material` varchar(100) DEFAULT NULL COMMENT '材料',
-  `image` varchar(255) DEFAULT NULL COMMENT '图片URL',
-  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `image` TEXT DEFAULT NULL COMMENT '图片URL',
   `technician_audio` varchar(255) DEFAULT NULL COMMENT '技工录音URL',
   `technician_video` TEXT DEFAULT NULL COMMENT '技工视频URL',
   `web_video` TEXT DEFAULT NULL COMMENT '视频URL',
+  `factory_image` TEXT DEFAULT NULL COMMENT '工厂图片URL',
+  `factory_technician_video` TEXT DEFAULT NULL COMMENT '工厂技工视频URL',
+  `factory_web_video` TEXT DEFAULT NULL COMMENT '工厂视频URL',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_customer_id` (`customer_id`),
-  KEY `idx_customer_name` (`customer_name`),
   KEY `idx_progress` (`progress`),
   KEY `idx_technician` (`technician`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='客户进度表';
 
--- 插入示例数据
-INSERT INTO `customer_process` (`customer_id`, `customer_name`, `progress`, `material`, `remark`) VALUES
-(1, '王宇秋', 'not_started', '抹光器 (VITA)', '依口修复4颗'),
-(2, '古慧珠', 'not_started', '璞典姿', '依口16颗'),
-(3, '钟欣博', 'not_started', '抹光器 (VITA)', '依口9颗、依口8颗上牙体挂瓷、依口1颗下...'),
-(4, '刘佳', 'not_started', '抹光器 (VITA)', '依口16颗'),
-(5, '顾姿', 'not_started', '抹光器 (VITA) 威兰德', '依口14颗顽挂瓷2颗再生差'),
-(6, '吴淀煊', 'not_started', '璞典姿', '依口16颗'),
-(7, '蒋泽洋', 'not_started', '人工查询 (曼生特)', '依口16颗'),
-(8, '洗秋玲', 'not_started', '抹光器 (VITA)', '依口16颗'),
-(9, '尹梦', 'not_started', '抹光器 (VITA)', '依口16颗'),
-(10, '苏林', 'not_started', '抹光器 (VITA) 威兰德', '依口11颗陶瓷5颗牙冠'),
-(11, '张妍', 'not_started', '抹光器 (VITA) 威兰德', '依口15颗陶瓷1颗牙冠'),
-(12, '庞晶怡', 'not_started', '冷昆侏爷 (曼生特)', '依口16颗'),
-(13, '巴妍', 'not_started', '璞典姿', '代切口16颗'),
-(14, '杨都尼', 'not_started', '玻璃陶瓷 (曼生特)', '依口修复3颗（原依外）'),
-(15, '张美俞', 'not_started', '人工查询 (曼生特)', '代切口16颗'),
-(16, '雄文杰', 'not_started', '人工查询 (曼生特)', '代切口8颗 牙缺红龄 托差重取'),
-(17, '李祝晗', 'not_started', '璞典姿', '代切口16颗 牙缺红龄托差重取 日肖待定'),
-(18, '刘霞', 'not_started', '璞典姿', '代切口16颗 设计方案未定托差未取'),
-(19, '古慧珠', 'not_started', '璞典姿', '全口拆除 代切口16颗'),
-(20, '洗秋玲', 'not_started', '曼化性 (曼生特)', '代切口16颗 牙冠（截牙未成功 重做）'),
-(21, '邓霓雪', 'not_started', '人工查询 (曼生特)', '依口新做16颗'),
-(22, '黄泽样', 'not_started', '人工查询 (曼生特)', '依口新做16颗'),
-(23, '唐姿', 'not_started', '抹光器 (VITA)', '依口新做16颗'),
-(24, '王怡', 'not_started', '冷昆侏爷 (曼生特)', '依口新做16颗'),
-(25, '刘雅雯', 'not_started', '抹光器 (VITA)', '依口新做16颗');
+INSERT INTO `customer_process`
+(`customer_id`,`progress`)
+VALUES
+(1, 'not_started'),
+(2, 'not_started'),
+(3, 'not_started');

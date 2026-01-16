@@ -99,7 +99,14 @@
         </view>
         <view class="action-card note-card full-width-card">
           <view class="card-content note-content">
-            <video-list label="视频备注" :videos="form.web_video || ''"></video-list>
+            <video-list label="视频备注"
+              :videos="form.type === '工厂' ? form.factory_web_video : form.web_video || ''"></video-list>
+          </view>
+        </view>
+        <view class="action-card note-card full-width-card">
+          <view class="card-content note-content">
+            <images-list label="图片备注"
+              :images="form.type === '工厂' ? form.factory_image : form.image || ''"></images-list>
           </view>
         </view>
         <!-- 
@@ -148,6 +155,7 @@
 
 <script>
 import VideoList from '../../components/video-list.vue';
+import ImagesList from '../../components/images-list.vue';
 
 
 export const materialOptions = [
@@ -166,7 +174,8 @@ export const materialOptions = [
 
 export default {
   components: {
-    VideoList
+    VideoList,
+    ImagesList
   },
   data() {
     return {
@@ -180,12 +189,16 @@ export default {
         wear_time: "",
         customer_note: "",
         technician_video: "",
+        factory_technician_video: "",
+        factory_web_video: "",
+        factory_image: "",
+        type: "",
+        image: "",
         web_video: "",
         preparation_time: "",
         progress: "",
         technician: "",
         materials: [],
-        image: "",
         remark: "",
         doctor: "",
         qr_code: "",
@@ -193,6 +206,7 @@ export default {
         technician_audio: "",
         process_created_at: "",
         process_updated_at: "",
+
         edge_seating: null,
         occlusion_status: null
       },
@@ -227,7 +241,6 @@ export default {
   },
 
   onLoad: async function (option) {
-    await this.fetchTechnicians();
     // 小程序环境直接从 option 获取
     if (option.scene) {
       console.log("option.scene", option.scene);
@@ -318,6 +331,7 @@ export default {
             ...res.re,
             materials: materials
           }
+          await this.fetchTechnicians(this.form.type);
           this.cacheLastProgress = this.form.progress;
           this.cacheLastTechnician = this.form.technician;
           this.progressLabel = this.progressColumns[0].find(item => item.key === this.form.progress)?.label || "";
@@ -419,7 +433,7 @@ export default {
     async updateVideoToDatabase(videoUrl) {
       try {
         // 获取当前已有的视频URL
-        const currentVideos = this.form.technician_video || '';
+        const currentVideos = this.form.type === '工厂' ? this.form.factory_technician_video : this.form.technician_video || '';
 
         // 用逗号拼接新视频URL（追加而不是覆盖）
         let newVideos = '';
@@ -434,11 +448,9 @@ export default {
         console.log("当前视频:", currentVideos);
         console.log("新视频:", videoUrl);
         console.log("合并后:", newVideos);
-
-        const res = await this.$api.updateTechnicianVideo({
-          customer_id: this.customerId,
-          technician_video: newVideos
-        });
+        const requestFn = this.form.type === '工厂' ? this.$api.updateFactoryTechnicianVideo : this.$api.updateTechnicianVideo;
+        const data = this.form.type === '工厂' ? { customer_id: this.customerId, factory_technician_video: newVideos } : { customer_id: this.customerId, technician_video: newVideos };
+        const res = await requestFn(data);
 
         if (res.code === 0) {
           uni.showToast({
@@ -461,11 +473,12 @@ export default {
       }
     },
 
-    async fetchTechnicians() {
+    async fetchTechnicians(type) {
       try {
         const res = await this.$api.getUserList();
         if (res.code === 0 && res.re) {
-          const list = res.re.filter(user => user.role === "技师").map(user => ({ key: user.usercount, label: user.username }));
+          const role = type === "工厂" ? "工厂技师" : "技师";
+          const list = res.re.filter(user => user.role === role).map(user => ({ key: user.usercount, label: user.username }));
           this.technicianColumns = [list];
         } else {
           console.error("获取用户列表失败:", res);

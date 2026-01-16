@@ -41,7 +41,7 @@ const formData = reactive<UserFormData>({
   role: ""
 })
 
-const roleOptions = ["技师", "医生椅旁技师", "其他人员"]
+const roleOptions = ["技师", "医生椅旁技师", "工厂技师", "其他人员"]
 
 const formRules: FormRules = {
   username: [
@@ -229,16 +229,9 @@ getTableData()
         </el-table>
       </div>
       <div class="pager-wrapper">
-        <el-pagination
-          background
-          :layout="paginationData.layout"
-          :page-sizes="paginationData.pageSizes"
-          :total="paginationData.total"
-          :page-size="paginationData.pageSize"
-          :currentPage="paginationData.currentPage"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
+        <el-pagination background :layout="paginationData.layout" :page-sizes="paginationData.pageSizes"
+          :total="paginationData.total" :page-size="paginationData.pageSize" :currentPage="paginationData.currentPage"
+          @size-change="handleSizeChange" @current-change="handleCurrentChange" />
       </div>
     </el-card>
 
@@ -271,6 +264,7 @@ getTableData()
 .app-container {
   .search-wrapper {
     margin-bottom: 20px;
+
     :deep(.el-card__body) {
       padding-bottom: 2px;
     }

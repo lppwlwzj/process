@@ -10,6 +10,9 @@ router.post('/batchDelete', process_handler.batchDelete)
 router.post('/detail', process_handler.detail)
 router.post('/updateTechnicianVideo', process_handler.updateTechnicianVideo)
 router.post('/updateWebVideo', process_handler.updateWebVideo)
-
+router.post('/updateImage', process_handler.updateImage)
+router.post('/updateFactoryTechnicianVideo', process_handler.updateFactoryTechnicianVideo)
+router.post('/updateFactoryWebVideo', process_handler.updateFactoryWebVideo)
+router.post('/updateFactoryImage', process_handler.updateFactoryImage)
 module.exports = router
 

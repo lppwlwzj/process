@@ -1,13 +1,15 @@
 const db = require('../db/index')
 
 exports.list = (req, res) => {
-  const { customer_name, progress, technician, remark, currentPage = 1, pageSize = 10 } = req.body;
+  const { customer_name, progress, technician, remark, type, currentPage = 1, pageSize = 10 } = req.body;
   let sql = `SELECT 
     cp.*,
+    c.customer_name,
+    c.type,
     c.materials,
     c.wear_time,
     c.preparation_time,
-    c.remark as customer_remark,
+    c.remark,
     y.edge_seating,
     y.occlusion_status,
     y.chairside_video
@@ -16,6 +18,10 @@ exports.list = (req, res) => {
     LEFT JOIN yipan y ON cp.customer_id = y.customer_id
     WHERE 1=1`;
   const params = [];
+  if(type) {
+    sql += ` AND c.type = ?`;
+    params.push(type);
+  }
 
   if (customer_name) {
     sql += ` AND cp.customer_name LIKE ?`;
@@ -35,58 +41,35 @@ exports.list = (req, res) => {
   }
 
   const countSql = `SELECT COUNT(*) as total FROM (${sql}) as temp`;
+  const orderBySql = ` ORDER BY 
+    CASE
+      WHEN cp.progress != 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN 1
+      WHEN c.wear_time = DATE_FORMAT(CURDATE(), '%m-%d') THEN 2
+      WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN 4
+      ELSE 3
+    END ASC,
+    CASE
+      WHEN cp.progress != 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN c.wear_time
+      WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN NULL
+      WHEN c.wear_time = DATE_FORMAT(CURDATE(), '%m-%d') THEN NULL
+      WHEN c.wear_time IS NULL THEN '99-99'
+      ELSE c.wear_time
+    END ASC,
+    CASE
+      WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN c.wear_time
+      ELSE NULL
+    END DESC`;
+
   db.query(countSql, params, (err, countResults) => {
     if (err) return res.cc(err);
     const total = countResults[0].total;
 
-    sql += ` ORDER BY 
-      CASE
-        WHEN cp.progress != 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN 1
-        WHEN c.wear_time = DATE_FORMAT(CURDATE(), '%m-%d') THEN 2
-        WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN 4
-        ELSE 3
-      END ASC,
-      CASE
-        WHEN cp.progress != 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN c.wear_time
-        WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN NULL
-        WHEN c.wear_time = DATE_FORMAT(CURDATE(), '%m-%d') THEN NULL
-        WHEN c.wear_time IS NULL THEN '99-99'
-        ELSE c.wear_time
-      END ASC,
-      CASE
-        WHEN cp.progress = 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN c.wear_time
-        ELSE NULL
-      END DESC
-      LIMIT ?, ?`;
-    params.push((currentPage - 1) * pageSize, pageSize);
-    
-    // console.log('=== 排序SQL ===');
-    // console.log('今天日期:', new Date().toISOString().slice(0, 10));
-    // console.log('SQL:', sql);
-    // console.log('Params:', params);
-    
-    // const debugSql = `SELECT cp.customer_name, cp.progress, c.wear_time, cp.customer_id, c.id as customer_table_id FROM customer_process cp LEFT JOIN customer c ON cp.customer_id = c.id WHERE cp.progress != 'completed' AND c.wear_time IS NOT NULL`;
-    // db.query(debugSql, [], (err, debugResults) => {
-    //   if (!err) {
-    //     console.log('\n=== 所有 progress != completed 的数据 ===');
-    //     debugResults.forEach(item => {
-    //       console.log(`${item.customer_name} - wear_time: ${item.wear_time} - progress: ${item.progress} - customer_id: ${item.customer_id} - customer_table_id: ${item.customer_table_id}`);
-    //     });
-    //     console.log('===============\n');
-    //   }
-    // });
+    const allDataSql = sql + orderBySql;
+    const paginatedSql = sql + orderBySql + ` LIMIT ?, ?`;
+    const paginatedParams = [...params, (currentPage - 1) * pageSize, pageSize];
 
-    db.query(sql, params, (err, results) => {
-      if (err) return res.cc(err);
-      
-      // console.log('=== 查询结果 ===');
-      // results.forEach((item, index) => {
-      //   console.log(`[${index}] ${item.customer_name} - wear_time: ${item.wear_time} - progress: ${item.progress}`);
-      // });
-      // console.log('===============\n');
-      
-      // 解析 materials JSON 字段
-      const parsedResults = results.map(item => {
+    const parseMaterials = (results) => {
+      return results.map(item => {
         let materials = [];
         if (item.materials) {
           try {
@@ -106,16 +89,28 @@ exports.list = (req, res) => {
           materials: materials
         };
       });
+    };
+
+    db.query(allDataSql, params, (err, allResults) => {
+      if (err) return res.cc(err);
       
-      res.send({
-        code: 0,
-        message: "获取客户进度列表成功！",
-        re: {
-          list: parsedResults,
-          total: total,
-          currentPage: +currentPage,
-          pageSize: +pageSize
-        }
+      db.query(paginatedSql, paginatedParams, (err, paginatedResults) => {
+        if (err) return res.cc(err);
+        
+        const allParsedResults = parseMaterials(allResults);
+        const paginatedParsedResults = parseMaterials(paginatedResults);
+        
+        res.send({
+          code: 0,
+          message: "获取客户进度列表成功！",
+          re: {
+            list: paginatedParsedResults,
+            allList: allParsedResults,
+            total: total,
+            currentPage: +currentPage,
+            pageSize: +pageSize
+          }
+        });
       });
     });
   });
@@ -123,13 +118,10 @@ exports.list = (req, res) => {
 
 exports.create = (req, res) => {
   const {
-    customer_name,
     progress,
     technician,
-    material,
     quantity,
     image,
-    remark,
     technician_audio,
     technician_video,
     chairside_audio,
@@ -140,20 +132,17 @@ exports.create = (req, res) => {
     daily_wear_status
   } = req.body;
 
-  if (!customer_name || !progress) {
+  if (!progress) {
     return res.cc("客户名称和进度不能为空！");
   }
 
-  const sql = `INSERT INTO customer_process (customer_name, progress, technician, material, quantity, image, remark, technician_audio, technician_video, chairside_audio, chairside_video, start_chairside_time, complete_chairside_time, chairside_doctor, daily_wear_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  const sql = `INSERT INTO customer_process ( progress, technician, quantity, image, technician_audio, technician_video, chairside_audio, chairside_video, start_chairside_time, complete_chairside_time, chairside_doctor, daily_wear_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   db.query(sql, [
-    customer_name,
     'not_started',
     technician || null,
-    material || null,
     quantity || null,
     image || null,
-    remark || null,
     technician_audio || null,
     technician_video || null,
     chairside_audio || null,
@@ -177,13 +166,10 @@ exports.create = (req, res) => {
 exports.update = (req, res) => {
   const {
     id,
-    customer_name,
     progress,
     technician,
-    material,
     quantity,
     image,
-    remark,
     technician_audio,
     technician_video,
     chairside_audio,
@@ -195,20 +181,17 @@ exports.update = (req, res) => {
   } = req.body;
 
   if (!id) return res.cc("缺少客户进度ID！");
-  if (!customer_name || !progress) {
+  if ( !progress) {
     return res.cc("客户名称和进度不能为空！");
   }
 
-  const sql = `UPDATE customer_process SET customer_name=?, progress=?, technician=?, material=?, quantity=?, image=?, remark=?, technician_audio=?, technician_video=?, chairside_audio=?, chairside_video=?, start_chairside_time=?, complete_chairside_time=?, chairside_doctor=?, daily_wear_status=? WHERE id=?`;
+  const sql = `UPDATE customer_process SET progress=?, technician=?, quantity=?, image=?, technician_audio=?, technician_video=?, chairside_audio=?, chairside_video=?, start_chairside_time=?, complete_chairside_time=?, chairside_doctor=?, daily_wear_status=? WHERE id=?`;
 
   db.query(sql, [
-    customer_name,
     progress,
     technician || null,
-    material || null,
     quantity || null,
     image || null,
-    remark || null,
     technician_audio || null,
     technician_video || null,
     chairside_audio || null,
@@ -280,16 +263,18 @@ exports.detail = (req, res) => {
       c.preparation_time,
       c.doctor,
       c.materials,
-      c.image,
       c.qr_code,
-      c.remark as customer_note,
+      c.remark,
+      c.type,
       cp.id as process_id,
       cp.progress,
       cp.technician,
-      cp.remark,
-      cp.technician_audio,
+      cp.image,
       cp.web_video,
       cp.technician_video,
+      cp.factory_image,
+      cp.factory_technician_video,
+      cp.factory_web_video,
       cp.created_at as process_created_at,
       cp.updated_at as process_updated_at,
       y.edge_seating,
@@ -341,7 +326,7 @@ exports.updateTechnicianVideo = (req, res) => {
   if (!customer_id) return res.cc("缺少客户ID！");
   if (technician_video === undefined || technician_video === null) return res.cc("缺少视频URL！");
   
-  const checkSql = `SELECT id, customer_name FROM customer_process WHERE customer_id=? LIMIT 1`;
+  const checkSql = `SELECT id FROM customer_process WHERE customer_id=? LIMIT 1`;
   
   db.query(checkSql, [customer_id], (err, results) => {
     if (err) return res.cc(err);
@@ -350,7 +335,6 @@ exports.updateTechnicianVideo = (req, res) => {
       const updateSql = `UPDATE customer_process SET technician_video=? WHERE customer_id=?`;
       db.query(updateSql, [technician_video, customer_id], (err, updateResults) => {
         if (err) return res.cc(err);
-        console.log("updateResults--->", updateResults);
         res.send({
           code: 0,
           message: "更新视频成功！",
@@ -364,8 +348,8 @@ exports.updateTechnicianVideo = (req, res) => {
         if (customerResults.length === 0) return res.cc("客户不存在！");
         
         const customer_name = customerResults[0].customer_name;
-        const insertSql = `INSERT INTO customer_process (customer_id, customer_name, progress, technician_video) VALUES (?, ?, ?, ?)`;
-        db.query(insertSql, [customer_id, customer_name, 'not_started', technician_video], (err, insertResults) => {
+        const insertSql = `INSERT INTO customer_process (customer_id, progress, technician_video) VALUES (?, ?, ?)`;
+        db.query(insertSql, [customer_id, 'not_started', technician_video], (err, insertResults) => {
           if (err) return res.cc(err);
           res.send({
             message: "保存视频成功！",
@@ -383,7 +367,7 @@ exports.updateWebVideo = (req, res) => {
   if (!customer_id) return res.cc("缺少客户ID！");
   if (web_video === undefined || web_video === null) return res.cc("缺少视频URL！");
   
-  const checkSql = `SELECT id, customer_name FROM customer_process WHERE customer_id=? LIMIT 1`;
+  const checkSql = `SELECT id FROM customer_process WHERE customer_id=? LIMIT 1`;
   
   db.query(checkSql, [customer_id], (err, results) => {
     if (err) return res.cc(err);
@@ -405,14 +389,160 @@ exports.updateWebVideo = (req, res) => {
         if (customerResults.length === 0) return res.cc("客户不存在！");
         
         const customer_name = customerResults[0].customer_name;
-        const insertSql = `INSERT INTO customer_process (customer_id, customer_name, progress, web_video) VALUES (?, ?, ?, ?)`;
-        db.query(insertSql, [customer_id, customer_name, 'not_started', web_video], (err, insertResults) => {
+        const insertSql = `INSERT INTO customer_process (customer_id, progress, web_video) VALUES (?, ?, ?)`;
+        db.query(insertSql, [customer_id, 'not_started', web_video], (err, insertResults) => {
           if (err) return res.cc(err);
           res.send({
             code: 0,
             message: "保存视频成功！",
             re: null
           });
+        });
+      });
+    }
+  });
+};
+
+exports.updateImage = (req, res) => {
+  const { customer_id, image } = req.body;
+  if (!customer_id) return res.cc("缺少客户ID！");
+  if (image === undefined || image === null) return res.cc("缺少图片URL！");
+  
+  const checkSql = `SELECT id FROM customer_process WHERE customer_id=? LIMIT 1`;
+  db.query(checkSql, [customer_id], (err, results) => {
+    if (err) return res.cc(err);
+  if (results.length > 0) {
+    const updateSql = `UPDATE customer_process SET image=? WHERE customer_id=?`;
+    db.query(updateSql, [image, customer_id], (err, updateResults) => {
+      if (err) return res.cc(err);
+      res.send({
+        code: 0,
+        message: "更新图片成功！",
+        re: null
+      });
+    });
+  }
+  else {
+    const insertSql = `INSERT INTO customer_process (customer_id, image) VALUES (?, ?)`;
+    db.query(insertSql, [customer_id, image], (err, insertResults) => {
+      if (err) return res.cc(err);
+      res.send({
+        code: 0,
+        message: "保存图片成功！",
+        re: null
+      });
+    });
+  }
+  });
+};
+
+exports.updateFactoryTechnicianVideo = (req, res) => {
+  const { customer_id, factory_technician_video } = req.body;
+  
+  if (!customer_id) return res.cc("缺少客户ID！");
+  if (factory_technician_video === undefined || factory_technician_video === null) return res.cc("缺少视频URL！");
+  
+  const checkSql = `SELECT id FROM customer_process WHERE customer_id=? LIMIT 1`;
+  
+  db.query(checkSql, [customer_id], (err, results) => {
+    if (err) return res.cc(err);
+    
+    if (results.length > 0) {
+      const updateSql = `UPDATE customer_process SET factory_technician_video=? WHERE customer_id=?`;
+      db.query(updateSql, [factory_technician_video, customer_id], (err, updateResults) => {
+        if (err) return res.cc(err);
+        res.send({
+          code: 0,
+          message: "更新视频成功！",
+          re: null
+        });
+      });
+    } else {
+      const getCustomerSql = `SELECT customer_name FROM customer WHERE id=? LIMIT 1`;
+      db.query(getCustomerSql, [customer_id], (err, customerResults) => {
+        if (err) return res.cc(err);
+        if (customerResults.length === 0) return res.cc("客户不存在！");
+        
+        const insertSql = `INSERT INTO customer_process (customer_id, progress, factory_technician_video) VALUES (?, ?, ?)`;
+        db.query(insertSql, [customer_id, 'not_started', factory_technician_video], (err, insertResults) => {
+          if (err) return res.cc(err);
+          res.send({
+            message: "保存视频成功！",
+            re: null
+          });
+        });
+      });
+    }
+  });
+};
+
+exports.updateFactoryWebVideo = (req, res) => {
+  const { customer_id, factory_web_video } = req.body;
+  
+  if (!customer_id) return res.cc("缺少客户ID！");
+  if (factory_web_video === undefined || factory_web_video === null) return res.cc("缺少视频URL！");
+  
+  const checkSql = `SELECT id FROM customer_process WHERE customer_id=? LIMIT 1`;
+  
+  db.query(checkSql, [customer_id], (err, results) => {
+    if (err) return res.cc(err);
+    
+    if (results.length > 0) {
+      const updateSql = `UPDATE customer_process SET factory_web_video=? WHERE customer_id=?`;
+      db.query(updateSql, [factory_web_video, customer_id], (err, updateResults) => {
+        if (err) return res.cc(err);
+        res.send({
+          code: 0,
+          message: "更新视频成功！",
+          re: null
+        });
+      });
+    } else {
+      const getCustomerSql = `SELECT customer_name FROM customer WHERE id=? LIMIT 1`;
+      db.query(getCustomerSql, [customer_id], (err, customerResults) => {
+        if (err) return res.cc(err);
+        if (customerResults.length === 0) return res.cc("客户不存在！");
+        
+        const insertSql = `INSERT INTO customer_process (customer_id, progress, factory_web_video) VALUES (?, ?, ?)`;
+        db.query(insertSql, [customer_id, 'not_started', factory_web_video], (err, insertResults) => {
+          if (err) return res.cc(err);
+          res.send({
+            code: 0,
+            message: "保存视频成功！",
+            re: null
+          });
+        });
+      });
+    }
+  });
+};
+
+exports.updateFactoryImage = (req, res) => {
+  const { customer_id, factory_image } = req.body;
+  if (!customer_id) return res.cc("缺少客户ID！");
+  if (factory_image === undefined || factory_image === null) return res.cc("缺少图片URL！");
+  
+  const checkSql = `SELECT id FROM customer_process WHERE customer_id=? LIMIT 1`;
+  db.query(checkSql, [customer_id], (err, results) => {
+    if (err) return res.cc(err);
+    if (results.length > 0) {
+      const updateSql = `UPDATE customer_process SET factory_image=? WHERE customer_id=?`;
+      db.query(updateSql, [factory_image, customer_id], (err, updateResults) => {
+        if (err) return res.cc(err);
+        res.send({
+          code: 0,
+          message: "更新图片成功！",
+          re: null
+        });
+      });
+    } else {
+      const insertSql = `INSERT INTO customer_process (customer_id, factory_image) VALUES (?, ?)`;
+      db.query(insertSql, [customer_id, factory_image], (err, insertResults) => {
+        if (err) return res.cc(err);
+        res.send({
+          code: 0,
+          message: "保存图片成功！",
+          re: null
         });
       });
     }

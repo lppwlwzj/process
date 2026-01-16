@@ -6,6 +6,11 @@ export interface ProcessData {
   technician: string
   material?: string
   image?: string
+  type?: string
+  factory_image?: string
+  factory_technician_audio?: string
+  factory_technician_video?: string
+  factory_web_video?: string
     remark?: string
     technician_audio?: string
     technician_video?: string
@@ -45,4 +50,5 @@ export interface ProcessListRequest {
   progress?: string
   technician?: string
   remark?: string
+  type?: string
 } 

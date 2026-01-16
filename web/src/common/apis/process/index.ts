@@ -4,7 +4,7 @@ import axios from "axios"
 import type { ProcessData, ProcessFormData, ProcessListRequest } from "./type"
 
 export function getProcessListApi(params: ProcessListRequest) {
-  return request<ApiResponseData<{ list: ProcessData[]; total: number }>>({
+  return request<ApiResponseData<{ list: ProcessData[]; allList: ProcessData[]; total: number }>>({
     url: "process/list",
     method: "post",
     data: params
@@ -75,14 +75,47 @@ export function updateWebVideoApi(data: { customer_id: number; web_video: string
   })
 }
 
-export function uploadFileApi(file: File, id?: string | number) {
+export function updateImageApi(data: { customer_id: number; image: string }) {
+  return request<ApiResponseData<null>>({
+    url: "process/updateImage",
+    method: "post",
+    data
+  })
+}
+
+export function updateFactoryTechnicianVideoApi(data: { customer_id: number; factory_technician_video: string }) {
+  return request<ApiResponseData<null>>({
+    url: "process/updateFactoryTechnicianVideo",
+    method: "post",
+    data
+  })
+}
+
+export function updateFactoryWebVideoApi(data: { customer_id: number; factory_web_video: string }) {
+  return request<ApiResponseData<null>>({
+    url: "process/updateFactoryWebVideo",
+    method: "post",
+    data
+  })
+}
+
+export function updateFactoryImageApi(data: { customer_id: number; factory_image: string }) {
+  return request<ApiResponseData<null>>({
+    url: "process/updateFactoryImage",
+    method: "post",
+    data
+  })
+}
+
+export function uploadFileApi(file: File, id?: string | number,type?: string) {
   const formData = new FormData()
   formData.append("file", file)
   if (id) {
     formData.append("id", String(id))
   }
+  const ext = file.name.split('.').pop();
   const timestamp = Date.now()
-  const fileName = `video_${timestamp}_${id || 'unknown'}.mp4`
+  const fileName = `${type}_${timestamp}_${id || 'unknown'}.${ext}`
   formData.append("name", fileName)
   
   const token = getToken()

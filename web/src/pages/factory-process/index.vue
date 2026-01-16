@@ -3,15 +3,14 @@ import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { VideoPlay, Search, Refresh, Delete, Upload } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
-import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateTechnicianVideoApi, updateChairsideVideoApi, updateWebVideoApi, updateImageApi, uploadFileApi } from "@@/apis/process"
+import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateChairsideVideoApi, updateFactoryTechnicianVideoApi, updateFactoryWebVideoApi, updateFactoryImageApi, uploadFileApi } from "@@/apis/process"
 import { getUserListApi } from "@@/apis/users"
-import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
-import ChairsideHistoryDialog from "./components/ChairsideHistoryDialog.vue"
+import ProcessHistoryDialog from "../process/components/ProcessHistoryDialog.vue"
+import ChairsideHistoryDialog from "../process/components/ChairsideHistoryDialog.vue"
 import type { FormInstance, FormRules } from "element-plus"
-import { progressOptions, materialOptions } from "./constant"
+import { progressOptions, materialOptions } from "../process/constant"
 import ExcelJS from "exceljs"
 import { loadImage, formatMaterials, formatEdgeSeating, formatOcclusionStatus, formatDailyWearStatus } from "../../utils"
-
 interface UserData {
   id: number
   username: string
@@ -36,28 +35,33 @@ interface ProcessData {
   quantity?: string | number
   image?: string
   remark?: string
+  type?: string
   customer_remark?: string
   technician_audio?: string
   technician_video?: string
   chairside_audio?: string
   chairside_video?: string
+  factory_image?: string
+  factory_technician_audio?: string
+  factory_technician_video?: string
+  factory_web_video?: string
   web_video?: string
   start_chairside_time?: string
   complete_chairside_time?: string
   chairside_doctor?: string
-  daily_wear_status?: number
+  daily_wear_status?: number | string
   preparation_time?: string
-  edge_seating?: number
-  occlusion_status?: number
+  edge_seating?: string | number
+  occlusion_status?: string | number
   created_at?: string
   updated_at?: string
-  type?: string
 }
 
 const loading = ref(false)
 const { paginationData, handleCurrentChange: baseHandleCurrentChange, handleSizeChange: baseHandleSizeChange } = usePagination()
-const allTableData = ref<ProcessData[]>([])
+
 const tableData = ref<ProcessData[]>([])
+const allTableData = ref<ProcessData[]>([])
 const selectedRows = ref<ProcessData[]>([])
 const searchFormRef = ref()
 const searchData = reactive({
@@ -77,16 +81,16 @@ const currentImageUrl = ref("")
 const formRef = ref<FormInstance>()
 const formData = reactive<ProcessData>({
   id: 0,
-  type: "",
+  type: "工厂",
   customer_name: "",
   wear_time: "",
   progress: "",
   technician: "",
   material: "",
-  image: "",
-  remark: "",
-  technician_audio: "",
-  technician_video: "",
+  factory_image: "",
+  factory_technician_audio: "",
+  factory_technician_video: "",
+  factory_web_video: "",
   chairside_audio: "",
   chairside_video: "",
   start_chairside_time: "",
@@ -119,17 +123,17 @@ const getTableData = async () => {
       progress: searchData.progress,
       technician: searchData.technician,
       remark: searchData.remark,
-      type: "依口"
+      type: "工厂"
     })
     if (res.re) {
-      tableData.value = res.re.list
-      const allData = res.re.allList
+      tableData.value = res.re.list;
+      const allData = res.re.allList;
       allTableData.value = allData
       paginationData.total = allData.length
     }
   } catch (error) {
-    console.error("获取依口客户进度列表失败:", error)
-    ElMessage.error("获取依口客户进度列表失败")
+    console.error("获取客户进度列表失败:", error)
+    ElMessage.error("获取客户进度列表失败")
   } finally {
     loading.value = false
   }
@@ -145,21 +149,13 @@ const handleSizeChange = (value: number) => {
   getTableData()
 }
 
-const handleSearch = () => {
-  paginationData.currentPage = 1
-  getTableData()
-}
 
-const resetSearch = () => {
-  searchFormRef.value?.resetFields()
-  handleSearch()
-}
 
 
 
 
 const handleDelete = async (row: ProcessData) => {
-  ElMessageBox.confirm(`确认删除依口客户进度：${row.customer_name}？`, "提示", {
+  ElMessageBox.confirm(`确认删除客户进度：${row.customer_name}？`, "提示", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning"
@@ -170,8 +166,8 @@ const handleDelete = async (row: ProcessData) => {
       ElMessage.success("删除成功")
       getTableData()
     } catch (error) {
-      console.error("删除依口客户进度失败:", error)
-      ElMessage.error("删除依口客户进度失败")
+      console.error("删除客户进度失败:", error)
+      ElMessage.error("删除客户进度失败")
     } finally {
       loading.value = false
     }
@@ -189,7 +185,7 @@ const handleBatchDelete = async () => {
   }
 
   const customerNames = selectedRows.value.map(row => row.customer_name).join("、")
-  ElMessageBox.confirm(`确认删除 ${selectedRows.value.length} 条依口客户进度记录：${customerNames}？`, "批量删除", {
+  ElMessageBox.confirm(`确认删除 ${selectedRows.value.length} 条客户进度记录：${customerNames}？`, "批量删除", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning"
@@ -202,13 +198,14 @@ const handleBatchDelete = async () => {
       selectedRows.value = []
       getTableData()
     } catch (error) {
-      console.error("批量删除依口客户进度失败:", error)
-      ElMessage.error("批量删除依口客户进度失败")
+      console.error("批量删除客户进度失败:", error)
+      ElMessage.error("批量删除客户进度失败")
     } finally {
       loading.value = false
     }
   })
 }
+
 
 
 const historyDialogVisible = ref(false)
@@ -251,25 +248,6 @@ const handleChairsideRecord = (row: ProcessData) => {
   chairsideHistoryDialogVisible.value = true
 }
 
-const resetForm = () => {
-  formRef.value?.resetFields()
-  formData.id = 0
-  formData.customer_name = ""
-  formData.wear_time = ""
-  formData.progress = ""
-  formData.technician = ""
-  formData.material = ""
-  formData.image = ""
-  formData.remark = ""
-  formData.technician_audio = ""
-  formData.technician_video = ""
-  formData.chairside_audio = ""
-  formData.chairside_video = ""
-  formData.start_chairside_time = ""
-  formData.complete_chairside_time = ""
-  formData.chairside_doctor = ""
-  formData.daily_wear_status = undefined
-}
 
 const getProgressType = (progressKey: string): "primary" | "success" | "warning" | "info" | "danger" => {
   const typeMap: Record<string, "primary" | "success" | "warning" | "info" | "danger"> = {
@@ -297,8 +275,6 @@ const getVideoList = (videoUrls: string): string[] => {
   return videoUrls.split(',').map(url => url.trim()).filter(url => url)
 }
 
-
-
 const handlePlayVideo = (videoUrl: string) => {
   if (!videoUrl) {
     ElMessage.warning("暂无视频")
@@ -308,7 +284,14 @@ const handlePlayVideo = (videoUrl: string) => {
   videoDialogVisible.value = true
 }
 
-
+const handlePreviewImage = (imageUrl: string) => {
+  if (!imageUrl) {
+    ElMessage.warning("暂无图片")
+    return
+  }
+  currentImageUrl.value = imageUrl
+  imageDialogVisible.value = true
+}
 
 const appendVideoToUrlList = (currentVideos: string, newVideoUrl: string): string => {
   if (!currentVideos) return newVideoUrl
@@ -332,6 +315,39 @@ const removeVideoFromUrlList = (currentVideos: string, videoUrlToRemove: string,
   return videoList.join(',')
 }
 
+const handleUploadTechnicianVideo = async (row: ProcessData, file: File) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
+
+  const customerId = row.customer_id
+  try {
+    loading.value = true
+    const uploadRes = await uploadFileApi(file, customerId, "factory_technician_video")
+    if (uploadRes.code === 0 && uploadRes.re?.img_url) {
+      const newVideoUrl = uploadRes.re.img_url
+      const currentVideos = row.factory_technician_video || ""
+      const updatedVideos = appendVideoToUrlList(currentVideos, newVideoUrl)
+
+      await updateFactoryTechnicianVideoApi({
+        customer_id: customerId,
+        factory_technician_video: updatedVideos
+      })
+
+      ElMessage.success("上传成功")
+      getTableData()
+    } else {
+      ElMessage.error(uploadRes.message || "上传失败")
+    }
+  } catch (error) {
+    console.error("上传进度视频失败:", error)
+    ElMessage.error("上传进度视频失败")
+  } finally {
+    loading.value = false
+  }
+}
+
 const handleUploadWebVideo = async (row: ProcessData, file: File) => {
   if (!row.customer_id) {
     ElMessage.error("缺少客户ID")
@@ -341,15 +357,15 @@ const handleUploadWebVideo = async (row: ProcessData, file: File) => {
   const customerId = row.customer_id
   try {
     loading.value = true
-    const uploadRes = await uploadFileApi(file, customerId)
+    const uploadRes = await uploadFileApi(file, customerId, "factory_web_video")
     if (uploadRes.code === 0 && uploadRes.re?.img_url) {
       const newVideoUrl = uploadRes.re.img_url
-      const currentVideos = row.web_video || ""
+      const currentVideos = row.factory_web_video || ""
       const updatedVideos = appendVideoToUrlList(currentVideos, newVideoUrl)
 
-      await updateWebVideoApi({
+      await updateFactoryWebVideoApi({
         customer_id: customerId,
-        web_video: updatedVideos
+        factory_web_video: updatedVideos
       })
 
       ElMessage.success("上传成功")
@@ -374,15 +390,15 @@ const handleUploadImage = async (row: ProcessData, file: File) => {
   const customerId = row.customer_id
   try {
     loading.value = true
-    const uploadRes = await uploadFileApi(file, customerId, 'image')
+    const uploadRes = await uploadFileApi(file, customerId, "factory_image")
     if (uploadRes.code === 0 && uploadRes.re?.img_url) {
       const imageUrl = uploadRes.re.img_url
-      const currentImages = row.image || ""
+      const currentImages = row.factory_image || ""
       const updatedImages = appendImageToUrlList(currentImages, imageUrl)
 
-      await updateImageApi({
+      await updateFactoryImageApi({
         customer_id: customerId,
-        image: updatedImages
+        factory_image: updatedImages
       })
 
       ElMessage.success("上传成功")
@@ -412,12 +428,12 @@ const handleDeleteImage = async (row: ProcessData, imageUrl: string, index: numb
   }).then(async () => {
     try {
       loading.value = true
-      const currentImages = row.image || ""
+      const currentImages = row.factory_image || ""
       const updatedImages = removeVideoFromUrlList(currentImages, imageUrl, index)
 
-      await updateImageApi({
+      await updateFactoryImageApi({
         customer_id: customerId,
-        image: updatedImages
+        factory_image: updatedImages
       })
 
       ElMessage.success("删除成功")
@@ -445,11 +461,11 @@ const handleDeleteTechnicianVideo = async (row: ProcessData, videoUrl: string, i
   }).then(async () => {
     try {
       loading.value = true
-      const currentVideos = row.technician_video || ""
+      const currentVideos = row.factory_technician_video || ""
       const updatedVideos = removeVideoFromUrlList(currentVideos, videoUrl, index);
-      await updateTechnicianVideoApi({
+      await updateFactoryTechnicianVideoApi({
         customer_id: customerId,
-        technician_video: updatedVideos
+        factory_technician_video: updatedVideos
       })
 
       ElMessage.success("删除成功")
@@ -477,12 +493,12 @@ const handleDeleteWebVideo = async (row: ProcessData, videoUrl: string, index: n
   }).then(async () => {
     try {
       loading.value = true
-      const currentVideos = row.web_video || ""
+      const currentVideos = row.factory_web_video || ""
       const updatedVideos = removeVideoFromUrlList(currentVideos, videoUrl, index)
 
-      await updateWebVideoApi({
+      await updateFactoryWebVideoApi({
         customer_id: customerId,
-        web_video: updatedVideos
+        factory_web_video: updatedVideos
       })
 
       ElMessage.success("删除成功")
@@ -529,38 +545,6 @@ const handleDeleteChairsideVideo = async (row: ProcessData, videoUrl: string, in
   })
 }
 
-const handleUploadTechnicianVideo = async (row: ProcessData, file: File) => {
-  if (!row.customer_id) {
-    ElMessage.error("缺少客户ID")
-    return
-  }
-
-  const customerId = row.customer_id
-  try {
-    loading.value = true
-    const uploadRes = await uploadFileApi(file, customerId)
-    if (uploadRes.code === 0 && uploadRes.re?.img_url) {
-      const newVideoUrl = uploadRes.re.img_url
-      const currentVideos = row.technician_video || ""
-      const updatedVideos = appendVideoToUrlList(currentVideos, newVideoUrl)
-
-      await updateTechnicianVideoApi({
-        customer_id: customerId,
-        technician_video: updatedVideos
-      })
-
-      ElMessage.success("上传成功")
-      getTableData()
-    } else {
-      ElMessage.error(uploadRes.message || "上传失败")
-    }
-  } catch (error) {
-    console.error("上传进度视频失败:", error)
-    ElMessage.error("上传进度视频失败")
-  } finally {
-    loading.value = false
-  }
-}
 // 将图片URL转换为base64
 const imageToBase64 = async (url: string) => {
   try {
@@ -620,6 +604,145 @@ const handleMultipleImages = async (jsonString: string, worksheet: ExcelJS.Works
   }
 }
 
+// const handleExport = async () => {
+//   // // #region agent log
+//   // fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:entry', message: '开始导出', data: { tableDataLength: tableData.value.length, allTableDataLength: allTableData.value.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
+//   // // #endregion
+//   if (tableData.value.length === 0) {
+//     ElMessage.warning("暂无数据可导出")
+//     return
+//   }
+
+//   try {
+//     loading.value = true
+//     const workbook = new ExcelJS.Workbook()
+//     const worksheet = workbook.addWorksheet("工厂客户进度")
+//     // // #region agent log
+//     // fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:workbook', message: '工作簿创建完成', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
+//     // // #endregion
+
+//     const headers = [
+//       "客户名称", "进度", "戴牙时间", "备注", "图片列表",
+//       "备牙时间", "技工师", "椅旁医生", "材料与数量",
+//       "边缘就位", "咬合状态", "当日戴牙"
+//     ]
+
+//     worksheet.columns = headers.map(header => ({ header, key: header, width: 15 }))
+//     worksheet.getRow(1).font = { bold: true }
+
+//     // const loadImage = async (url: string): Promise<ExcelJS.Image | null> => {
+//     //   try {
+//     //     const response = await fetch(url)
+//     //     const arrayBuffer = await response.arrayBuffer()
+//     //     const extension = url.split('.').pop()?.toLowerCase()
+//     //     const imageType = extension === 'png' ? 'png' : 'jpeg'
+//     //     const image = workbook.addImage({
+//     //       buffer: arrayBuffer,
+//     //       extension: imageType
+//     //     })
+//     //     return image
+//     //   } catch (error) {
+//     //     console.error("加载图片失败:", url, error)
+//     //     return null
+//     //   }
+//     // }
+
+
+
+
+//     for (let i = 0; i < allTableData.value.length; i++) {
+//       const row = allTableData.value[i]
+//       const rowNumber = i + 2
+
+//       worksheet.getRow(rowNumber).values = {
+//         "客户名称": row.customer_name || "-",
+//         "进度": getProgressLabel(row.progress),
+//         "戴牙时间": row.wear_time || "-",
+//         "备注": row.remark || row.customer_remark || "-",
+//         "图片列表": "",
+//         "备牙时间": row.preparation_time || "-",
+//         "技工师": row.technician || "-",
+//         "椅旁医生": row.chairside_doctor || "-",
+//         "材料与数量": formatMaterials(row.materials),
+//         "边缘就位": formatEdgeSeating(row.edge_seating),
+//         "咬合状态": formatOcclusionStatus(row.occlusion_status),
+//         "当日戴牙": formatDailyWearStatus(row.daily_wear_status)
+//       }
+
+//       const imageUrls = getVideoList(row.image || "")
+//       // #region agent log
+//       fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:imageUrls', message: '获取图片URL列表', data: { rowNumber, customerName: row.customer_name, imageUrls, imageUrlsLength: imageUrls.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
+//       // #endregion
+//       if (imageUrls.length > 0) {
+//         const imageCol = worksheet.getColumn("图片列表")
+//         imageCol.width = 20
+//         worksheet.getRow(rowNumber).height = Math.max(80, imageUrls.length * 80)
+
+//         for (let imgIndex = 0; imgIndex < imageUrls.length; imgIndex++) {
+//           // #region agent log
+//           fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:imageLoop', message: '开始处理图片', data: { rowNumber, imgIndex, imageUrl: imageUrls[imgIndex] }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
+//           // #endregion
+//           try {
+//             const imageData = await loadImage(imageUrls[imgIndex])
+//             // #region agent log
+//             fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:imageData', message: '图片数据加载结果', data: { rowNumber, imgIndex, imageUrl: imageUrls[imgIndex], hasImageData: !!imageData, bufferSize: imageData?.buffer?.byteLength, extension: imageData?.extension }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' }) }).catch(() => { });
+//             // #endregion
+//             if (imageData && imageData.buffer.byteLength > 0) {
+//               const imageId = workbook.addImage({
+//                 buffer: imageData.buffer,
+//                 extension: imageData.extension as 'png' | 'jpeg' | 'gif'
+//               })
+//               // #region agent log
+//               fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:addImage', message: 'addImage调用', data: { rowNumber, imgIndex, imageId, extension: imageData.extension, bufferSize: imageData.buffer.byteLength }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) }).catch(() => { });
+//               // #endregion
+
+//               worksheet.addImage(imageId, {
+//                 tl: { col: 4, row: rowNumber - 1 },
+//                 ext: { width: 80, height: 80 },
+//                 editAs: 'oneCell'
+//               })
+//               // #region agent log
+//               fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:worksheetAddImage', message: 'worksheet.addImage调用完成', data: { rowNumber, imgIndex, col: 4, row: rowNumber - 1, width: 80, height: 80, editAs: 'oneCell' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) }).catch(() => { });
+//               // #endregion
+//             } else {
+//               // #region agent log
+//               fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:imageDataInvalid', message: '图片数据无效', data: { rowNumber, imgIndex, imageUrl: imageUrls[imgIndex], hasImageData: !!imageData, bufferSize: imageData?.buffer?.byteLength }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' }) }).catch(() => { });
+//               // #endregion
+//             }
+//           } catch (error) {
+//             console.error(`加载图片失败 [${imgIndex}]:`, imageUrls[imgIndex], error)
+//             // #region agent log
+//             fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:imageError', message: '图片处理异常', data: { rowNumber, imgIndex, imageUrl: imageUrls[imgIndex], error: String(error) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+//             // #endregion
+//           }
+//         }
+//       }
+//     }
+
+//     // #region agent log
+//     fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:beforeWrite', message: '准备写入Excel', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
+//     // #endregion
+//     const buffer = await workbook.xlsx.writeBuffer()
+//     // #region agent log
+//     fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:afterWrite', message: 'Excel写入完成', data: { bufferSize: buffer.byteLength }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
+//     // #endregion
+//     const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+//     const url = window.URL.createObjectURL(blob)
+//     const link = document.createElement("a")
+//     link.href = url
+//     link.download = `客户进度_${new Date().toISOString().split("T")[0]}.xlsx`
+//     link.click()
+//     window.URL.revokeObjectURL(url)
+
+//     ElMessage.success("导出成功")
+//   } catch (error) {
+//     console.error("导出失败:", error)
+//     ElMessage.error("导出失败")
+//   } finally {
+//     loading.value = false
+//   }
+// }
+
 const generateMockExcelData = async () => {
   try {
     const workbook = new ExcelJS.Workbook();
@@ -657,11 +780,12 @@ const generateMockExcelData = async () => {
       row["occlusion_status"] = formatOcclusionStatus(row.occlusion_status);
       row["daily_wear_status"] = formatDailyWearStatus(row.daily_wear_status);
       row["images"] = "";
+      console.log('row', row);
       const dataRow = worksheet.addRow(row);
       dataRow.height = 100;
       dataRow.alignment = { vertical: 'middle', horizontal: 'center' };
       const rowNum = dataRow.number;
-      await handleMultipleImages(row.image, worksheet, rowNum, 11, workbook);
+      await handleMultipleImages(row.factory_image, worksheet, rowNum, 11, workbook);
     }
     // 生成Excel文件
     const buffer = await workbook.xlsx.writeBuffer();
@@ -681,7 +805,7 @@ const handleExport = async () => {  // 生成Excel文件
   const url = window.URL.createObjectURL(blob as Blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `依口客户进度_${new Date().toLocaleDateString()}.xlsx`;
+  link.download = `工厂客户进度_${new Date().toLocaleDateString()}.xlsx`;
 
   // 触发下载
   document.body.appendChild(link);
@@ -692,6 +816,7 @@ const handleExport = async () => {  // 生成Excel文件
 }
 
 
+
 onMounted(() => {
   loadUserList()
   getTableData()
@@ -700,6 +825,7 @@ onMounted(() => {
 
 <template>
   <div class="app-container">
+
     <el-card shadow="never">
       <div class="toolbar-wrapper">
         <div>
@@ -734,11 +860,11 @@ onMounted(() => {
           </el-table-column>
 
 
-          <el-table-column prop="technician_video" label="进度视频" min-width="280" align="left">
+          <el-table-column prop="factory_technician_video" label="进度视频" min-width="280" align="left">
             <template #default="{ row }">
-              <div v-if="row.technician_video"
+              <div v-if="row.factory_technician_video"
                 style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
-                <div v-for="(videoUrl, index) in getVideoList(row.technician_video)" :key="index"
+                <div v-for="(videoUrl, index) in getVideoList(row.factory_technician_video)" :key="index"
                   style="display: flex; align-items: center; gap: 4px;">
                   <el-button type="primary" size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
                     <el-icon style="margin-right: 0px;">
@@ -754,13 +880,15 @@ onMounted(() => {
             </template>
           </el-table-column>
 
-          <el-table-column prop="image" label="图片" min-width="260  " align="left">
+
+
+          <el-table-column prop="factory_image" label="图片" min-width="260" align="left">
             <template #default="{ row }">
-              <div v-if="row.image"
+              <div v-if="row.factory_image"
                 style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
-                <div v-for="(imageUrl, index) in getVideoList(row.image)" :key="index"
+                <div v-for="(imageUrl, index) in getVideoList(row.factory_image)" :key="index"
                   style="display: flex; align-items: center; gap: 4px;">
-                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.image)" :initial-index="index"
+                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.factory_image)" :initial-index="index"
                     fit="cover" style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;"
                     preview-teleported />
                   <el-button type="danger" size="small" :icon="Delete" circle
@@ -770,6 +898,11 @@ onMounted(() => {
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
+
+
+
+
+
 
           <el-table-column prop="preparation_time" label="备牙时间" align="center">
             <template #default="{ row }">
@@ -811,11 +944,11 @@ onMounted(() => {
             </template>
           </el-table-column>
 
-          <el-table-column prop="web_video" label="视频" min-width="280" align="left">
+          <el-table-column prop="factory_web_video" label="视频" min-width="280" align="left">
             <template #default="{ row }">
-              <div v-if="row.web_video"
+              <div v-if="row.factory_web_video"
                 style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
-                <div v-for="(videoUrl, index) in getVideoList(row.web_video)" :key="index"
+                <div v-for="(videoUrl, index) in getVideoList(row.factory_web_video)" :key="index"
                   style="display: flex; align-items: center; gap: 4px;">
                   <el-button type="primary" size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
                     <el-icon style="margin-right: 0px;">
@@ -879,6 +1012,11 @@ onMounted(() => {
                   </el-upload>
                 </div>
 
+
+
+
+
+
                 <el-button type="danger" text size="small" @click="handleDelete(row)">删除</el-button>
               </div>
             </template>
@@ -891,6 +1029,46 @@ onMounted(() => {
           @size-change="handleSizeChange" @current-change="handleCurrentChange" />
       </div>
     </el-card>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     <ProcessHistoryDialog v-model:visible="historyDialogVisible" :customer-id="selectedCustomer.id"
       :customer-name="selectedCustomer.name" :user-map="userMap" />
@@ -912,22 +1090,21 @@ onMounted(() => {
     margin-bottom: 20px;
 
     :deep(.el-card__body) {
-      padding-bottom: 2px;
+        padding-bottom: 2px;
+      }
     }
-  }
 
-  .toolbar-wrapper {
-    margin-bottom: 20px;
-  }
+    .toolbar-wrapper {
+      margin-bottom: 20px;
+    }
 
-  .table-wrapper {
-    margin-bottom: 20px;
-  }
+    .table-wrapper {
+      margin-bottom: 20px;
+    }
 
-  .pager-wrapper {
-    display: flex;
-    justify-content: flex-end;
-  }
-}
+    .pager-wrapper {
+      display: flex;
+      justify-content: flex-end;
+    }
+    }
 </style>
-

@@ -111,7 +111,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     redirect: "/process/index",
     name: "Process",
     meta: {
-      title: "进度管理",
+      title: "依口进度管理",
       elIcon: "User"
     },
     children: [
@@ -120,7 +120,28 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/pages/process/index.vue"),
         name: "ProcessManagement",
         meta: {
-          title: "进度列表",
+          title: "依口进度列表",
+          elIcon: "User"
+        }
+      }
+    ]
+  },
+  {
+    path: "/factory-process",
+    component: Layouts,
+    redirect: "/factory-process/index",
+    name: "FactoryProcess",
+    meta: {
+      title: "工厂进度管理",
+      elIcon: "User"
+    },
+    children: [
+      {
+        path: "index",
+        component: () => import("@/pages/factory-process/index.vue"),
+        name: "FactoryProcessManagement",
+        meta: {
+          title: "工厂进度列表",
           elIcon: "User"
         }
       }

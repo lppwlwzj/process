@@ -5,7 +5,6 @@ import { CirclePlus, Edit, Delete, VideoPlay } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
 import { getCustomerListApi, createCustomerApi, updateCustomerApi, deleteCustomerApi, batchDeleteCustomerApi, generateQrCodeApi } from "@@/apis/customers"
 import type { FormInstance, FormRules } from "element-plus"
-import dayjs from "dayjs"
 import { materialOptions } from "../process/constant"
 interface MaterialItem {
   material: string
@@ -25,7 +24,8 @@ interface CustomerData {
   technician_video?: string
   remark?: string
   created_at?: string
-  updated_at?: string
+  updated_at?: string;
+  type?: string
 }
 
 const loading = ref(false)
@@ -59,7 +59,8 @@ const formData = reactive<CustomerData>({
   image: "",
   qr_code: "",
   technician_video: "",
-  remark: ""
+  remark: "",
+  type: ""
 })
 
 const stageOptions = [
@@ -76,7 +77,6 @@ const stageOptions = [
 ]
 
 
-const doctorOptions = ["宇医生", "秦医生", "蔡医生", "王医生"]
 
 const formRules: FormRules = {
   customer_name: [
@@ -84,6 +84,9 @@ const formRules: FormRules = {
   ],
   technician: [
     { required: true, message: "请选择阶段进度", trigger: "change" }
+  ],
+  type: [
+    { required: true, message: "请选择类型", trigger: "change" }
   ]
 }
 
@@ -380,6 +383,8 @@ onMounted(() => {
           <el-table-column type="selection" width="45" align="center" />
           <el-table-column prop="id" label="ID" width="60" align="center" />
           <el-table-column prop="customer_name" label="客户姓名" width="100" align="center" />
+          <el-table-column prop="type" label="类型" width="100" align="center" />
+
           <!-- <el-table-column prop="technician" label="阶段进度" width="110" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.technician" :type="getStageType(row.technician) || undefined">{{ row.technician }}</el-tag>
@@ -443,6 +448,14 @@ onMounted(() => {
           <el-col :span="12">
             <el-form-item label="客户姓名" prop="customer_name">
               <el-input v-model="formData.customer_name" placeholder="请输入客户姓名" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="类型" prop="type" required>
+              <el-select v-model="formData.type" placeholder="请选择类型" style="flex: 2;">
+                <el-option label="依口" value="依口" />
+                <el-option label="工厂" value="工厂" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>

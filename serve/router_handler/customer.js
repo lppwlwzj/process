@@ -57,7 +57,8 @@ exports.create = (req, res) => {
     materials,
     image,
     qr_code,
-    remark
+    remark,
+    type
   } = req.body;
   
   if (!customer_name) {
@@ -73,8 +74,8 @@ exports.create = (req, res) => {
     materialStr = materials.map(m => m.material).join(',');
   }
   
-  const sql = `INSERT INTO customer (customer_name, wear_time, preparation_time, doctor, materials, image, qr_code, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-  db.query(sql, [customer_name, wear_time, preparation_time, doctor, materialsJson, image, qr_code, remark], function (err, results) {
+  const sql = `INSERT INTO customer (customer_name, wear_time, preparation_time, doctor, materials, image, qr_code, remark, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  db.query(sql, [customer_name, wear_time, preparation_time, doctor, materialsJson, image, qr_code, remark,type], function (err, results) {
     if (err) return res.cc(err);
     if (results.affectedRows !== 1) return res.cc("新增客户失败！");
     
@@ -90,16 +91,16 @@ exports.create = (req, res) => {
       
       if (processResults && processResults.length > 0) {
         // 如果记录已存在，更新而不是插入
-        const updateProcessSQL = `UPDATE customer_process SET customer_name=?, material=?, remark=? WHERE customer_id=?`;
-        db.query(updateProcessSQL, [customer_name, materialStr, remark, customerId], function (err) {
+        const updateProcessSQL = `UPDATE customer_process SET progress=? WHERE customer_id=?`;
+        db.query(updateProcessSQL, ['not_started', customerId], function (err) {
           if (err) {
             console.error("更新客户进度记录失败:", err);
           }
         });
       } else {
         // 如果记录不存在，插入新记录
-        const insertProcessSQL = `INSERT INTO customer_process (customer_id, customer_name, progress, material, remark) VALUES (?, ?, ?, ?, ?)`;
-        db.query(insertProcessSQL, [customerId, customer_name, 'not_started', materialStr, remark], function (err) {
+        const insertProcessSQL = `INSERT INTO customer_process (customer_id, progress) VALUES (?, ?)`;
+        db.query(insertProcessSQL, [customerId, 'not_started'], function (err) {
           if (err) {
             console.error("创建客户进度记录失败:", err);
           }
@@ -117,8 +118,8 @@ exports.create = (req, res) => {
       
       if (!yipanResults || yipanResults.length === 0) {
         // 如果记录不存在，插入新记录
-        const insertYipanSQL = `INSERT INTO yipan (customer_id, customer_name) VALUES (?, ?)`;
-        db.query(insertYipanSQL, [customerId, customer_name], function (err) {
+        const insertYipanSQL = `INSERT INTO yipan (customer_id) VALUES (?)`;
+        db.query(insertYipanSQL, [customerId], function (err) {
           if (err) {
             console.error("创建椅旁记录失败:", err);
           }
@@ -145,7 +146,8 @@ exports.update = (req, res) => {
     materials,
     image,
     qr_code,
-    remark
+    remark,
+    type
   } = req.body;
   
   if (!id) return res.cc("缺少客户ID！");
@@ -154,8 +156,8 @@ exports.update = (req, res) => {
   // 将 materials 数组转换为 JSON 字符串
   const materialsJson = materials ? JSON.stringify(materials) : null;
   
-  const sql = `UPDATE customer SET customer_name=?, wear_time=?, preparation_time=?, doctor=?, materials=?, image=?, qr_code=?, remark=? WHERE id=?`;
-  db.query(sql, [customer_name, wear_time, preparation_time, doctor, materialsJson, image, qr_code, remark, id], function (err, results) {
+  const sql = `UPDATE customer SET customer_name=?, wear_time=?, preparation_time=?, doctor=?, materials=?, image=?, qr_code=?, remark=? ,type=? WHERE id=?`;
+  db.query(sql, [customer_name, wear_time, preparation_time, doctor, materialsJson, image, qr_code, remark, type, id], function (err, results) {
     if (err) return res.cc(err);
     if (results.affectedRows !== 1) return res.cc("更新客户失败！");
     

@@ -10,6 +10,7 @@ CREATE TABLE `customer` (
   `image` varchar(255) DEFAULT NULL COMMENT '图片URL',
   `qr_code` varchar(255) DEFAULT NULL COMMENT '二维码图片URL',
   `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `type` varchar(50) DEFAULT NULL COMMENT '类型',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
@@ -19,8 +20,8 @@ CREATE TABLE `customer` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='客户进度表';
 
 -- 插入示例数据
-INSERT INTO `customer` (`customer_name`, `wear_time`, `doctor`, `materials`, `remark`) VALUES
-('王宇秋', '2025-12-02', '宇医生', '[{"material":"guochan_quancitiemin","quantity":4}]', '依口修复4颗'),
-('古慧珠', '2025-12-01', '宇医生', '[{"material":"deguo_aidisiteyanghuagao","quantity":16}]', '依口16颗'),
-('钟欣博', '2025-12-03', '宇医生', '[{"material":"guochan_quancitiemin","quantity":9}]', '依口9颗、依口8颗上牙体挂瓷、依口1颗下...');
+INSERT INTO `customer` (`customer_name`, `wear_time`, `doctor`, `materials`, `remark`, `type`) VALUES
+('王宇秋', '2025-12-02', '宇医生', '[{"material":"guochan_quancitiemin","quantity":4}]', '依口修复4颗', '依口'),
+('古慧珠', '2025-12-01', '宇医生', '[{"material":"deguo_aidisiteyanghuagao","quantity":16}]', '依口16颗', '依口'),
+('钟欣博', '2025-12-03', '宇医生', '[{"material":"guochan_quancitiemin","quantity":9}]', '依口9颗、依口8颗上牙体挂瓷、依口1颗下...', '依口');
 
