@@ -26,6 +26,18 @@
           <view class="btn-text">咬合不正常</view>
         </button>
       </view>
+      <view class="btn-row">
+        <button class="icon-btn status-btn" :class="{ active: colorStatus === 'normal' }"
+          @click="handleColorStatusSelect('normal')">
+          <view class="btn-icon success">✓</view>
+          <view class="btn-text">颜色质地正常</view>
+        </button>
+        <button class="icon-btn status-btn" :class="{ active: colorStatus === 'abnormal' }"
+          @click="handleColorStatusSelect('abnormal')">
+          <view class="btn-icon error">✕</view>
+          <view class="btn-text">颜色质地不正常</view>
+        </button>
+      </view>
     </view>
 
     <view class="page-title">椅旁操作</view>
@@ -65,20 +77,11 @@
       </view>
 
       <view class="btn-row">
-        <!-- <button class="icon-btn upload-btn" @click="handleUploadAudio">
-          <view class="btn-icon">🎤</view>
-          <view class="btn-text">上传录音</view>
-        </button> -->
         <button class="icon-btn upload-btn" @click="handleUploadVideo">
           <view class="btn-icon">▶</view>
           <view class="btn-text">上传视频</view>
         </button>
       </view>
-      <!-- <view class="action-card note-card full-width-card">
-        <view class="card-content note-content">
-          <video-list label="椅旁视频" :videos="form.chairside_video || ''"></video-list>
-        </view>
-      </view> -->
     </view>
 
     <view class="yipan-button-container">
@@ -113,13 +116,15 @@ export default {
         occlusion_status: null,
         chairside_audio: "",
         chairside_video: "",
-        start_time: null
+        start_time: null,
+        color_status: null
       },
       currentOperation: "",
       selectedDoctor: "",
       wearStatus: "",
       edgeSeating: "",
       occlusionStatus: "",
+      colorStatus: "",
       showDoctorPicker: false,
       doctorColumns: [
         []
@@ -179,6 +184,38 @@ export default {
         }
       } catch (err) {
         console.error("更新边缘就位状态失败:", err);
+        uni.showToast({
+          title: "更新失败",
+          icon: "none"
+        });
+      }
+    },
+    async handleColorStatusSelect(status) {
+      this.colorStatus = status;
+      this.form.color_status = status === 'normal' ? 1 : 0;
+      if (!this.customerId) {
+        return;
+      }
+
+      try {
+        const res = await this.$api.updateYipan({
+          customer_id: this.customerId,
+          color_status: this.form.color_status
+        });
+        if (res.code === 0) {
+          uni.showToast({
+            title: "颜色质地更新成功",
+            icon: "success"
+          });
+        } else {
+          console.error("颜色质地状态更新失败:", res);
+          uni.showToast({
+            title: "更新失败",
+            icon: "none"
+          });
+        }
+      } catch (err) {
+        console.error("更新颜色质地状态失败:", err);
         uni.showToast({
           title: "更新失败",
           icon: "none"
@@ -266,6 +303,10 @@ export default {
 
           if (data.occlusion_status !== null) {
             this.occlusionStatus = data.occlusion_status === 1 ? 'normal' : 'abnormal';
+          }
+
+          if (data.color_status !== null) {
+            this.colorStatus = data.color_status === 1 ? 'normal' : 'abnormal';
           }
 
           this.form = {
@@ -537,6 +578,7 @@ export default {
       this.wearStatus = "";
       this.edgeSeating = "";
       this.occlusionStatus = "";
+      this.colorStatus = "";
       this.form = {
         customer_id: this.customerId,
         customer_name: this.customerName,

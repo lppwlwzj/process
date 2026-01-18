@@ -12,7 +12,8 @@ exports.list = (req, res) => {
     c.remark,
     y.edge_seating,
     y.occlusion_status,
-    y.chairside_video
+    y.chairside_video,
+    y.color_status
     FROM customer_process cp
     LEFT JOIN customer c ON cp.customer_id = c.id
     LEFT JOIN yipan y ON cp.customer_id = y.customer_id
@@ -24,7 +25,7 @@ exports.list = (req, res) => {
   }
 
   if (customer_name) {
-    sql += ` AND cp.customer_name LIKE ?`;
+    sql += ` AND c.customer_name LIKE ?`;
     params.push(`%${customer_name}%`);
   }
   if (progress) {
@@ -277,6 +278,8 @@ exports.detail = (req, res) => {
       cp.factory_web_video,
       cp.created_at as process_created_at,
       cp.updated_at as process_updated_at,
+      cp.mini_image,
+      cp.factory_mini_image,
       y.edge_seating,
       y.occlusion_status
     FROM customer c
@@ -538,6 +541,48 @@ exports.updateFactoryImage = (req, res) => {
     } else {
       const insertSql = `INSERT INTO customer_process (customer_id, factory_image) VALUES (?, ?)`;
       db.query(insertSql, [customer_id, factory_image], (err, insertResults) => {
+        if (err) return res.cc(err);
+        res.send({
+          code: 0,
+          message: "保存图片成功！",
+          re: null
+        });
+      });
+    }
+  });
+};
+
+exports.updateMiniImage = (req, res) => {
+  const { customer_id, mini_image, factory_mini_image } = req.body;
+  if (!customer_id) return res.cc("缺少客户ID！");
+  
+  let fieldName, imageValue;
+  if (mini_image !== undefined && mini_image !== null) {
+    fieldName = 'mini_image';
+    imageValue = mini_image;
+  } else if (factory_mini_image !== undefined && factory_mini_image !== null) {
+    fieldName = 'factory_mini_image';
+    imageValue = factory_mini_image;
+  } else {
+    return res.cc("缺少图片URL！");
+  }
+  
+  const checkSql = `SELECT id FROM customer_process WHERE customer_id=? LIMIT 1`;
+  db.query(checkSql, [customer_id], (err, results) => {
+    if (err) return res.cc(err);
+    if (results.length > 0) {
+      const updateSql = `UPDATE customer_process SET ${fieldName}=? WHERE customer_id=?`;
+      db.query(updateSql, [imageValue, customer_id], (err, updateResults) => {
+        if (err) return res.cc(err);
+        res.send({
+          code: 0,
+          message: "更新图片成功！",
+          re: null
+        });
+      });
+    } else {
+      const insertSql = `INSERT INTO customer_process (customer_id, ${fieldName}) VALUES (?, ?)`;
+      db.query(insertSql, [customer_id, imageValue], (err, insertResults) => {
         if (err) return res.cc(err);
         res.send({
           code: 0,

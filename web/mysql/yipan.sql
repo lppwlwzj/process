@@ -9,6 +9,7 @@ CREATE TABLE `yipan` (
   `daily_wear_status` tinyint(1) DEFAULT NULL COMMENT '当日是否戴牙（0-未戴牙，1-已戴牙）',
   `edge_seating` tinyint(1) DEFAULT NULL COMMENT '边缘是否就位（0-未就位，1-已就位）',
   `occlusion_status` tinyint(1) DEFAULT NULL COMMENT '咬合是否正常（0-不正常，1-正常）',
+  `color_status` tinyint(1) DEFAULT NULL COMMENT '颜色质地是否正常（0-不正常，1-正常）',
   `chairside_audio` varchar(255) DEFAULT NULL COMMENT '椅旁录音URL',
   `chairside_video` TEXT DEFAULT NULL COMMENT '椅旁视频URL',
   `start_time` datetime DEFAULT NULL COMMENT '开始椅旁时间（有值表示正在进行椅旁操作）',

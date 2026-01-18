@@ -12,6 +12,8 @@ const install = (Vue, vm) => {
     //图片上传
     uploadImg: (formData) => vm.$u.http.upload("/api/upload", formData),
     deleteImg: (data) => vm.$u.http.post("/api/upload/delete", data),
+    updateMiniImage: (data) => vm.$u.http.post("/api/process/updateMiniImage", data),
+    // updateFactoryMiniImage: (data) => vm.$u.http.post("/api/process/updateFactoryMiniImage", data),
 
     // login: (data) => vm.$u.http.post("/api/user/login", data),
     getQrImg: (data) => vm.$u.http.post("/api/user/getQrImg", data),

@@ -131,3 +131,11 @@ export function uploadFileApi(file: File, id?: string | number,type?: string) {
     }
   ).then(res => res.data)
 }
+
+export function updateMiniImageApi(data: { customer_id: number; mini_image?: string; factory_mini_image?: string }) {
+  return request<ApiResponseData<null>>({
+    url: "process/updateMiniImage",
+    method: "post",
+    data
+  })
+}

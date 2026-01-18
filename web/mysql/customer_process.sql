@@ -6,6 +6,8 @@ CREATE TABLE `customer_process` (
   `progress` varchar(50) DEFAULT NULL COMMENT '进度（未开始、进行中、已完成）',
   `technician` varchar(50) DEFAULT NULL COMMENT '技工师',
   `image` TEXT DEFAULT NULL COMMENT '图片URL',
+  `mini_image` TEXT DEFAULT NULL COMMENT '小程序图片URL',
+  `factory_mini_image` TEXT DEFAULT NULL COMMENT '小程序图片URL',
   `technician_audio` varchar(255) DEFAULT NULL COMMENT '技工录音URL',
   `technician_video` TEXT DEFAULT NULL COMMENT '技工视频URL',
   `web_video` TEXT DEFAULT NULL COMMENT '视频URL',

@@ -89,6 +89,15 @@
           </view>
         </view>
 
+        <view class="action-card  full-width-card" style="min-height: 0;padding:36rpx" @click="handleUploadImage">
+          <view class="card-content">
+            <view class="card-text">
+              <text class="card-label">上传图片</text>
+            </view>
+          </view>
+        </view>
+
+
         <view class="action-card note-card full-width-card">
           <view class="card-content note-content">
             <text class="card-label note-label">文字备注</text>
@@ -372,6 +381,89 @@ export default {
         }
       });
     },
+    handleUploadImage() {
+      uni.chooseImage({
+        count: 1,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+        success: (res) => {
+          if (res.tempFilePaths && res.tempFilePaths.length > 0) {
+            this.uploadImageToCOS(res.tempFilePaths[0]);
+          } else {
+            uni.showToast({
+              title: "未选择图片",
+              icon: "none"
+            });
+          }
+        },
+        fail: (err) => {
+          console.error("选择图片失败:", err);
+          if (err.errMsg !== 'chooseImage:fail cancel') {
+            uni.showToast({
+              title: "选择图片失败",
+              icon: "none"
+            });
+          }
+        }
+      });
+    },
+    uploadImageToCOS(imagePath) {
+      console.log("imagePath", imagePath);
+      uni.showLoading({ title: "上传中..." });
+
+      const userInfo = uni.getStorageSync("userInfo");
+      const timestamp = Date.now();
+      const fileName = `image_${timestamp}_${this.customerId || 'unknown'}.jpg`;
+      uni.uploadFile({
+        url: "https://gdcasa.cn/api/upload",
+        filePath: imagePath,
+        name: "file",
+        header: {
+          Authorization: userInfo?.token || ""
+        },
+        formData: {
+          id: this.customerId || "",
+          name: fileName
+        },
+        success: (res) => {
+          uni.hideLoading();
+          if (res?.statusCode === 401) {
+            uni.removeStorageSync("userInfo");
+            uni.redirectTo({
+              url: "/pages/login/login"
+            });
+          } else if (res?.statusCode === 200) {
+            const data = JSON.parse(res.data);
+            if (data.code === 0) {
+              const imageUrl = data.re?.img_url;
+
+              if (imageUrl && this.customerId) {
+
+                this.updateImageToDatabase(imageUrl);
+              }
+            } else {
+              uni.showToast({
+                title: data.message || "上传失败",
+                icon: "none"
+              });
+            }
+          } else {
+            uni.showToast({
+              title: "上传失败",
+              icon: "none"
+            });
+          }
+        },
+        fail: (err) => {
+          uni.hideLoading();
+          console.error("上传图片失败:", err);
+          uni.showToast({
+            title: "上传失败",
+            icon: "none"
+          });
+        }
+      });
+    },
     uploadVideoToCOS(videoPath) {
       uni.showLoading({ title: "上传中..." });
 
@@ -429,6 +521,40 @@ export default {
           });
         }
       });
+    },
+    async updateImageToDatabase(imageUrl) {
+      try {
+        console.log("imageUrl", imageUrl);
+        const currentImages = this.form.type === '工厂' ? this.form.factory_mini_image : this.form.mini_image || '';
+        let newImages = '';
+        if (currentImages) {
+          newImages = currentImages + ',' + imageUrl;
+        } else {
+          newImages = imageUrl;
+        }
+        console.log("newImages", this.form, newImages);
+        const requestFn = this.$api.updateMiniImage;
+        const data = this.form.type === '工厂' ? { customer_id: this.customerId, factory_mini_image: newImages } : { customer_id: this.customerId, mini_image: newImages };
+        const res = await requestFn(data);
+        if (res.code === 0) {
+          uni.showToast({
+            title: "上传成功",
+            icon: "success"
+          });
+          await this.fetchData();
+        } else {
+          uni.showToast({
+            title: res.message || "更新失败",
+            icon: "none"
+          });
+        }
+      } catch (err) {
+        console.error("更新图片到数据库失败:", err);
+        uni.showToast({
+          title: "更新失败",
+          icon: "none"
+        });
+      }
     },
     async updateVideoToDatabase(videoUrl) {
       try {

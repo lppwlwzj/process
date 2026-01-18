@@ -3,7 +3,7 @@ import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { VideoPlay, Search, Refresh, Delete, Upload } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
-import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateChairsideVideoApi, updateFactoryTechnicianVideoApi, updateFactoryWebVideoApi, updateFactoryImageApi, uploadFileApi } from "@@/apis/process"
+import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateMiniImageApi, updateChairsideVideoApi, updateFactoryTechnicianVideoApi, updateFactoryWebVideoApi, updateFactoryImageApi, uploadFileApi } from "@@/apis/process"
 import { getUserListApi } from "@@/apis/users"
 import ProcessHistoryDialog from "../process/components/ProcessHistoryDialog.vue"
 import ChairsideHistoryDialog from "../process/components/ChairsideHistoryDialog.vue"
@@ -55,6 +55,8 @@ interface ProcessData {
   occlusion_status?: string | number
   created_at?: string
   updated_at?: string
+  mini_image?: string
+  factory_mini_image?: string
 }
 
 const loading = ref(false)
@@ -147,6 +149,19 @@ const handleCurrentChange = (value: number) => {
 const handleSizeChange = (value: number) => {
   baseHandleSizeChange(value)
   getTableData()
+}
+
+const handleSearch = () => {
+  paginationData.currentPage = 1
+  getTableData()
+}
+
+const resetSearch = () => {
+  searchData.customer_name = ""
+  searchData.progress = ""
+  searchData.technician = ""
+  searchData.remark = ""
+  handleSearch()
 }
 
 
@@ -311,7 +326,6 @@ const removeVideoFromUrlList = (currentVideos: string, videoUrlToRemove: string,
   if (!currentVideos) return ""
   const videoList = getVideoList(currentVideos);
   videoList.splice(index, 1)
-  console.log("videoList-->", videoList)
   return videoList.join(',')
 }
 
@@ -436,6 +450,36 @@ const handleDeleteImage = async (row: ProcessData, imageUrl: string, index: numb
         factory_image: updatedImages
       })
 
+      ElMessage.success("删除成功")
+      getTableData()
+    } catch (error) {
+      console.error("删除图片失败:", error)
+      ElMessage.error("删除图片失败")
+    } finally {
+      loading.value = false
+    }
+  })
+}
+const handleDeleteFactoryMiniImage = async (row: ProcessData, imageUrl: string, index: number) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
+
+  const customerId = row.customer_id
+  ElMessageBox.confirm("确认删除该图片？", "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(async () => {
+    try {
+      loading.value = true
+      const currentImages = row.factory_mini_image || ""
+      const updatedImages = removeVideoFromUrlList(currentImages, imageUrl, index)
+      await updateMiniImageApi({
+        customer_id: customerId,
+        factory_mini_image: updatedImages
+      })
       ElMessage.success("删除成功")
       getTableData()
     } catch (error) {
@@ -604,144 +648,6 @@ const handleMultipleImages = async (jsonString: string, worksheet: ExcelJS.Works
   }
 }
 
-// const handleExport = async () => {
-//   // // #region agent log
-//   // fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:entry', message: '开始导出', data: { tableDataLength: tableData.value.length, allTableDataLength: allTableData.value.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-//   // // #endregion
-//   if (tableData.value.length === 0) {
-//     ElMessage.warning("暂无数据可导出")
-//     return
-//   }
-
-//   try {
-//     loading.value = true
-//     const workbook = new ExcelJS.Workbook()
-//     const worksheet = workbook.addWorksheet("工厂客户进度")
-//     // // #region agent log
-//     // fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:workbook', message: '工作簿创建完成', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-//     // // #endregion
-
-//     const headers = [
-//       "客户名称", "进度", "戴牙时间", "备注", "图片列表",
-//       "备牙时间", "技工师", "椅旁医生", "材料与数量",
-//       "边缘就位", "咬合状态", "当日戴牙"
-//     ]
-
-//     worksheet.columns = headers.map(header => ({ header, key: header, width: 15 }))
-//     worksheet.getRow(1).font = { bold: true }
-
-//     // const loadImage = async (url: string): Promise<ExcelJS.Image | null> => {
-//     //   try {
-//     //     const response = await fetch(url)
-//     //     const arrayBuffer = await response.arrayBuffer()
-//     //     const extension = url.split('.').pop()?.toLowerCase()
-//     //     const imageType = extension === 'png' ? 'png' : 'jpeg'
-//     //     const image = workbook.addImage({
-//     //       buffer: arrayBuffer,
-//     //       extension: imageType
-//     //     })
-//     //     return image
-//     //   } catch (error) {
-//     //     console.error("加载图片失败:", url, error)
-//     //     return null
-//     //   }
-//     // }
-
-
-
-
-//     for (let i = 0; i < allTableData.value.length; i++) {
-//       const row = allTableData.value[i]
-//       const rowNumber = i + 2
-
-//       worksheet.getRow(rowNumber).values = {
-//         "客户名称": row.customer_name || "-",
-//         "进度": getProgressLabel(row.progress),
-//         "戴牙时间": row.wear_time || "-",
-//         "备注": row.remark || row.customer_remark || "-",
-//         "图片列表": "",
-//         "备牙时间": row.preparation_time || "-",
-//         "技工师": row.technician || "-",
-//         "椅旁医生": row.chairside_doctor || "-",
-//         "材料与数量": formatMaterials(row.materials),
-//         "边缘就位": formatEdgeSeating(row.edge_seating),
-//         "咬合状态": formatOcclusionStatus(row.occlusion_status),
-//         "当日戴牙": formatDailyWearStatus(row.daily_wear_status)
-//       }
-
-//       const imageUrls = getVideoList(row.image || "")
-//       // #region agent log
-//       fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:imageUrls', message: '获取图片URL列表', data: { rowNumber, customerName: row.customer_name, imageUrls, imageUrlsLength: imageUrls.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
-//       // #endregion
-//       if (imageUrls.length > 0) {
-//         const imageCol = worksheet.getColumn("图片列表")
-//         imageCol.width = 20
-//         worksheet.getRow(rowNumber).height = Math.max(80, imageUrls.length * 80)
-
-//         for (let imgIndex = 0; imgIndex < imageUrls.length; imgIndex++) {
-//           // #region agent log
-//           fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:imageLoop', message: '开始处理图片', data: { rowNumber, imgIndex, imageUrl: imageUrls[imgIndex] }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
-//           // #endregion
-//           try {
-//             const imageData = await loadImage(imageUrls[imgIndex])
-//             // #region agent log
-//             fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:imageData', message: '图片数据加载结果', data: { rowNumber, imgIndex, imageUrl: imageUrls[imgIndex], hasImageData: !!imageData, bufferSize: imageData?.buffer?.byteLength, extension: imageData?.extension }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' }) }).catch(() => { });
-//             // #endregion
-//             if (imageData && imageData.buffer.byteLength > 0) {
-//               const imageId = workbook.addImage({
-//                 buffer: imageData.buffer,
-//                 extension: imageData.extension as 'png' | 'jpeg' | 'gif'
-//               })
-//               // #region agent log
-//               fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:addImage', message: 'addImage调用', data: { rowNumber, imgIndex, imageId, extension: imageData.extension, bufferSize: imageData.buffer.byteLength }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) }).catch(() => { });
-//               // #endregion
-
-//               worksheet.addImage(imageId, {
-//                 tl: { col: 4, row: rowNumber - 1 },
-//                 ext: { width: 80, height: 80 },
-//                 editAs: 'oneCell'
-//               })
-//               // #region agent log
-//               fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:worksheetAddImage', message: 'worksheet.addImage调用完成', data: { rowNumber, imgIndex, col: 4, row: rowNumber - 1, width: 80, height: 80, editAs: 'oneCell' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'E' }) }).catch(() => { });
-//               // #endregion
-//             } else {
-//               // #region agent log
-//               fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:imageDataInvalid', message: '图片数据无效', data: { rowNumber, imgIndex, imageUrl: imageUrls[imgIndex], hasImageData: !!imageData, bufferSize: imageData?.buffer?.byteLength }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' }) }).catch(() => { });
-//               // #endregion
-//             }
-//           } catch (error) {
-//             console.error(`加载图片失败 [${imgIndex}]:`, imageUrls[imgIndex], error)
-//             // #region agent log
-//             fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:imageError', message: '图片处理异常', data: { rowNumber, imgIndex, imageUrl: imageUrls[imgIndex], error: String(error) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-//             // #endregion
-//           }
-//         }
-//       }
-//     }
-
-//     // #region agent log
-//     fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:beforeWrite', message: '准备写入Excel', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-//     // #endregion
-//     const buffer = await workbook.xlsx.writeBuffer()
-//     // #region agent log
-//     fetch('http://127.0.0.1:7242/ingest/bb47517f-5071-4ad6-9697-ce0644c52969', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'process/index.vue:handleExport:afterWrite', message: 'Excel写入完成', data: { bufferSize: buffer.byteLength }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
-//     // #endregion
-//     const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
-//     const url = window.URL.createObjectURL(blob)
-//     const link = document.createElement("a")
-//     link.href = url
-//     link.download = `客户进度_${new Date().toISOString().split("T")[0]}.xlsx`
-//     link.click()
-//     window.URL.revokeObjectURL(url)
-
-//     ElMessage.success("导出成功")
-//   } catch (error) {
-//     console.error("导出失败:", error)
-//     ElMessage.error("导出失败")
-//   } finally {
-//     loading.value = false
-//   }
-// }
 
 const generateMockExcelData = async () => {
   try {
@@ -759,6 +665,7 @@ const generateMockExcelData = async () => {
       { header: '材料与数量', key: 'material', width: 15 },
       { header: '边缘就位', key: 'edge_seating', width: 15 },
       { header: '咬合状态', key: 'occlusion_status', width: 15 },
+      { header: '颜色质地', key: 'color_status', width: 15 },
       { header: '当日戴牙', key: 'daily_wear_status', width: 15 },
       { header: '备注', key: 'remark', width: 15 },
       { header: '图片列表', key: 'images', width: 15 },
@@ -779,13 +686,14 @@ const generateMockExcelData = async () => {
       row["edge_seating"] = formatEdgeSeating(row.edge_seating);
       row["occlusion_status"] = formatOcclusionStatus(row.occlusion_status);
       row["daily_wear_status"] = formatDailyWearStatus(row.daily_wear_status);
+      row["color_status"] = formatOcclusionStatus(row.color_status);
       row["images"] = "";
       console.log('row', row);
       const dataRow = worksheet.addRow(row);
       dataRow.height = 100;
       dataRow.alignment = { vertical: 'middle', horizontal: 'center' };
       const rowNum = dataRow.number;
-      await handleMultipleImages(row.factory_image, worksheet, rowNum, 11, workbook);
+      await handleMultipleImages(row.factory_image, worksheet, rowNum, 12, workbook);
     }
     // 生成Excel文件
     const buffer = await workbook.xlsx.writeBuffer();
@@ -828,6 +736,21 @@ onMounted(() => {
 
     <el-card shadow="never">
       <div class="toolbar-wrapper">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <el-input
+            v-model="searchData.customer_name"
+            placeholder="请输入客户名称"
+            clearable
+            style="width: 200px;"
+            @keyup.enter="handleSearch"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
+          <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
+        </div>
         <div>
           <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchDelete">
             批量删除 ({{ selectedRows.length }})
@@ -882,50 +805,33 @@ onMounted(() => {
 
 
 
-          <el-table-column prop="factory_image" label="图片" min-width="260" align="left">
+          <el-table-column prop="factory_mini_image" label="进度图片" min-width="280" align="left">
             <template #default="{ row }">
-              <div v-if="row.factory_image"
+              <div v-if="row.factory_mini_image"
                 style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
-                <div v-for="(imageUrl, index) in getVideoList(row.factory_image)" :key="index"
+                <div v-for="(imageUrl, index) in getVideoList(row.factory_mini_image)" :key="index"
                   style="display: flex; align-items: center; gap: 4px;">
-                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.factory_image)" :initial-index="index"
-                    fit="cover" style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;"
-                    preview-teleported />
+                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.factory_mini_image)"
+                    :initial-index="index" fit="cover"
+                    style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;" preview-teleported />
                   <el-button type="danger" size="small" :icon="Delete" circle
-                    @click="handleDeleteImage(row, imageUrl, index)" />
+                    @click="handleDeleteFactoryMiniImage(row, imageUrl, index)" style="padding: 4px;" />
                 </div>
               </div>
               <span v-else style="color: #999;">-</span>
-            </template>
-          </el-table-column>
-
-
-
-
-
-
-          <el-table-column prop="preparation_time" label="备牙时间" align="center">
-            <template #default="{ row }">
-              {{ row.preparation_time ? row.preparation_time : '-' }}
-            </template>
-          </el-table-column>
-
-          <el-table-column prop="technician" label="技工师" align="center" />
-          <el-table-column prop="chairside_doctor" label="椅旁医生" align="center" />
-          <el-table-column prop="materials" label="材料与数量" min-width="250" align="center">
-            <template #default="{ row }">
-              <div v-if="row.materials && row.materials.length > 0">
-                <el-tag v-for="(item, index) in row.materials" :key="index" style="margin: 2px;">
-                  {{ getMaterialLabel(item.material) }}: {{ item.quantity }}颗
-                </el-tag>
-              </div>
-              <span v-else>-</span>
             </template>
           </el-table-column>
           <el-table-column prop="edge_seating" label="边缘就位" align="center" width="100">
             <template #default="{ row }">
               <el-tag v-if="row.edge_seating === 1" type="success">已就位</el-tag>
               <el-tag v-else-if="row.edge_seating === 0" type="warning">未就位</el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="color_status" label="颜色质地" align="center" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.color_status === 1" type="success">正常</el-tag>
+              <el-tag v-else-if="row.color_status === 0" type="danger">不正常</el-tag>
               <span v-else>-</span>
             </template>
           </el-table-column>
@@ -963,6 +869,48 @@ onMounted(() => {
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
+
+
+
+
+
+
+
+          <el-table-column prop="preparation_time" label="备牙时间" align="center">
+            <template #default="{ row }">
+              {{ row.preparation_time ? row.preparation_time : '-' }}
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="technician" label="技工师" align="center" />
+          <el-table-column prop="chairside_doctor" label="椅旁医生" align="center" />
+          <el-table-column prop="materials" label="材料与数量" min-width="250" align="center">
+            <template #default="{ row }">
+              <div v-if="row.materials && row.materials.length > 0">
+                <el-tag v-for="(item, index) in row.materials" :key="index" style="margin: 2px;">
+                  {{ getMaterialLabel(item.material) }}: {{ item.quantity }}颗
+                </el-tag>
+              </div>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="factory_image" label="图片" min-width="260" align="left">
+            <template #default="{ row }">
+              <div v-if="row.factory_image"
+                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
+                <div v-for="(imageUrl, index) in getVideoList(row.factory_image)" :key="index"
+                  style="display: flex; align-items: center; gap: 4px;">
+                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.factory_image)" :initial-index="index"
+                    fit="cover" style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;"
+                    preview-teleported />
+                  <el-button type="danger" size="small" :icon="Delete" circle
+                    @click="handleDeleteImage(row, imageUrl, index)" />
+                </div>
+              </div>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+
           <el-table-column prop="chairside_video" label="椅旁视频" min-width="270" align="left">
             <template #default="{ row }">
               <div v-if="row.chairside_video"
@@ -1011,12 +959,6 @@ onMounted(() => {
                     <el-button type="success" text size="small" :icon="Upload">上传图片</el-button>
                   </el-upload>
                 </div>
-
-
-
-
-
-
                 <el-button type="danger" text size="small" @click="handleDelete(row)">删除</el-button>
               </div>
             </template>
@@ -1029,45 +971,6 @@ onMounted(() => {
           @size-change="handleSizeChange" @current-change="handleCurrentChange" />
       </div>
     </el-card>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     <ProcessHistoryDialog v-model:visible="historyDialogVisible" :customer-id="selectedCustomer.id"
@@ -1090,21 +993,24 @@ onMounted(() => {
     margin-bottom: 20px;
 
     :deep(.el-card__body) {
-        padding-bottom: 2px;
-      }
+      padding-bottom: 2px;
     }
+  }
 
-    .toolbar-wrapper {
-      margin-bottom: 20px;
-    }
+  .toolbar-wrapper {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
 
-    .table-wrapper {
-      margin-bottom: 20px;
-    }
+  .table-wrapper {
+    margin-bottom: 20px;
+  }
 
-    .pager-wrapper {
-      display: flex;
-      justify-content: flex-end;
-    }
-    }
+  .pager-wrapper {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
 </style>

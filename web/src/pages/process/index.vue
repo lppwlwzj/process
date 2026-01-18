@@ -3,7 +3,7 @@ import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { VideoPlay, Search, Refresh, Delete, Upload } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
-import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateTechnicianVideoApi, updateChairsideVideoApi, updateWebVideoApi, updateImageApi, uploadFileApi } from "@@/apis/process"
+import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateMiniImageApi, updateTechnicianVideoApi, updateChairsideVideoApi, updateWebVideoApi, updateImageApi, uploadFileApi } from "@@/apis/process"
 import { getUserListApi } from "@@/apis/users"
 import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
 import ChairsideHistoryDialog from "./components/ChairsideHistoryDialog.vue"
@@ -49,9 +49,13 @@ interface ProcessData {
   preparation_time?: string
   edge_seating?: number
   occlusion_status?: number
+  color_status?: number
   created_at?: string
   updated_at?: string
   type?: string
+  mini_image?: string
+  factory_mini_image?: string
+
 }
 
 const loading = ref(false)
@@ -151,7 +155,10 @@ const handleSearch = () => {
 }
 
 const resetSearch = () => {
-  searchFormRef.value?.resetFields()
+  searchData.customer_name = ""
+  searchData.progress = ""
+  searchData.technician = ""
+  searchData.remark = ""
   handleSearch()
 }
 
@@ -330,6 +337,36 @@ const removeVideoFromUrlList = (currentVideos: string, videoUrlToRemove: string,
   videoList.splice(index, 1)
   console.log("videoList-->", videoList)
   return videoList.join(',')
+}
+
+const handleDeleteMiniImage = async (row: ProcessData, imageUrl: string, index: number) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
+  const customerId = row.customer_id
+  ElMessageBox.confirm("确认删除该图片？", "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(async () => {
+    try {
+      loading.value = true
+      const currentImages = row.mini_image || ""
+      const updatedImages = removeVideoFromUrlList(currentImages, imageUrl, index)
+      await updateMiniImageApi({
+        customer_id: customerId,
+        mini_image: updatedImages
+      })
+      ElMessage.success("删除成功")
+      getTableData()
+    } catch (error) {
+      console.error("删除图片失败:", error)
+      ElMessage.error("删除图片失败")
+    } finally {
+      loading.value = false
+    }
+  })
 }
 
 const handleUploadWebVideo = async (row: ProcessData, file: File) => {
@@ -636,6 +673,7 @@ const generateMockExcelData = async () => {
       { header: '材料与数量', key: 'material', width: 15 },
       { header: '边缘就位', key: 'edge_seating', width: 15 },
       { header: '咬合状态', key: 'occlusion_status', width: 15 },
+      { header: '颜色质地', key: 'color_status', width: 15 },
       { header: '当日戴牙', key: 'daily_wear_status', width: 15 },
       { header: '备注', key: 'remark', width: 15 },
       { header: '图片列表', key: 'images', width: 15 },
@@ -655,13 +693,14 @@ const generateMockExcelData = async () => {
       row["material"] = formatMaterials(row.materials);
       row["edge_seating"] = formatEdgeSeating(row.edge_seating);
       row["occlusion_status"] = formatOcclusionStatus(row.occlusion_status);
+      row["color_status"] = formatOcclusionStatus(row.color_status);
       row["daily_wear_status"] = formatDailyWearStatus(row.daily_wear_status);
       row["images"] = "";
       const dataRow = worksheet.addRow(row);
       dataRow.height = 100;
       dataRow.alignment = { vertical: 'middle', horizontal: 'center' };
       const rowNum = dataRow.number;
-      await handleMultipleImages(row.image, worksheet, rowNum, 11, workbook);
+      await handleMultipleImages(row.image, worksheet, rowNum, 12, workbook);
     }
     // 生成Excel文件
     const buffer = await workbook.xlsx.writeBuffer();
@@ -702,6 +741,18 @@ onMounted(() => {
   <div class="app-container">
     <el-card shadow="never">
       <div class="toolbar-wrapper">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <el-input v-model="searchData.customer_name" placeholder="请输入客户名称" clearable style="width: 200px;"
+            @keyup.enter="handleSearch">
+            <template #prefix>
+              <el-icon>
+                <Search />
+              </el-icon>
+            </template>
+          </el-input>
+          <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
+          <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
+        </div>
         <div>
           <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchDelete">
             批量删除 ({{ selectedRows.length }})
@@ -754,45 +805,35 @@ onMounted(() => {
             </template>
           </el-table-column>
 
-          <el-table-column prop="image" label="图片" min-width="260  " align="left">
+
+          <el-table-column prop="mini_image" label="进度图片" min-width="280" align="left">
             <template #default="{ row }">
-              <div v-if="row.image"
+              <div v-if="row.mini_image"
                 style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
-                <div v-for="(imageUrl, index) in getVideoList(row.image)" :key="index"
+                <div v-for="(imageUrl, index) in getVideoList(row.mini_image)" :key="index"
                   style="display: flex; align-items: center; gap: 4px;">
-                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.image)" :initial-index="index"
+                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.mini_image)" :initial-index="index"
                     fit="cover" style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;"
                     preview-teleported />
                   <el-button type="danger" size="small" :icon="Delete" circle
-                    @click="handleDeleteImage(row, imageUrl, index)" />
+                    @click="handleDeleteMiniImage(row, imageUrl, index)" style="padding: 4px;" />
                 </div>
               </div>
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
 
-          <el-table-column prop="preparation_time" label="备牙时间" align="center">
-            <template #default="{ row }">
-              {{ row.preparation_time ? row.preparation_time : '-' }}
-            </template>
-          </el-table-column>
-
-          <el-table-column prop="technician" label="技工师" align="center" />
-          <el-table-column prop="chairside_doctor" label="椅旁医生" align="center" />
-          <el-table-column prop="materials" label="材料与数量" min-width="250" align="center">
-            <template #default="{ row }">
-              <div v-if="row.materials && row.materials.length > 0">
-                <el-tag v-for="(item, index) in row.materials" :key="index" style="margin: 2px;">
-                  {{ getMaterialLabel(item.material) }}: {{ item.quantity }}颗
-                </el-tag>
-              </div>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
           <el-table-column prop="edge_seating" label="边缘就位" align="center" width="100">
             <template #default="{ row }">
               <el-tag v-if="row.edge_seating === 1" type="success">已就位</el-tag>
               <el-tag v-else-if="row.edge_seating === 0" type="warning">未就位</el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="color_status" label="颜色质地" align="center" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.color_status === 1" type="success">正常</el-tag>
+              <el-tag v-else-if="row.color_status === 0" type="danger">不正常</el-tag>
               <span v-else>-</span>
             </template>
           </el-table-column>
@@ -810,7 +851,6 @@ onMounted(() => {
               <span v-else>-</span>
             </template>
           </el-table-column>
-
           <el-table-column prop="web_video" label="视频" min-width="280" align="left">
             <template #default="{ row }">
               <div v-if="row.web_video"
@@ -830,6 +870,44 @@ onMounted(() => {
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
+
+
+          <el-table-column prop="preparation_time" label="备牙时间" align="center">
+            <template #default="{ row }">
+              {{ row.preparation_time ? row.preparation_time : '-' }}
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="technician" label="技工师" align="center" />
+          <el-table-column prop="chairside_doctor" label="椅旁医生" align="center" />
+          <el-table-column prop="materials" label="材料与数量" min-width="250" align="center">
+            <template #default="{ row }">
+              <div v-if="row.materials && row.materials.length > 0">
+                <el-tag v-for="(item, index) in row.materials" :key="index" style="margin: 2px;">
+                  {{ getMaterialLabel(item.material) }}: {{ item.quantity }}颗
+                </el-tag>
+              </div>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="image" label="图片" min-width="260  " align="left">
+            <template #default="{ row }">
+              <div v-if="row.image"
+                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
+                <div v-for="(imageUrl, index) in getVideoList(row.image)" :key="index"
+                  style="display: flex; align-items: center; gap: 4px;">
+                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.image)" :initial-index="index"
+                    fit="cover" style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;"
+                    preview-teleported />
+                  <el-button type="danger" size="small" :icon="Delete" circle
+                    @click="handleDeleteImage(row, imageUrl, index)" />
+                </div>
+              </div>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+
           <el-table-column prop="chairside_video" label="椅旁视频" min-width="270" align="left">
             <template #default="{ row }">
               <div v-if="row.chairside_video"
@@ -918,6 +996,9 @@ onMounted(() => {
 
   .toolbar-wrapper {
     margin-bottom: 20px;
+    display: flex;
+      justify-content: space-between;
+      align-items: center;
   }
 
   .table-wrapper {

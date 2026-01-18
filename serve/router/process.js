@@ -14,5 +14,6 @@ router.post('/updateImage', process_handler.updateImage)
 router.post('/updateFactoryTechnicianVideo', process_handler.updateFactoryTechnicianVideo)
 router.post('/updateFactoryWebVideo', process_handler.updateFactoryWebVideo)
 router.post('/updateFactoryImage', process_handler.updateFactoryImage)
+router.post('/updateMiniImage', process_handler.updateMiniImage)
 module.exports = router
 
