@@ -1,10 +1,22 @@
 import json
 import sys
 import os
+from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.connection import db
 from common.response import success_response, error_response
 from common.utils import parse_materials
+
+def convert_datetime_to_str(obj):
+    """递归转换字典中的 datetime 对象为字符串"""
+    if isinstance(obj, dict):
+        return {k: convert_datetime_to_str(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_datetime_to_str(item) for item in obj]
+    elif isinstance(obj, datetime):
+        return obj.isoformat()
+    else:
+        return obj
 
 def list_customers():
     sql = """SELECT 
@@ -16,10 +28,12 @@ def list_customers():
         results = db.query(sql)
         parsed_results = []
         for item in results:
-            parsed_results.append({
+            parsed_item = {
                 **item,
                 'materials': parse_materials(item.get('materials'))
-            })
+            }
+            parsed_item = convert_datetime_to_str(parsed_item)
+            parsed_results.append(parsed_item)
         return success_response(parsed_results)
     except Exception as e:
         return error_response(str(e))
@@ -147,6 +161,7 @@ def get_customer_detail(data):
             **results[0],
             'materials': parse_materials(results[0].get('materials'))
         }
+        customer = convert_datetime_to_str(customer)
         return success_response(customer)
     except Exception as e:
         return error_response(str(e))

@@ -1,0 +1,330 @@
+openapi: 3.0.0
+info:
+  title: 智能排班助手H5前端API
+  version: 1.0.0
+  description: H5前端应用调用的API接口定义
+
+servers:
+  - url: http://localhost:3000/api
+    description: 本地开发环境
+
+paths:
+  /ai-schedule/chat:
+    post:
+      summary: 发送消息到AI助手（SSE流式响应）
+      description: 发送自然语言消息，通过 Server-Sent Events (SSE) 流式返回AI响应
+      tags:
+        - Chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                session_id:
+                  type: string
+                  description: 会话ID（新会话时为空或省略）
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+                message:
+                  type: string
+                  description: 用户输入的自然语言消息
+                  example: "今天下午两点安排李总给客户王小心面诊，备注：客户要求提前准备"
+                user_id:
+                  type: integer
+                  description: 用户ID（可选）
+                  example: 1
+      responses:
+        '200':
+          description: SSE流式响应（Content-Type: text/event-stream）
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  SSE事件流格式：
+                  data: {"type":"chunk","content":"部分响应文本"}
+                  data: {"type":"chunk","content":"更多响应文本"}
+                  data: {"type":"complete","data":{...完整响应对象...}}
+                  \n\n
+              example: |
+                data: {"type":"chunk","content":"已为您查询"}
+                data: {"type":"chunk","content":"到该时间段"}
+                data: {"type":"complete","data":{"session_id":"...","response":"...","extracted_info":{...}}}
+                \n\n
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ai-schedule/confirm:
+    post:
+      summary: 确认创建排班记录
+      description: 用户确认AI建议的排班方案后，创建排班记录
+      tags:
+        - Schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+                - suggested_schedule
+              properties:
+                session_id:
+                  type: string
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+                suggested_schedule:
+                  $ref: '#/components/schemas/SuggestedSchedule'
+                is_vip_priority:
+                  type: boolean
+                  description: 是否为VIP优先插入
+                  example: false
+      responses:
+        '200':
+          description: 排班创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 0
+                  message:
+                    type: string
+                    example: "排班创建成功"
+                  data:
+                    type: object
+                    properties:
+                      schedule_id:
+                        type: integer
+                        example: 123
+                      adjusted_schedules:
+                        type: array
+                        description: VIP优先插入时，被顺延调整的排班列表
+                        items:
+                          $ref: '#/components/schemas/Schedule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /ai-schedule/history/{session_id}:
+    get:
+      summary: 获取对话历史
+      description: 根据会话ID获取该会话的所有对话消息
+      tags:
+        - Chat
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 会话ID
+      responses:
+        '200':
+          description: 成功返回对话历史
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 0
+                  message:
+                    type: string
+                    example: "成功"
+                  data:
+                    type: object
+                    properties:
+                      session_id:
+                        type: string
+                      messages:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ChatMessage'
+        '404':
+          description: 会话不存在
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /schedule/list:
+    post:
+      summary: 获取排班列表
+      description: 根据筛选条件获取排班记录列表
+      tags:
+        - Schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date
+                  description: 日期（YYYY-MM-DD格式）
+                  example: "2026-01-25"
+                doctor_id:
+                  type: integer
+                  description: 医生ID
+                  example: 1
+                room:
+                  type: string
+                  description: 诊室名称
+                  example: "诊室1"
+      responses:
+        '200':
+          description: 成功返回排班列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 0
+                  message:
+                    type: string
+                    example: "成功"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Schedule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        metadata:
+          type: object
+
+    Schedule:
+      type: object
+      properties:
+        id:
+          type: integer
+        project:
+          type: string
+          enum: [面诊, 备牙, 戴牙, 椅旁, 复诊, 雕蜡, 蜡形试戴]
+        doctor_id:
+          type: integer
+        doctor_name:
+          type: string
+        nurse_id:
+          type: integer
+          nullable: true
+        nurse_name:
+          type: string
+          nullable: true
+        customer_id:
+          type: integer
+        customer_name:
+          type: string
+        room:
+          type: string
+          nullable: true
+        start_time:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+          description: 时长（分钟）
+        end_time:
+          type: string
+          format: date-time
+        remark:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SuggestedSchedule:
+      type: object
+      required:
+        - project
+        - doctor_id
+        - customer_id
+        - start_time
+      properties:
+        project:
+          type: string
+          enum: [面诊, 备牙, 戴牙, 椅旁, 复诊, 雕蜡, 蜡形试戴]
+        doctor_id:
+          type: integer
+        nurse_id:
+          type: integer
+          nullable: true
+        customer_id:
+          type: integer
+        room:
+          type: string
+          nullable: true
+        start_time:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+          description: 时长（分钟）
+        remark:
+          type: string
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 1
+        message:
+          type: string
+          example: "错误信息"
+
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: 服务器内部错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

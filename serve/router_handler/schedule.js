@@ -1,0 +1,291 @@
+const db = require('../db/index')
+
+exports.list = (req, res) => {
+  const { date, doctor_id } = req.body;
+  let sql = `SELECT 
+    s.*,
+    u1.username as doctor_name,
+    u2.username as nurse_name,
+    c.customer_name
+    FROM schedule s
+    LEFT JOIN user u1 ON s.doctor_id = u1.id
+    LEFT JOIN user u2 ON s.nurse_id = u2.id
+    LEFT JOIN customer c ON s.customer_id = c.id
+    WHERE 1=1`;
+  const params = [];
+  
+  if (date) {
+    sql += ` AND DATE(s.start_time) = ?`;
+    params.push(date);
+  }
+  
+  if (doctor_id) {
+    sql += ` AND s.doctor_id = ?`;
+    params.push(doctor_id);
+  }
+  
+  sql += ` ORDER BY s.start_time ASC`;
+  
+  db.query(sql, params, (err, results) => {
+    if (err) return res.cc(err);
+    res.send({
+      code: 0,
+      message: "成功！",
+      re: results
+    });
+  });
+};
+
+exports.create = (req, res) => {
+  const { project, doctor_id, nurse_id, customer_id, room, start_time, duration, remark } = req.body;
+  
+  if (!project || !doctor_id || !customer_id || !room || !start_time || !duration) {
+    return res.cc("缺少必填字段！");
+  }
+  
+  if (duration <= 0) {
+    return res.cc("时长必须大于0！");
+  }
+  
+  const startTime = new Date(start_time);
+  const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
+  
+  const conflictChecks = [];
+  const conflictMessages = [];
+  
+  const checkDoctorSql = `SELECT id FROM schedule 
+    WHERE doctor_id = ? 
+    AND (
+      (start_time <= ? AND end_time > ?) OR
+      (start_time < ? AND end_time >= ?) OR
+      (start_time >= ? AND end_time <= ?)
+    )`;
+  
+  conflictChecks.push({
+    sql: checkDoctorSql,
+    params: [doctor_id, startTime, startTime, endTime, endTime, startTime, endTime],
+    message: "该医生在此时间段已有排班，请选择其他时间！"
+  });
+  
+  if (nurse_id) {
+    const checkNurseSql = `SELECT id FROM schedule 
+      WHERE nurse_id = ? 
+      AND (
+        (start_time <= ? AND end_time > ?) OR
+        (start_time < ? AND end_time >= ?) OR
+        (start_time >= ? AND end_time <= ?)
+      )`;
+    
+    conflictChecks.push({
+      sql: checkNurseSql,
+      params: [nurse_id, startTime, startTime, endTime, endTime, startTime, endTime],
+      message: "该护士在此时间段已有排班，请选择其他时间！"
+    });
+  }
+  
+  const checkRoomSql = `SELECT id FROM schedule 
+    WHERE room = ? 
+    AND (
+      (start_time <= ? AND end_time > ?) OR
+      (start_time < ? AND end_time >= ?) OR
+      (start_time >= ? AND end_time <= ?)
+    )`;
+  
+  conflictChecks.push({
+    sql: checkRoomSql,
+    params: [room, startTime, startTime, endTime, endTime, startTime, endTime],
+    message: "该诊室在此时间段已被占用，请选择其他诊室或时间！"
+  });
+  
+  let completedChecks = 0;
+  const totalChecks = conflictChecks.length;
+  
+  conflictChecks.forEach((check, index) => {
+    db.query(check.sql, check.params, (err, conflictResults) => {
+      if (err) return res.cc(err);
+      
+      if (conflictResults.length > 0) {
+        conflictMessages.push(check.message);
+      }
+      
+      completedChecks++;
+      
+      if (completedChecks === totalChecks) {
+        if (conflictMessages.length > 0) {
+          return res.cc(conflictMessages.join("；"));
+        }
+        
+        const insertSql = `INSERT INTO schedule 
+          (project, doctor_id, nurse_id, customer_id, room, start_time, duration, end_time, remark) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        
+        const insertParams = [project, doctor_id, nurse_id || null, customer_id, room, startTime, duration, endTime, remark || null];
+        
+        db.query(insertSql, insertParams, (err, results) => {
+          if (err) return res.cc(err);
+          res.send({
+            code: 0,
+            message: "创建排班成功！",
+            re: { id: results.insertId }
+          });
+        });
+      }
+    });
+  });
+};
+
+exports.update = (req, res) => {
+  const { id, project, doctor_id, nurse_id, customer_id, room, start_time, duration, remark } = req.body;
+  
+  if (!id) {
+    return res.cc("缺少排班ID！");
+  }
+  
+  if (!project || !doctor_id || !customer_id || !room || !start_time || !duration) {
+    return res.cc("缺少必填字段！");
+  }
+  
+  if (duration <= 0) {
+    return res.cc("时长必须大于0！");
+  }
+  
+  const startTime = new Date(start_time);
+  const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
+  
+  const conflictChecks = [];
+  const conflictMessages = [];
+  
+  const checkDoctorSql = `SELECT id FROM schedule 
+    WHERE doctor_id = ? 
+    AND id != ?
+    AND (
+      (start_time <= ? AND end_time > ?) OR
+      (start_time < ? AND end_time >= ?) OR
+      (start_time >= ? AND end_time <= ?)
+    )`;
+  
+  conflictChecks.push({
+    sql: checkDoctorSql,
+    params: [doctor_id, id, startTime, startTime, endTime, endTime, startTime, endTime],
+    message: "该医生在此时间段已有排班，请选择其他时间！"
+  });
+  
+  if (nurse_id) {
+    const checkNurseSql = `SELECT id FROM schedule 
+      WHERE nurse_id = ? 
+      AND id != ?
+      AND (
+        (start_time <= ? AND end_time > ?) OR
+        (start_time < ? AND end_time >= ?) OR
+        (start_time >= ? AND end_time <= ?)
+      )`;
+    
+    conflictChecks.push({
+      sql: checkNurseSql,
+      params: [nurse_id, id, startTime, startTime, endTime, endTime, startTime, endTime],
+      message: "该护士在此时间段已有排班，请选择其他时间！"
+    });
+  }
+  
+  const checkRoomSql = `SELECT id FROM schedule 
+    WHERE room = ? 
+    AND id != ?
+    AND (
+      (start_time <= ? AND end_time > ?) OR
+      (start_time < ? AND end_time >= ?) OR
+      (start_time >= ? AND end_time <= ?)
+    )`;
+  
+  conflictChecks.push({
+    sql: checkRoomSql,
+    params: [room, id, startTime, startTime, endTime, endTime, startTime, endTime],
+    message: "该诊室在此时间段已被占用，请选择其他诊室或时间！"
+  });
+  
+  let completedChecks = 0;
+  const totalChecks = conflictChecks.length;
+  
+  conflictChecks.forEach((check, index) => {
+    db.query(check.sql, check.params, (err, conflictResults) => {
+      if (err) return res.cc(err);
+      
+      if (conflictResults.length > 0) {
+        conflictMessages.push(check.message);
+      }
+      
+      completedChecks++;
+      
+      if (completedChecks === totalChecks) {
+        if (conflictMessages.length > 0) {
+          return res.cc(conflictMessages.join("；"));
+        }
+        
+        const updateSql = `UPDATE schedule 
+          SET project = ?, doctor_id = ?, nurse_id = ?, customer_id = ?, room = ?,
+              start_time = ?, duration = ?, end_time = ?, remark = ?
+          WHERE id = ?`;
+        
+        const updateParams = [project, doctor_id, nurse_id || null, customer_id, room, startTime, duration, endTime, remark || null, id];
+        
+        db.query(updateSql, updateParams, (err, results) => {
+          if (err) return res.cc(err);
+          res.send({
+            code: 0,
+            message: "更新排班成功！",
+            re: null
+          });
+        });
+      }
+    });
+  });
+};
+
+exports.delete = (req, res) => {
+  const { id } = req.body;
+  
+  if (!id) {
+    return res.cc("缺少排班ID！");
+  }
+  
+  const deleteSql = `DELETE FROM schedule WHERE id = ?`;
+  
+  db.query(deleteSql, [id], (err, results) => {
+    if (err) return res.cc(err);
+    res.send({
+      code: 0,
+      message: "删除排班成功！",
+      re: null
+    });
+  });
+};
+
+exports.detail = (req, res) => {
+  const { id } = req.body;
+  
+  if (!id) {
+    return res.cc("缺少排班ID！");
+  }
+  
+  const sql = `SELECT 
+    s.*,
+    u1.username as doctor_name,
+    u2.username as nurse_name,
+    c.customer_name
+    FROM schedule s
+    LEFT JOIN user u1 ON s.doctor_id = u1.id
+    LEFT JOIN user u2 ON s.nurse_id = u2.id
+    LEFT JOIN customer c ON s.customer_id = c.id
+    WHERE s.id = ?`;
+  
+  db.query(sql, [id], (err, results) => {
+    if (err) return res.cc(err);
+    if (results.length === 0) {
+      return res.cc("排班记录不存在！");
+    }
+    res.send({
+      code: 0,
+      message: "成功！",
+      re: results[0]
+    });
+  });
+};

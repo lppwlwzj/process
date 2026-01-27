@@ -783,46 +783,6 @@ onMounted(() => {
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
-
-
-          <el-table-column prop="technician_video" label="进度视频" min-width="280" align="left">
-            <template #default="{ row }">
-              <div v-if="row.technician_video"
-                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
-                <div v-for="(videoUrl, index) in getVideoList(row.technician_video)" :key="index"
-                  style="display: flex; align-items: center; gap: 4px;">
-                  <el-button type="primary" size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
-                    <el-icon style="margin-right: 0px;">
-                      <VideoPlay />
-                    </el-icon>
-                    {{ index + 1 }}
-                  </el-button>
-                  <el-button type="danger" size="small" :icon="Delete" circle
-                    @click="handleDeleteTechnicianVideo(row, videoUrl, index)" style="padding: 4px;" />
-                </div>
-              </div>
-              <span v-else style="color: #999;">-</span>
-            </template>
-          </el-table-column>
-
-
-          <el-table-column prop="mini_image" label="进度图片" min-width="280" align="left">
-            <template #default="{ row }">
-              <div v-if="row.mini_image"
-                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
-                <div v-for="(imageUrl, index) in getVideoList(row.mini_image)" :key="index"
-                  style="display: flex; align-items: center; gap: 4px;">
-                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.mini_image)" :initial-index="index"
-                    fit="cover" style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;"
-                    preview-teleported />
-                  <el-button type="danger" size="small" :icon="Delete" circle
-                    @click="handleDeleteMiniImage(row, imageUrl, index)" style="padding: 4px;" />
-                </div>
-              </div>
-              <span v-else style="color: #999;">-</span>
-            </template>
-          </el-table-column>
-
           <el-table-column prop="edge_seating" label="边缘就位" align="center" width="100">
             <template #default="{ row }">
               <el-tag v-if="row.edge_seating === 1" type="success">已就位</el-tag>
@@ -870,6 +830,46 @@ onMounted(() => {
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
+
+          <el-table-column prop="technician_video" label="进度视频" min-width="280" align="left">
+            <template #default="{ row }">
+              <div v-if="row.technician_video"
+                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
+                <div v-for="(videoUrl, index) in getVideoList(row.technician_video)" :key="index"
+                  style="display: flex; align-items: center; gap: 4px;">
+                  <el-button type="primary" size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
+                    <el-icon style="margin-right: 0px;">
+                      <VideoPlay />
+                    </el-icon>
+                    {{ index + 1 }}
+                  </el-button>
+                  <el-button type="danger" size="small" :icon="Delete" circle
+                    @click="handleDeleteTechnicianVideo(row, videoUrl, index)" style="padding: 4px;" />
+                </div>
+              </div>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+
+
+          <el-table-column prop="mini_image" label="进度图片" min-width="280" align="left">
+            <template #default="{ row }">
+              <div v-if="row.mini_image"
+                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
+                <div v-for="(imageUrl, index) in getVideoList(row.mini_image)" :key="index"
+                  style="display: flex; align-items: center; gap: 4px;">
+                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.mini_image)" :initial-index="index"
+                    fit="cover" style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;"
+                    preview-teleported />
+                  <el-button type="danger" size="small" :icon="Delete" circle
+                    @click="handleDeleteMiniImage(row, imageUrl, index)" style="padding: 4px;" />
+                </div>
+              </div>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+
+
 
 
           <el-table-column prop="preparation_time" label="备牙时间" align="center">

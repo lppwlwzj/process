@@ -1,4 +1,5 @@
-// 导入express模块
+require('dotenv').config();
+
 const express = require("express");
 
 
@@ -132,6 +133,12 @@ app.use("/api/process_history", processHistoryRouter);
 
 const yipanRouter = require("./router/yipan");
 app.use("/api/yipan", yipanRouter);
+
+const scheduleRouter = require("./router/schedule");
+app.use("/api/schedule", scheduleRouter);
+
+const aiScheduleRouter = require("./router/ai-schedule");
+app.use("/api/ai-schedule", aiScheduleRouter);
 
 // const kehuRouter = require("./router/kehu");
 // app.use("/api/kehu", kehuRouter);

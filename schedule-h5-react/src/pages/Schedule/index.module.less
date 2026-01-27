@@ -1,0 +1,74 @@
+@import '@/styles/variables';
+
+.scheduleContainer {
+  min-height: 100vh;
+  background-color: #f8f8f8;
+  padding-bottom: 3rem;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+.filterBar {
+  display: flex;
+  padding: 0.5rem;
+  background-color: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  gap: 0.5rem;
+}
+
+.filterSelect {
+  flex: 1;
+  padding: 0.4rem;
+  background-color: #f5f5f5;
+  border-radius: 0.2rem;
+  border: none;
+  font-size: 0.65rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.scheduleList {
+  padding: 0.5rem;
+}
+
+.loading {
+  padding: 2.5rem 0;
+  text-align: center;
+  color: #999;
+  font-size: 0.7rem;
+}
+
+.emptyState {
+  padding: 2.5rem 0;
+  text-align: center;
+  color: #999;
+  font-size: 0.7rem;
+}
+
+.scheduleItem {
+  margin-bottom: 0.5rem;
+}
+
+.refreshButton {
+  position: fixed;
+  bottom: 4rem;
+  right: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: @primary-color;
+  color: #fff;
+  border: none;
+  border-radius: 1.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  box-shadow: 0 0.1rem 0.3rem rgba(0, 0, 0, 0.2);
+  z-index: 999;
+  
+  &:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+}

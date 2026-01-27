@@ -1,0 +1,45 @@
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.errorIcon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.errorTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 12px 0;
+}
+
+.errorMessage {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 24px 0;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.retryButton {
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:active {
+    transform: scale(0.96);
+  }
+}

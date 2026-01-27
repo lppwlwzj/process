@@ -1,0 +1,67 @@
+@import './variables';
+@import './mixins';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: calc(100vw / 375 * 16);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background-color: @bg-color;
+  color: @text-color;
+  font-size: @font-size-base;
+  overflow-x: hidden;
+}
+
+@media (orientation: landscape) {
+  html {
+    font-size: calc(100vh / 667 * 16);
+  }
+}
+
+button, a, input, select, textarea {
+  &:focus-visible {
+    outline: 2px solid @primary-color;
+    outline-offset: 2px;
+  }
+}
+
+[tabindex]:focus-visible {
+  outline: 2px solid @primary-color;
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 16px;
+  background: #ef4444;
+  color: #fff;
+  text-align: center;
+  font-size: 14px;
+  z-index: 9999;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

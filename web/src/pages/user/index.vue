@@ -41,7 +41,7 @@ const formData = reactive<UserFormData>({
   role: ""
 })
 
-const roleOptions = ["技师", "医生椅旁技师", "工厂技师", "其他人员"]
+const roleOptions = ["技师", "医生椅旁技师", "工厂技师", "其他人员", "护士"]
 
 const formRules: FormRules = {
   username: [

@@ -43,8 +43,8 @@ def list_processes(data):
         params.append(f"%{remark}%")
         params.append(f"%{remark}%")
     
-        count_sql = f"SELECT COUNT(*) as total FROM ({sql}) as temp"
-        try:
+    count_sql = f"SELECT COUNT(*) as total FROM ({sql}) as temp"
+    try:
         count_results = db.query(count_sql, tuple(params))
         total = count_results[0]['total'] if count_results else 0
         

@@ -1,0 +1,73 @@
+@import '@/styles/variables';
+
+.scheduleItemWrapper {
+  background-color: #fff;
+  border-radius: 0.3rem;
+  padding: 0.6rem;
+  display: flex;
+  gap: 0.5rem;
+  box-shadow: 0 0.05rem 0.2rem rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: translateY(-0.05rem);
+    box-shadow: 0 0.1rem 0.3rem rgba(0, 0, 0, 0.15);
+  }
+}
+
+.timeSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 3rem;
+  padding-right: 0.5rem;
+  border-right: 1px solid #e0e0e0;
+}
+
+.time {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: @text-color;
+  margin-bottom: 0.2rem;
+}
+
+.duration {
+  font-size: 0.55rem;
+  color: #999;
+}
+
+.infoSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.infoRow {
+  display: flex;
+  font-size: 0.65rem;
+  line-height: 1.5;
+}
+
+.label {
+  color: #666;
+  min-width: 2.5rem;
+}
+
+.value {
+  color: @text-color;
+  flex: 1;
+  word-break: break-all;
+  
+  &.project {
+    color: @primary-color;
+    font-weight: bold;
+  }
+  
+  &.remark {
+    color: #999;
+    font-size: 0.6rem;
+  }
+}
