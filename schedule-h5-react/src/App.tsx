@@ -31,10 +31,10 @@ function AppContent() {
       <OfflineBanner />
       <Suspense fallback={<Loading fullscreen text="加载中..." />}>
         <Routes>
-          <Route path="/" element={<ChatPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/schedule" element={<SchedulePage />} />
-          <Route path="/schedule/detail" element={<ScheduleDetailPage />} />
+          <Route path="/app" element={<ChatPage />} />
+          <Route path="/app/chat" element={<ChatPage />} />
+          <Route path="/app/schedule" element={<SchedulePage />} />
+          <Route path="/app/schedule/detail" element={<ScheduleDetailPage />} />
         </Routes>
       </Suspense>
       {showTabBar && <TabBar />}

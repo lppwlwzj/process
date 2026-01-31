@@ -5,7 +5,7 @@ CREATE TABLE `schedule` (
   `project` varchar(50) NOT NULL COMMENT '项目类型',
   `doctor_id` int(11) NOT NULL COMMENT '医生ID（关联user表）',
   `nurse_id` int(11) DEFAULT NULL COMMENT '护士ID（关联user表）',
-  `customer_id` int(11) NOT NULL COMMENT '客户ID（关联customer表）',
+  `customer_name` varchar(100) NOT NULL COMMENT '客户姓名',
   `room` varchar(50) DEFAULT NULL COMMENT '诊室名称（诊室1、诊室2、诊室3、诊室4）',
   `start_time` datetime NOT NULL COMMENT '开始时间',
   `duration` int(11) NOT NULL COMMENT '时长（分钟）',
@@ -16,7 +16,7 @@ CREATE TABLE `schedule` (
   PRIMARY KEY (`id`),
   KEY `idx_doctor_id` (`doctor_id`),
   KEY `idx_nurse_id` (`nurse_id`),
-  KEY `idx_customer_id` (`customer_id`),
+  KEY `idx_customer_name` (`customer_name`),
   KEY `idx_room` (`room`),
   KEY `idx_start_time` (`start_time`),
   KEY `idx_end_time` (`end_time`)

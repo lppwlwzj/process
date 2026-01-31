@@ -211,7 +211,7 @@ const handleEdit = async (row: ScheduleData) => {
   dialogTitle.value = "编辑排班"
   isEdit.value = true
   try {
-    const res = await getScheduleDetailApi(row.id)
+    const res: any = await getScheduleDetailApi(row.id)
     if (res.re) {
       Object.assign(formData, {
         ...res.re,

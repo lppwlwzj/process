@@ -1,10 +1,11 @@
 import { request } from "@/http/axios"
 
 /** 获取客户列表 */
-export function getCustomerListApi() {
+export function getCustomerListApi(data?: any) {
   return request<any>({
     url: "customer/list",
-    method: "post"
+    method: "post",
+    data: data || {}
   })
 }
 

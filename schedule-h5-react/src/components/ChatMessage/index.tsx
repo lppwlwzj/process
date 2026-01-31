@@ -4,6 +4,8 @@ import { useChatStore } from '@/stores/chatStore'
 import { showToast } from '@/utils/toast'
 import dayjs from 'dayjs'
 import clsx from 'clsx'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import styles from './index.module.less'
 
 interface ChatMessageProps {
@@ -49,7 +51,37 @@ export default function ChatMessage({ message, onConfirmed }: ChatMessageProps) 
   return (
     <div className={clsx(styles.messageWrapper, styles[message.role])}>
       <div className={clsx(styles.messageBubble, message.type && styles[message.type])}>
-        <div className={styles.messageContent}>{message.content}</div>
+        <div className={styles.messageContent}>
+          {message.role === 'assistant' ? (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ node, ...props }) => <h1 className={styles.markdownH1} {...props} />,
+                h2: ({ node, ...props }) => <h2 className={styles.markdownH2} {...props} />,
+                h3: ({ node, ...props }) => <h3 className={styles.markdownH3} {...props} />,
+                p: ({ node, ...props }) => <p className={styles.markdownP} {...props} />,
+                ul: ({ node, ...props }) => <ul className={styles.markdownUl} {...props} />,
+                ol: ({ node, ...props }) => <ol className={styles.markdownOl} {...props} />,
+                li: ({ node, ...props }) => <li className={styles.markdownLi} {...props} />,
+                strong: ({ node, ...props }) => <strong className={styles.markdownStrong} {...props} />,
+                em: ({ node, ...props }) => <em className={styles.markdownEm} {...props} />,
+                code: ({ node, inline, ...props }: any) => 
+                  inline ? (
+                    <code className={styles.markdownCodeInline} {...props} />
+                  ) : (
+                    <code className={styles.markdownCodeBlock} {...props} />
+                  ),
+                pre: ({ node, ...props }) => <pre className={styles.markdownPre} {...props} />,
+                blockquote: ({ node, ...props }) => <blockquote className={styles.markdownBlockquote} {...props} />,
+                hr: ({ node, ...props }) => <hr className={styles.markdownHr} {...props} />,
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          ) : (
+            message.content
+          )}
+        </div>
         <div className={styles.messageTime}>{formatTime(message.timestamp)}</div>
         {message.type === 'confirm' && message.scheduleData && (
           <div className={styles.confirmActions}>

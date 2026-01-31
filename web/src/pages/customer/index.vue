@@ -1,11 +1,16 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
-import { CirclePlus, Edit, Delete, VideoPlay } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
 import { getCustomerListApi, createCustomerApi, updateCustomerApi, deleteCustomerApi, batchDeleteCustomerApi, generateQrCodeApi } from "@@/apis/customers"
 import type { FormInstance, FormRules } from "element-plus"
 import { materialOptions } from "../process/constant"
+
+const Search: any = null
+const Refresh: any = null
+const CirclePlus: any = null
+const Edit: any = null
+const Delete: any = null
 interface MaterialItem {
   material: string
   quantity: number | string
@@ -93,7 +98,7 @@ const formRules: FormRules = {
 const getTableData = async () => {
   loading.value = true
   try {
-    const res = await getCustomerListApi()
+    const res = await getCustomerListApi({ customer_name: searchData.customer_name })
     if (res.re) {
       allTableData.value = res.re
       paginationData.total = res.re.length
@@ -343,29 +348,17 @@ onMounted(() => {
 
 <template>
   <div class="app-container">
-    <!-- <el-card shadow="never" class="search-wrapper">
+    <el-card shadow="never" class="search-wrapper">
       <el-form ref="searchFormRef" :inline="true" :model="searchData">
         <el-form-item prop="customer_name" label="客户姓名">
           <el-input v-model="searchData.customer_name" placeholder="请输入客户姓名" />
-        </el-form-item>
-        <el-form-item prop="technician" label="阶段进度">
-          <el-select v-model="searchData.technician" placeholder="请选择阶段">
-            <el-option label="全部" value="" />
-            <el-option v-for="item in stageOptions" :key="item.key" :label="item.label" :value="item.label" />
-          </el-select>
-        </el-form-item>
-        <el-form-item prop="doctor" label="医生">
-          <el-select v-model="searchData.doctor" placeholder="请选择医生">
-            <el-option label="全部" value="" />
-            <el-option v-for="item in doctorOptions" :key="item" :label="item" :value="item" />
-          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
         </el-form-item>
       </el-form>
-    </el-card> -->
+    </el-card>
 
     <el-card shadow="never">
       <div class="toolbar-wrapper">
@@ -389,7 +382,7 @@ onMounted(() => {
             <template #default="{ row }">
               <el-tag v-if="row.technician" :type="getStageType(row.technician) || undefined">{{ row.technician }}</el-tag>
             </template>
-          </el-table-column> -->
+</el-table-column> -->
           <el-table-column prop="wear_time" label="戴牙时间" width="110" align="center">
             <template #default="{ row }">
               {{ row.wear_time ? row.wear_time : '-' }}
@@ -488,8 +481,7 @@ onMounted(() => {
           </el-col>
           <el-col :span="12">
             <el-form-item label="截牙时间" prop="wear_time">
-              <el-date-picker v-model="formData.wear_time" type="date" placeholder="选择日期"
-format="MM-DD"
+              <el-date-picker v-model="formData.wear_time" type="date" placeholder="选择日期" format="MM-DD"
                 value-format="MM-DD" style="width: 100%" />
             </el-form-item>
           </el-col>
@@ -538,7 +530,7 @@ format="MM-DD"
 <style lang="scss" scoped>
 .app-container {
   .search-wrapper {
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 
     :deep(.el-card__body) {
       padding-bottom: 2px;

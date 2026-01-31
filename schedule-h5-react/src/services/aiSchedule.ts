@@ -30,3 +30,10 @@ export function getChatHistory(sessionId: string) {
     method: 'GET'
   })
 }
+
+export function deleteSession(sessionId: string) {
+  return request({
+    url: `/ai-schedule/session/${sessionId}`,
+    method: 'DELETE'
+  })
+}

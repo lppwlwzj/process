@@ -1,7 +1,7 @@
 const { createAgent, HumanMessage, AIMessage, SystemMessage } = require('langchain');
 const { createLLM } = require('./config');
 const { systemPrompt } = require('./prompt');
-const { queryScheduleTool, checkConflictTool, createScheduleTool, vipPriorityInsertTool, delaySchedulesTool } = require('../tools/schedule-tools');
+const { queryScheduleTool, checkConflictTool, createScheduleTool, vipPriorityInsertTool, delaySchedulesTool, updateScheduleTool } = require('../tools/schedule-tools');
 const { queryUserTool, queryCustomerTool } = require('../tools/user-tools');
 const { queryAvailableResourcesTool } = require('../tools/resource-tools');
 const MemoryManager = require('../memory/manager');
@@ -18,6 +18,7 @@ class ScheduleAgent {
       queryScheduleTool,
       checkConflictTool,
       createScheduleTool,
+      updateScheduleTool,
       vipPriorityInsertTool,
       delaySchedulesTool,
       queryUserTool,
@@ -43,8 +44,10 @@ class ScheduleAgent {
   _buildMessages(chatHistory, userMessage) {
     const messages = [];
     
-    if (Array.isArray(chatHistory)) {
-      for (const msg of chatHistory) {
+    if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+      const recentHistory = chatHistory.slice(-10);
+      
+      for (const msg of recentHistory) {
         if (msg.role === 'user' || msg.type === 'human') {
           messages.push(new HumanMessage(msg.content || msg.text || ''));
         } else if (msg.role === 'assistant' || msg.type === 'ai') {
@@ -53,7 +56,11 @@ class ScheduleAgent {
       }
     }
     
-    messages.push(new HumanMessage(userMessage));
+    const currentRequestHint = `【新请求】以下是用户的当前请求，请基于这条消息重新处理，如果用户修改了之前提到的信息（如医生名、客户名等），请使用新的信息重新调用工具查询，不要参考历史对话中的工具调用结果。
+
+用户说：${userMessage}`;
+    
+    messages.push(new HumanMessage(currentRequestHint));
     
     return messages;
   }
@@ -138,6 +145,14 @@ class ScheduleAgent {
       const extractedInfo = extractScheduleInfo(userMessage);
       console.log('extractedInfo in streamMessage--->', extractedInfo);
       
+      await this.memoryManager.saveToLongTerm(
+        sessionId,
+        userId,
+        'user',
+        userMessage,
+        { extracted_info: extractedInfo }
+      );
+      
       const shortTermMemory = this.memoryManager.getShortTermMemory(sessionId);
       const longTermHistory = await this.memoryManager.loadLongTermMemory(sessionId);
       
@@ -155,7 +170,6 @@ class ScheduleAgent {
       let hasYieldedChunk = false;
 
       try {
-        console.log('Calling agent.streamEvents...');
         const streamEvents = this.agent.streamEvents({ messages }, { version: "v2" });
 
         for await (const event of streamEvents) {
@@ -256,14 +270,6 @@ class ScheduleAgent {
       await this.memoryManager.saveToLongTerm(
         sessionId,
         userId,
-        'user',
-        userMessage,
-        { extracted_info: extractedInfo }
-      );
-
-      await this.memoryManager.saveToLongTerm(
-        sessionId,
-        userId,
         'assistant',
         fullResponse,
         {}
@@ -272,7 +278,6 @@ class ScheduleAgent {
       yield { type: 'complete', response: fullResponse, extracted_info: extractedInfo };
     } catch (error) {
       console.error('Error in streamMessage--->', error);
-      console.error('Error stack--->', error.stack);
       yield { 
         type: 'complete', 
         response: `处理消息时出错: ${error.message}`,

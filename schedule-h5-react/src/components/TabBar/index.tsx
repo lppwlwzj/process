@@ -13,13 +13,13 @@ interface TabItem {
 
 const tabs: TabItem[] = [
   {
-    path: '/chat',
+    path: '/app/chat',
     label: '对话',
     icon: chatIcon,
     activeIcon: chatIcon
   },
   {
-    path: '/schedule',
+    path: '/app/schedule',
     label: '日程',
     icon: scheduleIcon,
     activeIcon: scheduleIcon
@@ -31,8 +31,8 @@ export default function TabBar() {
   const navigate = useNavigate()
 
   const isActive = (path: string) => {
-    if (path === '/chat') {
-      return location.pathname === '/' || location.pathname === '/chat'
+    if (path === '/app/chat') {
+      return location.pathname === '/app' || location.pathname === '/app/chat'
     }
     return location.pathname.startsWith(path)
   }

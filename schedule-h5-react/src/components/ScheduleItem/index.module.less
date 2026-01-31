@@ -45,29 +45,38 @@
   gap: 0.3rem;
 }
 
-.infoRow {
+.mainInfoRow {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   font-size: 0.65rem;
   line-height: 1.5;
+  gap: 0.2rem;
 }
 
-.label {
-  color: #666;
-  min-width: 2.5rem;
+.separator {
+  color: #ccc;
+  margin: 0 0.15rem;
+  user-select: none;
 }
 
 .value {
   color: @text-color;
-  flex: 1;
   word-break: break-all;
   
   &.project {
     color: @primary-color;
     font-weight: bold;
   }
-  
-  &.remark {
-    color: #999;
-    font-size: 0.6rem;
-  }
+}
+
+.remarkRow {
+  display: flex;
+  font-size: 0.6rem;
+  line-height: 1.5;
+}
+
+.remark {
+  color: #999;
+  word-break: break-all;
 }

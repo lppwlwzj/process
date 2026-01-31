@@ -46,7 +46,6 @@ async function* streamChatMessage(sessionId, userId, message) {
       return;
     }
     
-    console.log('calling agent.streamMessage');
     for await (const chunk of agent.streamMessage(sessionId, userId, message)) {
       console.log('yielding chunk--->', chunk);
       yield chunk;
@@ -98,24 +97,6 @@ async function handleDirectInsert(sessionId, userId, extractedInfo, originalMess
     };
   }
   
-  const customerResult = await new Promise((resolve, reject) => {
-    db.query('SELECT id FROM customer WHERE customer_name LIKE ?', 
-      [`%${customer_name}%`], (err, results) => {
-        if (err) reject(err);
-        else resolve(results[0]);
-      });
-  });
-  
-  if (!customerResult) {
-    return {
-      session_id: sessionId,
-      response: `未找到客户：${customer_name}`,
-      extracted_info: extractedInfo,
-      requires_confirmation: false,
-      has_conflict: false
-    };
-  }
-  
   const finalDuration = duration || getProjectDefaultDuration(project);
   const startTime = new Date(start_time);
   const endTime = new Date(startTime.getTime() + finalDuration * 60 * 1000);
@@ -134,9 +115,9 @@ async function handleDirectInsert(sessionId, userId, extractedInfo, originalMess
   
   const scheduleId = await new Promise((resolve, reject) => {
     db.query(`INSERT INTO schedule 
-      (project, doctor_id, customer_id, room, start_time, end_time, duration, remark)
+      (project, doctor_id, customer_name, room, start_time, end_time, duration, remark)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [project, doctorResult.id, customerResult.id, room, startTime, endTime, finalDuration, remark || null],
+      [project, doctorResult.id, customer_name, room, startTime, endTime, finalDuration, remark || null],
       (err, results) => {
         if (err) reject(err);
         else resolve(results.insertId);
@@ -154,7 +135,7 @@ async function handleDirectInsert(sessionId, userId, extractedInfo, originalMess
 }
 
 async function confirmSchedule(sessionId, suggestedSchedule, isVipPriority) {
-  const { project, doctor_id, nurse_id, customer_id, room, start_time, duration, remark } = suggestedSchedule;
+  const { project, doctor_id, nurse_id, customer_name, room, start_time, duration, remark } = suggestedSchedule;
   
   const startTime = new Date(start_time);
   const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
@@ -165,9 +146,9 @@ async function confirmSchedule(sessionId, suggestedSchedule, isVipPriority) {
   
   return new Promise((resolve, reject) => {
     db.query(`INSERT INTO schedule 
-      (project, doctor_id, nurse_id, customer_id, room, start_time, end_time, duration, remark)
+      (project, doctor_id, nurse_id, customer_name, room, start_time, end_time, duration, remark)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [project, doctor_id, nurse_id || null, customer_id, room, startTime, endTime, duration, remark || null],
+      [project, doctor_id, nurse_id || null, customer_name, room, startTime, endTime, duration, remark || null],
       (err, results) => {
         if (err) {
           reject(err);
@@ -184,7 +165,7 @@ async function confirmSchedule(sessionId, suggestedSchedule, isVipPriority) {
 
 async function handleVipInsert(sessionId, scheduleInfo) {
   return new Promise((resolve, reject) => {
-    const { project, doctor_id, nurse_id, customer_id, room, start_time, duration, remark } = scheduleInfo;
+    const { project, doctor_id, nurse_id, customer_name, room, start_time, duration, remark } = scheduleInfo;
     const startTime = new Date(start_time);
     const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
     
@@ -194,9 +175,9 @@ async function handleVipInsert(sessionId, scheduleInfo) {
       }
       
       db.query(`INSERT INTO schedule 
-        (project, doctor_id, nurse_id, customer_id, room, start_time, end_time, duration, remark)
+        (project, doctor_id, nurse_id, customer_name, room, start_time, end_time, duration, remark)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [project, doctor_id, nurse_id || null, customer_id, room, startTime, endTime, duration, remark || null],
+        [project, doctor_id, nurse_id || null, customer_name, room, startTime, endTime, duration, remark || null],
         (err, insertResult) => {
           if (err) {
             return db.rollback(() => reject(err));

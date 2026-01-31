@@ -7,6 +7,7 @@ import { existsSync } from 'fs'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
+  base: '/app',
   plugins: [react()],
   resolve: {
     alias: {
@@ -34,7 +35,7 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    minify: 'terser',
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {

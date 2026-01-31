@@ -22,7 +22,7 @@ export default function ScheduleDetailPage() {
     setError
   } = useScheduleStore()
 
-  const [selectedDate, setSelectedDate] = useState<string>(
+  const [selectedDate] = useState<string>(
     searchParams.get('date') || dayjs().format('YYYY-MM-DD')
   )
 
@@ -34,10 +34,10 @@ export default function ScheduleDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const list = await getScheduleList({
+      const res = await getScheduleList({
         date: selectedDate
       })
-      setScheduleList(list)
+      setScheduleList(res.re)
     } catch (error: any) {
       setError(error.message || '加载失败')
     } finally {

@@ -1,7 +1,7 @@
 @import '@/styles/variables';
 
 .messageWrapper {
-  max-width: 75%;
+  max-width: 80%;
   animation: messageAppear 0.3s ease-out;
   
   &.user {
@@ -31,6 +31,10 @@
       
       .messageTime {
         color: #999;
+      }
+      
+      .messageContent {
+        color: @text-color;
       }
     }
   }
@@ -76,8 +80,148 @@
   line-height: 1.7;
   margin-bottom: 0.375rem;
   word-break: break-word;
-  white-space: pre-wrap;
   letter-spacing: 0.01em;
+  
+  .markdownH1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0.75rem 0 0.5rem 0;
+    color: @text-color;
+    line-height: 1.4;
+    
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+  
+  .markdownH2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0.75rem 0 0.5rem 0;
+    color: @text-color;
+    line-height: 1.4;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    padding-bottom: 0.25rem;
+    
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+  
+  .markdownH3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0.625rem 0 0.375rem 0;
+    color: @text-color;
+    line-height: 1.4;
+    
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+  
+  .markdownP {
+    margin: 0.5rem 0;
+    line-height: 1.7;
+    color: @text-color;
+    
+    &:first-child {
+      margin-top: 0;
+    }
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  .markdownUl,
+  .markdownOl {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+    line-height: 1.7;
+    
+    &:first-child {
+      margin-top: 0;
+    }
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  .markdownLi {
+    margin: 0.25rem 0;
+    line-height: 1.7;
+    color: @text-color;
+    
+    &::marker {
+      color: @primary-color;
+    }
+  }
+  
+  .markdownStrong {
+    font-weight: 600;
+    color: @text-color;
+  }
+  
+  .markdownEm {
+    font-style: italic;
+    color: @text-color;
+  }
+  
+  .markdownCodeInline {
+    background: rgba(60, 197, 31, 0.1);
+    color: @primary-color;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.8em;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-weight: 500;
+  }
+  
+  .markdownCodeBlock {
+    display: block;
+    background: #f5f7fa;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    margin: 0.75rem 0;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  
+  .markdownPre {
+    margin: 0.75rem 0;
+    overflow-x: auto;
+    
+    &:first-child {
+      margin-top: 0;
+    }
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  .markdownBlockquote {
+    margin: 0.75rem 0;
+    padding-left: 1rem;
+    border-left: 3px solid @primary-color;
+    color: #666;
+    font-style: italic;
+    background: rgba(60, 197, 31, 0.05);
+    padding: 0.75rem 1rem;
+    border-radius: 0.25rem;
+  }
+  
+  .markdownHr {
+    margin: 1rem 0;
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    height: 0;
+  }
 }
 
 .messageTime {

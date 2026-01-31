@@ -21,7 +21,7 @@ function getRecentMessages(sessionId, limit, callback) {
   const sql = `SELECT id, role, content, metadata, created_at
     FROM conversation_memory
     WHERE session_id = ?
-    ORDER BY created_at DESC
+    ORDER BY created_at DESC, id DESC
     LIMIT ?`;
 
   db.query(sql, [sessionId, maxMessages], (err, results) => {

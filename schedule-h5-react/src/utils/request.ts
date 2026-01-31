@@ -23,7 +23,7 @@ instance.interceptors.response.use(
 )
 
 export function request<T = any>(config: AxiosRequestConfig): Promise<T> {
-  return instance.request<T>(config)
+  return instance.request<T>(config) as Promise<T>
 }
 
 export default instance

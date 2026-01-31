@@ -30,10 +30,7 @@ exports.chat = async (req, res) => {
     res.end();
   }, config.sse.connectionTimeout);
   
-  console.log('streamChatMessage--->', sessionId, userId, message);
-  
   try {
-    console.log('Starting streamChatMessage iteration');
     for await (const chunk of streamChatMessage(sessionId, userId, message)) {
       console.log('Received chunk--->', chunk);
       if (chunk.type === 'chunk') {

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { Input, Button, SpinLoading } from 'antd-mobile'
-import { SendOutline } from 'antd-mobile-icons'
+import { TextArea, SpinLoading, Dialog } from 'antd-mobile'
+import { SendOutline, DeleteOutline } from 'antd-mobile-icons'
 import { useChatStore } from '@/stores/chatStore'
 import { useSSE } from '@/hooks/useSSE'
-import { getChatHistory } from '@/services/aiSchedule'
+import { getChatHistory, deleteSession } from '@/services/aiSchedule'
 import { useScroll } from '@/hooks/useScroll'
 import ChatMessage from '@/components/ChatMessage'
+import type { ChatMessage as ChatMessageType } from '@/types/chat'
 import styles from './index.module.less'
 
 export default function ChatPage() {
@@ -45,7 +46,7 @@ export default function ChatPage() {
       const history = await getChatHistory(sessionId)
       if (history && history.messages && Array.isArray(history.messages) && history.messages.length > 0) {
         clearMessages()
-        const formattedMessages = history.messages.map((msg: any) => ({
+        const formattedMessages: ChatMessageType[] = history.messages.map((msg: any) => ({
           id: msg.id || `${Date.now()}-${Math.random()}`,
           role: msg.role || 'assistant',
           content: msg.content || '',
@@ -54,7 +55,7 @@ export default function ChatPage() {
           scheduleData: msg.scheduleData || msg.metadata?.suggested_schedule,
           isStreaming: false
         }))
-        formattedMessages.forEach((msg) => {
+        formattedMessages.forEach((msg: ChatMessageType) => {
           addMessage(msg)
         })
       }
@@ -72,13 +73,35 @@ export default function ChatPage() {
 
     const message = inputMessage.trim()
     setInputMessage('')
-    
+
     await sendMessage(message, sessionId || undefined)
   }
 
 
   const handleConfirmed = () => {
     console.log('Schedule confirmed')
+  }
+
+  const handleClearMessages = async () => {
+    const result = await Dialog.confirm({
+      content: '确定要清除所有对话记录吗？',
+      confirmText: '清除',
+      cancelText: '取消',
+    })
+    if (result) {
+      try {
+        if (sessionId) {
+          await deleteSession(sessionId)
+        }
+      } catch (error) {
+        console.error('删除会话失败:', error)
+      } finally {
+        clearMessages()
+        localStorage.removeItem('chat_session_id')
+        setSessionId('')
+        setHistoryLoaded(false)
+      }
+    }
   }
 
   return (
@@ -92,8 +115,8 @@ export default function ChatPage() {
           </div>
         )}
         {messages.map((msg, index) => (
-          <div 
-            key={msg.id} 
+          <div
+            key={msg.id}
             className={`${styles.messageItem} ${styles[msg.role]}`}
             style={{ animationDelay: `${index * 0.05}s` }}
           >
@@ -107,42 +130,52 @@ export default function ChatPage() {
               <span></span>
               <span></span>
             </div>
-            <span className={styles.typingText}>AI正在输入...</span>
+            <span className={styles.typingText}>AI正在解析...</span>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
-      
+
       <div className={styles.inputArea}>
-        <div className={styles.inputWrapper}>
-          <Input
-            value={inputMessage}
-            onChange={(val) => setInputMessage(val)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSend()
-              }
-            }}
-            placeholder="输入消息..."
-            disabled={isConnecting}
-            className={styles.input}
-            clearable
-          />
+        <div className={styles.inputCard}>
+          <div className={styles.inputHeader}>
+            <span className={styles.inputLabel}>发送消息</span>
+            <button
+              className={styles.clearButton}
+              onClick={handleClearMessages}
+              disabled={messages.length === 0}
+              aria-label="清除对话"
+            >
+              <DeleteOutline fontSize={16} />
+              <span>清除</span>
+            </button>
+          </div>
+          <div className={styles.inputWrapper}>
+            <TextArea
+              value={inputMessage}
+              onChange={(val) => setInputMessage(val)}
+              placeholder="输入您的排班需求，例如：帮我安排明天下午于医生的面诊..."
+              disabled={isConnecting}
+              className={styles.input}
+              autoSize={{ minRows: 2, maxRows: 5 }}
+              rows={2}
+            />
+            <div className={styles.inputActions}>
+              <button
+                className={`${styles.sendButton} ${(!inputMessage.trim() || isConnecting) ? styles.disabled : ''}`}
+                onClick={handleSend}
+                disabled={isConnecting || !inputMessage.trim()}
+                aria-label="发送消息"
+              >
+                {isConnecting ? (
+                  <SpinLoading style={{ '--size': '18px', '--color': '#fff' } as React.CSSProperties} />
+                ) : (
+                  <SendOutline fontSize={18} style={{ color: '#333' } as React.CSSProperties} />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-        <Button
-          onClick={handleSend}
-          disabled={isConnecting || !inputMessage.trim()}
-          className={styles.sendButton}
-          color="primary"
-          shape="rounded"
-        >
-          {isConnecting ? (
-            <SpinLoading style={{ '--size': '16px' }} />
-          ) : (
-            <SendOutline fontSize={18} />
-          )}
-        </Button>
       </div>
     </div>
   )

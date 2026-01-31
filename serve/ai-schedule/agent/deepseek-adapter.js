@@ -2,6 +2,10 @@ const { BaseChatModel } = require('@langchain/core/language_models/chat_models')
 const { AIMessageChunk } = require('@langchain/core/messages');
 const { ChatGenerationChunk } = require('@langchain/core/outputs');
 
+
+const axios = require('axios');
+const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
+
 class DeepSeekChatModel extends BaseChatModel {
   constructor(config) {
     super({});
@@ -72,10 +76,6 @@ class DeepSeekChatModel extends BaseChatModel {
   }
 
   async _generate(messages, options) {
-    const axios = require('axios');
-    
-    const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
-    
     const formattedMessages = messages
       .filter(msg => msg != null && !Array.isArray(msg))
       .map(msg => {
@@ -159,10 +159,8 @@ class DeepSeekChatModel extends BaseChatModel {
   }
 
   async *_streamResponseChunks(messages, options) {
-    const axios = require('axios');
     
-    console.log('_streamResponseChunks called with messages:', JSON.stringify(messages, null, 2));
-    console.log('_streamResponseChunks options:', JSON.stringify(options, null, 2));
+    // console.log('_streamResponseChunks called with messages:', JSON.stringify(messages, null, 2),);
     
     let formattedMessages = [];
     
@@ -171,7 +169,6 @@ class DeepSeekChatModel extends BaseChatModel {
         console.warn('_streamResponseChunks received empty messages array');
         formattedMessages = [{ role: 'user', content: '' }];
       } else {
-        const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
         
         formattedMessages = messages
           .filter(msg => msg != null)
@@ -220,6 +217,8 @@ class DeepSeekChatModel extends BaseChatModel {
       stream: true
     };
 
+    console.log('DeepSeek boundTools count:', this.boundTools?.length || 0);
+    
     if (this.boundTools && this.boundTools.length > 0) {
       const toolsFormat = this.boundTools.map(tool => ({
         type: 'function',
@@ -232,6 +231,9 @@ class DeepSeekChatModel extends BaseChatModel {
       requestBody.tools = toolsFormat;
       requestBody.tool_choice = 'auto';
     }
+    
+    // console.log('DeepSeek request messages count:', requestBody.messages.length);
+    console.log('DeepSeek has tools:', !!requestBody.tools,'DeepSeek last message:', JSON.stringify(requestBody.messages[requestBody.messages.length - 1]));
 
     try {
       const response = await axios.post(
@@ -248,6 +250,9 @@ class DeepSeekChatModel extends BaseChatModel {
       );
 
       let buffer = '';
+      let accumulatedToolCalls = {};
+      let fullContent = '';
+      
       for await (const chunk of response.data) {
         buffer += chunk.toString();
         const lines = buffer.split('\n');
@@ -257,12 +262,57 @@ class DeepSeekChatModel extends BaseChatModel {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') {
+              if (Object.keys(accumulatedToolCalls).length > 0) {
+                const toolCalls = Object.values(accumulatedToolCalls).map(tc => ({
+                  name: tc.name,
+                  args: JSON.parse(tc.arguments || '{}'),
+                  id: tc.id,
+                  type: 'tool_call'
+                }));
+                console.log('DeepSeek final tool_calls:', JSON.stringify(toolCalls));
+                
+                const message = new AIMessageChunk({
+                  content: fullContent,
+                  tool_call_chunks: toolCalls.map(tc => ({
+                    name: tc.name,
+                    args: JSON.stringify(tc.args),
+                    id: tc.id,
+                    index: 0
+                  }))
+                });
+                message.tool_calls = toolCalls;
+                
+                yield new ChatGenerationChunk({
+                  text: fullContent,
+                  message: message
+                });
+              }
               return;
             }
             try {
               const parsed = JSON.parse(data);
-              const content = parsed.choices[0]?.delta?.content || '';
+              const delta = parsed.choices[0]?.delta;
+              const content = delta?.content || '';
+              const toolCallsChunk = delta?.tool_calls;
+              
+              if (toolCallsChunk && toolCallsChunk.length > 0) {
+                for (const tc of toolCallsChunk) {
+                  const idx = tc.index || 0;
+                  if (!accumulatedToolCalls[idx]) {
+                    accumulatedToolCalls[idx] = {
+                      id: tc.id || '',
+                      name: tc.function?.name || '',
+                      arguments: ''
+                    };
+                  }
+                  if (tc.id) accumulatedToolCalls[idx].id = tc.id;
+                  if (tc.function?.name) accumulatedToolCalls[idx].name = tc.function.name;
+                  if (tc.function?.arguments) accumulatedToolCalls[idx].arguments += tc.function.arguments;
+                }
+              }
+              
               if (content) {
+                fullContent += content;
                 yield new ChatGenerationChunk({
                   text: content,
                   message: new AIMessageChunk(content)
@@ -272,6 +322,32 @@ class DeepSeekChatModel extends BaseChatModel {
             }
           }
         }
+      }
+      
+      if (Object.keys(accumulatedToolCalls).length > 0) {
+        const toolCalls = Object.values(accumulatedToolCalls).map(tc => ({
+          name: tc.name,
+          args: JSON.parse(tc.arguments || '{}'),
+          id: tc.id,
+          type: 'tool_call'
+        }));
+        console.log('DeepSeek final tool_calls (end of stream):', JSON.stringify(toolCalls));
+        
+        const message = new AIMessageChunk({
+          content: fullContent,
+          tool_call_chunks: toolCalls.map(tc => ({
+            name: tc.name,
+            args: JSON.stringify(tc.args),
+            id: tc.id,
+            index: 0
+          }))
+        });
+        message.tool_calls = toolCalls;
+        
+        yield new ChatGenerationChunk({
+          text: fullContent,
+          message: message
+        });
       }
     } catch (error) {
       const errorDetails = error.response 

@@ -1,9 +1,9 @@
 import { request } from '@/utils/request'
-import { ScheduleFilter, Schedule } from '@/types/schedule'
+import { ScheduleFilter } from '@/types/schedule'
 
-export function getScheduleList(filter: ScheduleFilter): Promise<Schedule[]> {
+export function getScheduleList(filter: ScheduleFilter): Promise<any> {
   return request({
-    url: '/api/schedule/list',
+    url: '/schedule/list',
     method: 'POST',
     data: filter
   })

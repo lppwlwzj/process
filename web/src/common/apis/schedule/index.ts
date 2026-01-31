@@ -34,7 +34,7 @@ export function deleteScheduleApi(id: number) {
 }
 
 export function getScheduleDetailApi(id: number) {
-  return request<ScheduleData>({
+  return request<any>({
     url: "schedule/detail",
     method: "post",
     data: { id }

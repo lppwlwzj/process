@@ -5,12 +5,10 @@ exports.list = (req, res) => {
   let sql = `SELECT 
     s.*,
     u1.username as doctor_name,
-    u2.username as nurse_name,
-    c.customer_name
+    u2.username as nurse_name
     FROM schedule s
     LEFT JOIN user u1 ON s.doctor_id = u1.id
     LEFT JOIN user u2 ON s.nurse_id = u2.id
-    LEFT JOIN customer c ON s.customer_id = c.id
     WHERE 1=1`;
   const params = [];
   
@@ -37,9 +35,11 @@ exports.list = (req, res) => {
 };
 
 exports.create = (req, res) => {
-  const { project, doctor_id, nurse_id, customer_id, room, start_time, duration, remark } = req.body;
+  const { project, doctor_id, nurse_id, customer_id, customer_name, room, start_time, duration, remark } = req.body;
   
-  if (!project || !doctor_id || !customer_id || !room || !start_time || !duration) {
+  const finalCustomerName = customer_name || customer_id;
+  
+  if (!project || !doctor_id || !finalCustomerName || !room || !start_time || !duration) {
     return res.cc("缺少必填字段！");
   }
   
@@ -116,10 +116,10 @@ exports.create = (req, res) => {
         }
         
         const insertSql = `INSERT INTO schedule 
-          (project, doctor_id, nurse_id, customer_id, room, start_time, duration, end_time, remark) 
+          (project, doctor_id, nurse_id, customer_name, room, start_time, duration, end_time, remark) 
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         
-        const insertParams = [project, doctor_id, nurse_id || null, customer_id, room, startTime, duration, endTime, remark || null];
+        const insertParams = [project, doctor_id, nurse_id || null, finalCustomerName, room, startTime, duration, endTime, remark || null];
         
         db.query(insertSql, insertParams, (err, results) => {
           if (err) return res.cc(err);

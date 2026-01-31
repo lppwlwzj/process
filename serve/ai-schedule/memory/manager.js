@@ -1,6 +1,7 @@
 const { createShortTermMemory } = require('./short-term');
 const { saveMessage, getRecentMessages, cleanupOldMessages, deleteSession } = require('./long-term');
 const { InMemoryChatMessageHistory } = require('@langchain/core/chat_history');
+const { HumanMessage, AIMessage } = require('@langchain/core/messages');
 
 class MemoryManager {
   constructor() {
@@ -23,7 +24,6 @@ class MemoryManager {
         }
 
         const history = new InMemoryChatMessageHistory();
-        const { HumanMessage, AIMessage } = require('@langchain/core/messages');
         for (const msg of messages) {
           if (msg.role === 'user') {
             await history.addMessage(new HumanMessage(msg.content));
