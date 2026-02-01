@@ -203,9 +203,9 @@ exports.create = (req, res) => {
                 };
                 const startStr = formatTime(start);
                 const endStr = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
-                return `${startStr}-${endStr} ${item.doctor_name}、${item.customer_name}、${item.project}`;
+                return `${startStr}-${endStr} <br>${item.doctor_name}、${item.customer_name}、${item.project}`;
               }).join('<br>');
-              message = `${check.message}<br><br>冲突排班：${conflictList} <br> <br> ${`项目默认时长：面诊: 40min  <br>备牙: 70min  <br>戴牙: 90min  <br>复诊: 30min`}`;
+              message = `${check.message}<br><br>${conflictList} <br> <br> ${`备牙: 70min  <br>戴牙: 90min  <br>复诊: 30min`}`;
             }
             conflictMessages.push(message.replace(/\n/g, '<br>'));
           }

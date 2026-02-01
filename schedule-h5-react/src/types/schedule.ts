@@ -1,4 +1,4 @@
-export type ProjectType = '面诊' | '备牙' | '戴牙' | '椅旁' | '复诊' | '雕蜡' | '蜡形试戴' | '休息'
+export type ProjectType = '面诊' | '备牙' | '戴牙' | '椅旁' | '复诊' | '雕蜡' | '蜡形试戴' // | '休息'
 
 export interface Schedule {
   id: string

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   DatePicker,
   Picker,
@@ -36,7 +36,7 @@ const PROJECT_TYPES = [
   // { label: '椅旁', value: '椅旁' },
   { label: '复诊', value: '复诊' },
   // { label: '雕蜡', value: '雕蜡' },
-  { label: '休息', value: '休息' },
+  // { label: '休息', value: '休息' },
   // { label: '蜡形试戴', value: '蜡形试戴' },
 ]
 
@@ -55,7 +55,7 @@ const PROJECT_DURATIONS: Record<string, number> = {
   '戴牙': 90,
   '复诊': 30,
   '蜡形试戴': 45,
-  '休息': 60
+  // '休息': 60
 }
 
 export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nurses, defaultDate }: ScheduleFormProps) {
@@ -73,6 +73,10 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
   const [nursePickerVisible, setNursePickerVisible] = useState(false)
   const [projectPickerVisible, setProjectPickerVisible] = useState(false)
   const [roomPickerVisible, setRoomPickerVisible] = useState(false)
+
+  const _doctors = useMemo(() => {
+    return doctors.map(d => ({ label: d.username, value: d.id })).filter(d => d.label !== '何锐' && d.label !== '孙韩宇')
+  }, [doctors])
 
   useEffect(() => {
     if (visible) {
@@ -106,23 +110,23 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
       setLoading(true)
       console.log(values)
 
-      if (!values.customer_name) {
-        Toast.show('请输入客户姓名')
-        setLoading(false)
-        return
-      }
+      // if (!values.customer_name) {
+      //   Toast.show('请输入客户姓名')
+      //   setLoading(false)
+      //   return
+      // }
 
-      if (!values.project) {
-        Toast.show('请选择项目')
-        setLoading(false)
-        return
-      }
+      // if (!values.project) {
+      //   Toast.show('请选择项目')
+      //   setLoading(false)
+      //   return
+      // }
 
-      if (!startDateTime) {
-        Toast.show('请选择开始时间')
-        setLoading(false)
-        return
-      }
+      // if (!startDateTime) {
+      //   Toast.show('请选择开始时间')
+      //   setLoading(false)
+      //   return
+      // }
 
       const start = dayjs(startDateTime).second(0).millisecond(0)
       const end = dayjs(endDateTime).second(0).millisecond(0)
@@ -276,8 +280,8 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
               <Picker
                 visible={doctorPickerVisible}
                 onClose={() => setDoctorPickerVisible(false)}
-                columns={[(doctors || []).map(d => ({ label: d.username, value: d.id }))]}
-                value={doctorId ? [doctorId] : [doctors[Math.floor(doctors.length / 2)].id]}
+                columns={[(_doctors || []).map(d => ({ label: d.label, value: d.value }))]}
+                value={doctorId ? [doctorId] : [_doctors[Math.floor(_doctors.length / 2)].value]}
                 onConfirm={(val) => {
                   if (val && Array.isArray(val) && val.length > 0) {
                     form.setFieldsValue({ doctor_id: val[0] })
@@ -310,7 +314,7 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
             </div>
           </Form.Item>
 
-          {/* <Form.Item
+          <Form.Item
             name="nurse_id"
             label="护士"
           >
@@ -350,7 +354,7 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
                 }}
               </Picker>
             </div>
-          </Form.Item> */}
+          </Form.Item>
 
           <Form.Item
             name="start_time"
@@ -376,11 +380,14 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
                     ? PROJECT_DURATIONS[projectValue]
                     : 60
 
-                  if (!endDateTime || dayjs(date).isBefore(endDateTime) || dayjs(date).isSame(endDateTime)) {
                     const newEndDateTime = dayjs(date).add(duration, 'minute').toDate()
                     setEndDateTime(newEndDateTime)
                     form.setFieldsValue({ end_time: newEndDateTime })
-                  }
+                  // if (!endDateTime || dayjs(date).isBefore(endDateTime) || dayjs(date).isSame(endDateTime)) {
+                  //   const newEndDateTime = dayjs(date).add(duration, 'minute').toDate()
+                  //   setEndDateTime(newEndDateTime)
+                  //   form.setFieldsValue({ end_time: newEndDateTime })
+                  // }
                 }}
               >
                 {(value) => (
