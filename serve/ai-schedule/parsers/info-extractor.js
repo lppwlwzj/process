@@ -46,7 +46,7 @@ function extractScheduleInfo(text) {
     info.nurse_name = nurseMatch[1].trim();
   }
 
-  const customerMatch = normalizedText.match(/客户\s*([^\s，,。]+)|给\s*([^\s，,。]+)\s*(安排|面诊|备牙|戴牙|复诊|雕蜡|蜡形试戴)/);
+  const customerMatch = normalizedText.match(/客户\s*([^\s，,。]+)|给\s*([^\s，,。]+)\s*(安排|面诊|备牙|戴牙|复诊|雕蜡|蜡形试戴|休息)/);
   if (customerMatch) {
     info.customer_name = (customerMatch[1] || customerMatch[2]).trim();
   }

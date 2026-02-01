@@ -21,7 +21,7 @@ const config = {
   },
   schedule: {
     projectTypes: {
-      noConflictCheck: ['面诊', '雕蜡', '椅旁'],
+      noConflictCheck: ['面诊', '雕蜡', '椅旁',"休息"],
       withConflictCheck: ['备牙', '戴牙', '复诊', '蜡形试戴']
     },
     defaultDurations: {

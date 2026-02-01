@@ -55,7 +55,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem 1.5rem 1rem;
+  padding: 1rem 1.5rem 0.5rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   background: linear-gradient(180deg, #fafafa 0%, #fff 100%);
 }
@@ -96,7 +96,7 @@
 .form {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 1.5rem;
+  padding: 0.5rem 1rem;
   
   :global(.adm-form-item) {
     margin-bottom:0rem;
@@ -104,6 +104,12 @@
     &:last-child {
       margin-bottom: 0;
     }
+  }
+  
+  :global(.adm-list-item-content-prefix) {
+    width: 80px;
+    min-width: 80px;
+    flex-shrink: 0;
   }
   
   :global(.adm-form-item-label) {
@@ -167,6 +173,40 @@
   :global(.adm-picker-view-column-item) {
     font-size: 0.9375rem;
   }
+
+}
+
+.pickerContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.clearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.1);
+  color: #666;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.15);
+    color: #333;
+  }
+  
+  &:active {
+    background: rgba(0, 0, 0, 0.2);
+    transform: scale(0.9);
+  }
 }
 
 .footer {
@@ -196,14 +236,8 @@
   height: 2.75rem;
   border-radius: 0.75rem;
   font-weight: 600;
-  background: linear-gradient(135deg, @primary-color 0%, #28a745 100%);
+  background-color: @primary-color;
   border: none;
-  box-shadow: 0 4px 12px rgba(60, 197, 31, 0.3);
-  
-  &:active {
-    transform: scale(0.98);
-    box-shadow: 0 2px 8px rgba(60, 197, 31, 0.2);
-  }
 }
 .customerInput {
   :global(.adm-form-item-child) {
@@ -215,4 +249,10 @@
       border-color:none;
     }
   }
+}
+
+
+
+:global(.adm-picker) {
+  height: 380px !important;
 }

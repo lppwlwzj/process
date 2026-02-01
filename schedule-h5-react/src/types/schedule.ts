@@ -1,4 +1,4 @@
-export type ProjectType = '面诊' | '备牙' | '戴牙' | '椅旁' | '复诊' | '雕蜡' | '蜡形试戴'
+export type ProjectType = '面诊' | '备牙' | '戴牙' | '椅旁' | '复诊' | '雕蜡' | '蜡形试戴' | '休息'
 
 export interface Schedule {
   id: string
@@ -11,9 +11,9 @@ export interface Schedule {
   nurse_name?: string
   customer_id: string
   customer_name: string
-  project_type: ProjectType
+  project: ProjectType
   room_id: string
-  room_name: string
+  room: string
   remark?: string
   is_vip: boolean
   created_at: number
@@ -25,5 +25,5 @@ export interface ScheduleFilter {
   dateRange?: [string, string]
   doctor_id?: string
   room_id?: string
-  project_type?: ProjectType
+  projectproject_type?: ProjectType
 }

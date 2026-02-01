@@ -65,41 +65,49 @@ function checkConflict(scheduleInfo, callback) {
       });
     }
 
-    let checkRoomSql = `SELECT s.id, s.start_time, s.end_time, s.project, s.customer_name
-      FROM schedule s
-      WHERE s.room = ?
-      AND s.start_time < ? AND s.end_time > ?`;
-    const roomParams = [room, endTime, startTime];
+  //检测诊室是否冲突
+  //   let checkRoomSql = `SELECT s.id, s.start_time, s.end_time, s.project, s.customer_name
+  //   FROM schedule s
+  //   WHERE s.room = ?
+  //   AND s.start_time < ? AND s.end_time > ?`;
+  // const roomParams = [room, endTime, startTime];
 
-    if (exclude_schedule_id) {
-      checkRoomSql += ` AND s.id != ?`;
-      roomParams.push(exclude_schedule_id);
-    }
+  // if (exclude_schedule_id) {
+  //   checkRoomSql += ` AND s.id != ?`;
+  //   roomParams.push(exclude_schedule_id);
+  // }
 
-    db.query(checkRoomSql, roomParams, (err, roomResults) => {
-      if (err) return callback(err);
+  // db.query(checkRoomSql, roomParams, (err, roomResults) => {
+  //   if (err) return callback(err);
 
-      if (roomResults && roomResults.length > 0) {
-        conflictTypes.push('room');
-        conflicts.push({
-          type: 'room',
-          message: '该诊室在此时间段已被占用',
-          conflicting_schedules: roomResults.map(r => ({
-            id: r.id,
-            customer_name: r.customer_name,
-            project: r.project,
-            start_time: formatLocalTime(r.start_time),
-            end_time: formatLocalTime(r.end_time)
-          }))
-        });
-      }
+  //   if (roomResults && roomResults.length > 0) {
+  //     conflictTypes.push('room');
+  //     conflicts.push({
+  //       type: 'room',
+  //       message: '该诊室在此时间段已被占用',
+  //       conflicting_schedules: roomResults.map(r => ({
+  //         id: r.id,
+  //         customer_name: r.customer_name,
+  //         project: r.project,
+  //         start_time: formatLocalTime(r.start_time),
+  //         end_time: formatLocalTime(r.end_time)
+  //       }))
+  //     });
+  //   }
 
-      callback(null, {
-        has_conflict: conflicts.length > 0,
-        conflict_types: conflictTypes,
-        conflict_details: conflicts,
-        skip_conflict_check: false
-      });
+  //   callback(null, {
+  //     has_conflict: conflicts.length > 0,
+  //     conflict_types: conflictTypes,
+  //     conflict_details: conflicts,
+  //     skip_conflict_check: false
+  //   });
+
+    // 诊室不检测冲突，自动分配空闲诊室
+    callback(null, {
+      has_conflict: conflicts.length > 0,
+      conflict_types: conflictTypes,
+      conflict_details: conflicts,
+      skip_conflict_check: false
     });
   });
 }

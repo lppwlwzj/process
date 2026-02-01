@@ -1,17 +1,30 @@
 @import '@/styles/variables';
 
+.swipeContainer {
+  position: relative;
+  overflow: hidden;
+  // border-radius: 0.3rem;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
 .scheduleItemWrapper {
   background-color: #fff;
-  border-radius: 0.3rem;
+  // border-radius: 0.3rem;
+  // padding: 0.46rem 0.6rem 0.46rem 0.36rem;
   padding: 0.6rem;
   display: flex;
   gap: 0.5rem;
-  box-shadow: 0 0.05rem 0.2rem rgba(0, 0, 0, 0.1);
+  // box-shadow: 0 0.05rem 0.2rem rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
+  backface-visibility: hidden;
+  will-change: transform;
   
   &:hover {
-    transform: translateY(-0.05rem);
     box-shadow: 0 0.1rem 0.3rem rgba(0, 0, 0, 0.15);
   }
 }
@@ -22,15 +35,14 @@
   align-items: center;
   justify-content: center;
   min-width: 3rem;
-  padding-right: 0.5rem;
+  padding-right: 0.15rem;
   border-right: 1px solid #e0e0e0;
 }
 
 .time {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: bold;
-  color: @text-color;
-  margin-bottom: 0.2rem;
+  color: #2064bc;
 }
 
 .duration {
@@ -54,29 +66,85 @@
   gap: 0.2rem;
 }
 
-.separator {
-  color: #ccc;
-  margin: 0 0.15rem;
-  user-select: none;
-}
+// .separator {
+//   color: #ccc;
+//   margin: 0 0.06rem;
+//   user-select: none;
+// }
 
 .value {
-  color: @text-color;
+  color:#121111;
   word-break: break-all;
+  font-size: 0.9rem;
+  font-weight: bold;
   
-  &.project {
-    color: @primary-color;
-    font-weight: bold;
-  }
+  // &.project {
+  //   color: @primary-color;
+  //   font-weight: bold;
+  // }
 }
 
 .remarkRow {
   display: flex;
-  font-size: 0.6rem;
+  font-size: 0.8rem;
   line-height: 1.5;
+  margin-left: 0.1rem;
 }
 
 .remark {
   color: #999;
   word-break: break-all;
+
+}
+
+.deleteArea {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ff6b6b;
+  z-index: 0;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  isolation: isolate;
+}
+
+.deleteButton {
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  // &:active {
+  //   background: rgba(255, 255, 255, 0.3);
+  //   transform: scale(0.95);
+  // }
+}
+
+.deleteIcon {
+  font-size: 0.9rem;
+  color: #fff;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
+  transition: transform 0.2s;
+  
+  .deleteButton:hover & {
+    transform: scale(1.15);
+  }
+  
+  .deleteButton:active & {
+    transform: scale(0.9);
+  }
 }

@@ -168,7 +168,7 @@ export default function Calendar({
 
   const handleDateClick = (date: dayjs.Dayjs) => {
     const dateStr = date.format('YYYY-MM-DD')
-    navigate(`/schedule/detail?date=${dateStr}`)
+    navigate(`/app/schedule/detail?date=${dateStr}`)
   }
 
   const isDateSelected = (date: dayjs.Dayjs) => {

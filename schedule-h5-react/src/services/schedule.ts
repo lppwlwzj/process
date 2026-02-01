@@ -8,3 +8,11 @@ export function getScheduleList(filter: ScheduleFilter): Promise<any> {
     data: filter
   })
 }
+
+export function deleteSchedule(id: number): Promise<any> {
+  return request({
+    url: '/schedule/delete',
+    method: 'POST',
+    data: { id }
+  })
+}

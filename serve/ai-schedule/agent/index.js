@@ -134,7 +134,7 @@ class ScheduleAgent {
 
   async *streamMessage(sessionId, userId, userMessage) {
     try {
-      console.log('streamMessage--->', sessionId, userId, userMessage, this.agent ? 'agent exists' : 'agent is null');
+      console.log('streamMessage--->', sessionId, userId, userMessage);
 
       if (!this.agent) {
         console.log('Initializing agent...');
@@ -163,7 +163,6 @@ class ScheduleAgent {
       const messages = this._buildMessages(allHistory, userMessage);
       
       console.log('Built messages for agent:', messages.length, 'messages');
-      console.log('Last message content:', userMessage);
 
       let fullResponse = '';
       let chunkCount = 0;

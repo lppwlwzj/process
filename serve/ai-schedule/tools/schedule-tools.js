@@ -70,12 +70,12 @@ const queryScheduleTool = new DynamicStructuredTool({
 
 const checkConflictTool = new DynamicStructuredTool({
   name: 'check_conflict',
-  description: '检查排班冲突。检查指定时间段内医生和诊室是否有冲突。',
+  description: '检查排班冲突。检查指定时间段内医生是否有冲突（不检查诊室冲突，诊室会自动分配空闲诊室）。',
   schema: z.object({
     project: z.string().describe('项目类型'),
     doctor_id: z.number().describe('医生ID'),
     nurse_id: z.number().optional().describe('护士ID，可选'),
-    room: z.string().describe('诊室名称'),
+    room: z.string().optional().describe('诊室名称，可选（不用于冲突检测）'),
     start_time: z.string().describe('开始时间，格式：YYYY-MM-DD HH:mm:ss'),
     duration: z.number().describe('时长（分钟）'),
     buffer_time: z.number().optional().describe('缓冲时间（分钟），可选'),
@@ -121,7 +121,7 @@ const createScheduleTool = new DynamicStructuredTool({
     customer_name: z.string().describe('客户姓名'),
     room: z.string().optional().describe('诊室名称，可选，默认自动分配'),
     start_time: z.string().describe('开始时间，格式：YYYY-MM-DD HH:mm:ss'),
-    duration: z.number().optional().describe('时长（分钟），可选，根据项目类型自动设置'),
+    duration: z.number().optional().describe('时长（分钟），可选。如果用户指定了时间段（如"8点到8点半"），必须计算并传入用户指定的时长；如果用户未指定时间段，则根据项目类型自动设置默认时长'),
     remark: z.string().optional().describe('备注，可选')
   }),
   func: async ({ project, doctor_name, nurse_name, customer_name, room, start_time, duration, remark }) => {
@@ -147,10 +147,11 @@ const createScheduleTool = new DynamicStructuredTool({
       }
 
       const projectDurations = {
-        '面诊': 30, '雕蜡': 60, '椅旁': 90,
-        '备牙': 120, '戴牙': 60, '复诊': 30, '蜡形试戴': 45
+        '面诊': 40, '雕蜡': 70, '椅旁': 90,
+        '备牙': 70, '戴牙': 90, '复诊': 30, '蜡形试戴': 45
       };
-      const finalDuration = duration || projectDurations[project] || 60;
+      // 如果用户指定了时长，优先使用用户指定的时长；否则使用项目类型的默认时长
+      const finalDuration = duration !== undefined && duration !== null ? duration : (projectDurations[project]);
 
       const startTime = new Date(start_time);
       const endTime = new Date(startTime.getTime() + finalDuration * 60 * 1000);
@@ -175,7 +176,10 @@ const createScheduleTool = new DynamicStructuredTool({
         }
       }
 
-      if (needsConflictCheck(project)) {
+      // 检查是否需要跳过冲突检测（何锐、孙韩宇）
+      const skipConflictCheck = doctor.username === '何锐' || doctor.username === '孙韩宇';
+      
+      if (needsConflictCheck(project) && !skipConflictCheck) {
         return new Promise((resolve, reject) => {
           checkConflict({
             project,
@@ -291,7 +295,8 @@ const vipPriorityInsertTool = new DynamicStructuredTool({
         '面诊': 30, '雕蜡': 60, '椅旁': 90,
         '备牙': 120, '戴牙': 60, '复诊': 30, '蜡形试戴': 45
       };
-      const finalDuration = duration || projectDurations[project] || 60;
+      // 如果用户指定了时长，优先使用用户指定的时长；否则使用项目类型的默认时长
+      const finalDuration = duration !== undefined && duration !== null ? duration : (projectDurations[project] || 60);
 
       const startTime = new Date(start_time);
       const endTime = new Date(startTime.getTime() + finalDuration * 60 * 1000);
@@ -309,7 +314,11 @@ const vipPriorityInsertTool = new DynamicStructuredTool({
       if (!finalRoom) {
         finalRoom = await findAvailableRoom();
         if (!finalRoom) {
-          finalRoom = '诊室1';
+          // start_time 已经是 YYYY-MM-DD HH:mm:ss 格式，直接使用
+          return JSON.stringify({ 
+            success: false, 
+            message: `该时间段（${start_time}）没有空闲的诊室，请选择其他时间` 
+          });
         }
       }
 
@@ -393,13 +402,13 @@ const delaySchedulesTool = new DynamicStructuredTool({
 
 const updateScheduleTool = new DynamicStructuredTool({
   name: 'update_schedule',
-  description: '修改已存在的排班记录。可以修改客户、护士、备注等非冲突字段直接更新；修改医生、时间、诊室等冲突字段需要先检测冲突。',
+  description: '修改已存在的排班记录。可以修改客户、护士、备注、诊室等非冲突字段直接更新；修改医生、时间等冲突字段需要先检测冲突。如果诊室未指定，会自动分配空闲诊室。',
   schema: z.object({
     schedule_id: z.number().describe('要修改的排班ID'),
     doctor_name: z.string().optional().describe('新的医生姓名，可选'),
     nurse_name: z.string().optional().describe('新的护士姓名，可选，传空字符串表示清除护士'),
     customer_name: z.string().optional().describe('新的客户姓名，可选'),
-    room: z.string().optional().describe('新的诊室名称，可选'),
+    room: z.string().optional().describe('新的诊室名称，可选，如果为空则自动分配空闲诊室'),
     start_time: z.string().optional().describe('新的开始时间，格式：YYYY-MM-DD HH:mm:ss，可选'),
     duration: z.number().optional().describe('新的时长（分钟），可选'),
     project: z.string().optional().describe('新的项目类型，可选'),
@@ -407,6 +416,17 @@ const updateScheduleTool = new DynamicStructuredTool({
     skip_conflict_check: z.boolean().optional().describe('是否跳过冲突检测，默认false')
   }),
   func: async ({ schedule_id, doctor_name, nurse_name, customer_name, room, start_time, duration, project, remark, skip_conflict_check }) => {
+    const formatLocalTime = (dateTime) => {
+      if (!dateTime) return null;
+      const date = new Date(dateTime);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}`;
+    };
+
     const findUser = (name, role) => {
       return new Promise((resolve, reject) => {
         db.query('SELECT id, username FROM user WHERE username LIKE ? AND role = ?', 
@@ -461,9 +481,50 @@ const updateScheduleTool = new DynamicStructuredTool({
         updates.customer_name = customer_name;
       }
 
-      if (room !== undefined && room !== existingSchedule.room) {
-        updates.room = room;
-        conflictFields.push('room');
+      // if (room !== undefined && room !== existingSchedule.room) {
+      //   updates.room = room;
+      //   conflictFields.push('room');
+
+      if (room !== undefined) {
+        if (room && room !== existingSchedule.room) {
+          updates.room = room;
+        } else if (!room || room === '') {
+          // 如果room为空或未传，自动分配空闲诊室
+          const finalStartTimeForRoom = updates.start_time || existingSchedule.start_time;
+          const finalDurationForRoom = updates.duration || existingSchedule.duration;
+          const startTimeForRoom = new Date(finalStartTimeForRoom);
+          const endTimeForRoom = new Date(startTimeForRoom.getTime() + finalDurationForRoom * 60 * 1000);
+          
+          const findAvailableRoom = () => {
+            return new Promise((resolve, reject) => {
+              findAvailableRooms(finalStartTimeForRoom, { start_time: startTimeForRoom, end_time: endTimeForRoom }, (err, availableRooms) => {
+                if (err) return reject(err);
+                resolve(availableRooms && availableRooms.length > 0 ? availableRooms[0].room : null);
+              });
+            });
+          };
+          
+          try {
+            const autoRoom = await findAvailableRoom();
+            if (autoRoom) {
+              updates.room = autoRoom;
+            } else {
+              // 如果没有空闲诊室，返回错误
+              const timeStr = formatLocalTime(finalStartTimeForRoom);
+              return JSON.stringify({ 
+                success: false, 
+                message: `该时间段（${timeStr}）没有空闲的诊室，请选择其他时间` 
+              });
+            }
+          } catch (error) {
+            // 如果查找失败，返回错误
+            const timeStr = formatLocalTime(finalStartTimeForRoom);
+            return JSON.stringify({ 
+              success: false, 
+              message: `查找空闲诊室失败: ${error.message}，时间段：${timeStr}` 
+            });
+          }
+        }
       }
 
       if (start_time !== undefined) {
@@ -508,7 +569,28 @@ const updateScheduleTool = new DynamicStructuredTool({
         updates.start_time = startTime;
       }
 
-      const needsCheck = conflictFields.length > 0 && !skip_conflict_check && needsConflictCheck(finalProject);
+      // 检查是否需要跳过冲突检测（何锐、孙韩宇）
+      let skipConflictCheckForUpdate = skip_conflict_check;
+      if (!skipConflictCheckForUpdate && updates.doctor_id !== undefined) {
+        // 如果修改了医生，查询新医生名
+        const newDoctor = await findUser(doctor_name, '医生椅旁技师');
+        if (newDoctor && (newDoctor.username === '何锐' || newDoctor.username === '孙韩宇')) {
+          skipConflictCheckForUpdate = true;
+        }
+      } else if (!skipConflictCheckForUpdate && updates.doctor_id === undefined) {
+        // 如果没有修改医生，查询当前医生名
+        const currentDoctorQuery = await new Promise((resolve, reject) => {
+          db.query('SELECT username FROM user WHERE id = ?', [finalDoctorId], (err, results) => {
+            if (err) return reject(err);
+            resolve(results.length > 0 ? results[0] : null);
+          });
+        });
+        if (currentDoctorQuery && (currentDoctorQuery.username === '何锐' || currentDoctorQuery.username === '孙韩宇')) {
+          skipConflictCheckForUpdate = true;
+        }
+      }
+
+      const needsCheck = conflictFields.length > 0 && !skipConflictCheckForUpdate && needsConflictCheck(finalProject);
 
       if (needsCheck) {
         return new Promise((resolve, reject) => {

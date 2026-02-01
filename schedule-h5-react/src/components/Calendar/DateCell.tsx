@@ -43,7 +43,6 @@ export default function DateCell({
         isPast && styles.isPast,
         content && styles.hasContent
       )}
-      style={backgroundColor ? { backgroundColor } : undefined}
       onClick={onClick}
     >
       <span className={styles.date}>{date}</span>
