@@ -1,7 +1,7 @@
 const { createAgent, HumanMessage, AIMessage, SystemMessage } = require('langchain');
 const { createLLM } = require('./config');
 const { systemPrompt } = require('./prompt');
-const { queryScheduleTool, checkConflictTool, createScheduleTool, vipPriorityInsertTool, delaySchedulesTool, updateScheduleTool } = require('../tools/schedule-tools');
+const { queryScheduleTool, checkConflictTool, createScheduleTool, forceInsertScheduleTool, delaySchedulesTool, updateScheduleTool, forceUpdateScheduleTool } = require('../tools/schedule-tools');
 const { queryUserTool, queryCustomerTool } = require('../tools/user-tools');
 const { queryAvailableResourcesTool } = require('../tools/resource-tools');
 const MemoryManager = require('../memory/manager');
@@ -19,7 +19,8 @@ class ScheduleAgent {
       checkConflictTool,
       createScheduleTool,
       updateScheduleTool,
-      vipPriorityInsertTool,
+      forceInsertScheduleTool,
+      forceUpdateScheduleTool,
       delaySchedulesTool,
       queryUserTool,
       queryCustomerTool,

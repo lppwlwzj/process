@@ -256,9 +256,9 @@ const createScheduleTool = new DynamicStructuredTool({
 });
 
 
-const vipPriorityInsertTool = new DynamicStructuredTool({
-  name: 'vip_priority_insert',
-  description: 'VIP优先插入排班。允许插入到冲突时间段，并自动顺延受影响排班。',
+const forceInsertScheduleTool = new DynamicStructuredTool({
+  name: 'force_insert_schedule',
+  description: '强制插入排班。当创建排班遇到时间冲突且用户确认"强制覆盖"时使用。允许插入到冲突时间段，并自动顺延受影响的排班。',
   schema: z.object({
     project: z.string().describe('项目类型'),
     doctor_name: z.string().describe('医生姓名'),
@@ -323,55 +323,106 @@ const vipPriorityInsertTool = new DynamicStructuredTool({
       }
 
       return new Promise((resolve, reject) => {
-        db.beginTransaction((err) => {
-          if (err) return reject(new Error(`开始事务失败: ${err.message}`));
+        db.getConnection((connErr, connection) => {
+          if (connErr) return reject(new Error(`获取数据库连接失败: ${connErr.message}`));
 
-          db.query(`INSERT INTO schedule 
-            (project, doctor_id, nurse_id, customer_name, room, start_time, end_time, duration, remark)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [project, doctor.id, nurse?.id || null, customer_name, finalRoom, startTime, endTime, finalDuration, remark || null],
-            (err, insertResult) => {
-              if (err) return db.rollback(() => reject(new Error(`插入排班失败: ${err.message}`)));
+          connection.beginTransaction((err) => {
+            if (err) {
+              connection.release();
+              return reject(new Error(`开始事务失败: ${err.message}`));
+            }
 
-              const scheduleId = insertResult.insertId;
-
-              findAffectedSchedules(doctor.id, finalRoom, startTime, (err, affectedSchedules) => {
-                if (err) return db.rollback(() => reject(new Error(`查询受影响排班失败: ${err.message}`)));
-
-                if (!affectedSchedules || affectedSchedules.length === 0) {
-                  return db.commit((err) => {
-                    if (err) return db.rollback(() => reject(new Error(`提交事务失败: ${err.message}`)));
-                    resolve(JSON.stringify({
-                      success: true,
-                      schedule_id: scheduleId,
-                      affected_count: 0,
-                      message: 'VIP排班创建成功',
-                      details: { room: finalRoom }
-                    }));
+            connection.query(`INSERT INTO schedule 
+              (project, doctor_id, nurse_id, customer_name, room, start_time, end_time, duration, remark)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [project, doctor.id, nurse?.id || null, customer_name, finalRoom, startTime, endTime, finalDuration, remark || null],
+              (err, insertResult) => {
+                if (err) {
+                  return connection.rollback(() => {
+                    connection.release();
+                    reject(new Error(`插入排班失败: ${err.message}`));
                   });
                 }
 
-                const affectedIds = affectedSchedules.map(s => s.id);
-                delaySchedules(affectedIds, finalDuration, (err, delayResult) => {
-                  if (err) return db.rollback(() => reject(new Error(`顺延排班失败: ${err.message}`)));
+                const scheduleId = insertResult.insertId;
 
-                  db.commit((err) => {
-                    if (err) return db.rollback(() => reject(new Error(`提交事务失败: ${err.message}`)));
-                    resolve(JSON.stringify({
-                      success: true,
-                      schedule_id: scheduleId,
-                      affected_count: delayResult.affected_count,
-                      message: 'VIP排班创建成功，已顺延受影响排班',
-                      details: { room: finalRoom }
-                    }));
+                findAffectedSchedules(doctor.id, finalRoom, startTime, (err, affectedSchedules) => {
+                  if (err) {
+                    return connection.rollback(() => {
+                      connection.release();
+                      reject(new Error(`查询受影响排班失败: ${err.message}`));
+                    });
+                  }
+
+                  const filtered = (affectedSchedules || []).filter(s => s.id !== scheduleId);
+                  if (!filtered || filtered.length === 0) {
+                    return connection.commit((err) => {
+                      connection.release();
+                      if (err) return reject(new Error(`提交事务失败: ${err.message}`));
+                      resolve(JSON.stringify({
+                        success: true,
+                        schedule_id: scheduleId,
+                        affected_count: 0,
+                        message: '排班强制插入成功',
+                        details: { room: finalRoom }
+                      }));
+                    });
+                  }
+
+                  const delayInTransaction = (conn, scheduleIds, delayMinutes, cb) => {
+                    let completed = 0;
+                    let hasError = false;
+                    scheduleIds.forEach((sid) => {
+                      if (hasError) return;
+                      conn.query('SELECT start_time, end_time FROM schedule WHERE id = ?', [sid], (err, results) => {
+                        if (hasError) return;
+                        if (err) { hasError = true; return cb(err); }
+                        if (!results || results.length === 0) {
+                          completed++;
+                          if (completed === scheduleIds.length) cb(null, { affected_count: completed });
+                          return;
+                        }
+                        const s = results[0];
+                        const newStart = new Date(new Date(s.start_time).getTime() + delayMinutes * 60 * 1000);
+                        const newEnd = new Date(new Date(s.end_time).getTime() + delayMinutes * 60 * 1000);
+                        conn.query('UPDATE schedule SET start_time = ?, end_time = ? WHERE id = ?', [newStart, newEnd, sid], (err) => {
+                          if (hasError) return;
+                          if (err) { hasError = true; return cb(err); }
+                          completed++;
+                          if (completed === scheduleIds.length) cb(null, { affected_count: completed });
+                        });
+                      });
+                    });
+                  };
+
+                  const affectedIds = filtered.map(s => s.id);
+                  delayInTransaction(connection, affectedIds, finalDuration, (err, delayResult) => {
+                    if (err) {
+                      return connection.rollback(() => {
+                        connection.release();
+                        reject(new Error(`顺延排班失败: ${err.message}`));
+                      });
+                    }
+
+                    connection.commit((err) => {
+                      connection.release();
+                      if (err) return reject(new Error(`提交事务失败: ${err.message}`));
+                      resolve(JSON.stringify({
+                        success: true,
+                        schedule_id: scheduleId,
+                        affected_count: delayResult.affected_count,
+                        message: '排班强制插入成功，已顺延受影响排班',
+                        details: { room: finalRoom }
+                      }));
+                    });
                   });
-                });
+                }, endTime);
               });
-            });
+          });
         });
       });
     } catch (error) {
-      return JSON.stringify({ success: false, message: `VIP排班创建失败: ${error.message}` });
+      return JSON.stringify({ success: false, message: `排班强制插入失败: ${error.message}` });
     }
   }
 });
@@ -682,11 +733,164 @@ const updateScheduleTool = new DynamicStructuredTool({
   }
 });
 
+const forceUpdateScheduleTool = new DynamicStructuredTool({
+  name: 'force_update_schedule',
+  description: '强制修改排班时间。当修改排班时间遇到冲突且用户确认"强制覆盖"时使用。允许修改到冲突时间段，并自动顺延受影响的排班。',
+  schema: z.object({
+    schedule_id: z.number().describe('要修改的排班ID'),
+    start_time: z.string().describe('新的开始时间，格式：YYYY-MM-DD HH:mm:ss'),
+    duration: z.number().optional().describe('新的时长（分钟），可选，不传则保持原时长'),
+    room: z.string().optional().describe('新的诊室名称，可选，如果为空则自动分配空闲诊室')
+  }),
+  func: async ({ schedule_id, start_time, duration, room }) => {
+    const getScheduleById = (id) => {
+      return new Promise((resolve, reject) => {
+        db.query(`SELECT s.*, u.username as doctor_name FROM schedule s 
+          LEFT JOIN user u ON s.doctor_id = u.id WHERE s.id = ?`, [id], (err, results) => {
+          if (err) return reject(err);
+          resolve(results.length > 0 ? results[0] : null);
+        });
+      });
+    };
+
+    try {
+      const existingSchedule = await getScheduleById(schedule_id);
+      if (!existingSchedule) {
+        return JSON.stringify({ success: false, message: `未找到ID为${schedule_id}的排班记录` });
+      }
+
+      const finalDuration = duration !== undefined ? duration : existingSchedule.duration;
+      const startTime = new Date(start_time);
+      const endTime = new Date(startTime.getTime() + finalDuration * 60 * 1000);
+
+      const findAvailableRoom = () => {
+        return new Promise((resolve, reject) => {
+          findAvailableRooms(start_time, { start_time: startTime, end_time: endTime }, (err, availableRooms) => {
+            if (err) return reject(err);
+            resolve(availableRooms && availableRooms.length > 0 ? availableRooms[0].room : null);
+          });
+        });
+      };
+
+      let finalRoom = room;
+      if (!finalRoom) {
+        finalRoom = await findAvailableRoom();
+        if (!finalRoom) {
+          return JSON.stringify({ 
+            success: false, 
+            message: `该时间段（${start_time}）没有空闲的诊室，请选择其他时间` 
+          });
+        }
+      }
+
+      return new Promise((resolve, reject) => {
+        db.getConnection((connErr, connection) => {
+          if (connErr) return reject(new Error(`获取数据库连接失败: ${connErr.message}`));
+
+          connection.beginTransaction((err) => {
+            if (err) {
+              connection.release();
+              return reject(new Error(`开始事务失败: ${err.message}`));
+            }
+
+            connection.query(`UPDATE schedule SET start_time = ?, end_time = ?, duration = ?, room = ? WHERE id = ?`,
+              [startTime, endTime, finalDuration, finalRoom, schedule_id],
+              (err) => {
+                if (err) {
+                  return connection.rollback(() => {
+                    connection.release();
+                    reject(new Error(`更新排班失败: ${err.message}`));
+                  });
+                }
+
+                findAffectedSchedules(existingSchedule.doctor_id, finalRoom, startTime, (err, affectedSchedules) => {
+                  if (err) {
+                    return connection.rollback(() => {
+                      connection.release();
+                      reject(new Error(`查询受影响排班失败: ${err.message}`));
+                    });
+                  }
+
+                  const filteredSchedules = (affectedSchedules || []).filter(s => s.id !== schedule_id);
+
+                  if (filteredSchedules.length === 0) {
+                    return connection.commit((err) => {
+                      connection.release();
+                      if (err) return reject(new Error(`提交事务失败: ${err.message}`));
+                      resolve(JSON.stringify({
+                        success: true,
+                        schedule_id: schedule_id,
+                        affected_count: 0,
+                        message: '排班时间强制修改成功',
+                        details: { room: finalRoom, start_time: start_time, duration: finalDuration }
+                      }));
+                    });
+                  }
+
+                  const delayInTransaction = (conn, scheduleIds, delayMinutes, cb) => {
+                    let completed = 0;
+                    let hasError = false;
+                    scheduleIds.forEach((sid) => {
+                      if (hasError) return;
+                      conn.query('SELECT start_time, end_time FROM schedule WHERE id = ?', [sid], (err, results) => {
+                        if (hasError) return;
+                        if (err) { hasError = true; return cb(err); }
+                        if (!results || results.length === 0) {
+                          completed++;
+                          if (completed === scheduleIds.length) cb(null, { affected_count: completed });
+                          return;
+                        }
+                        const s = results[0];
+                        const newStart = new Date(new Date(s.start_time).getTime() + delayMinutes * 60 * 1000);
+                        const newEnd = new Date(new Date(s.end_time).getTime() + delayMinutes * 60 * 1000);
+                        conn.query('UPDATE schedule SET start_time = ?, end_time = ? WHERE id = ?', [newStart, newEnd, sid], (err) => {
+                          if (hasError) return;
+                          if (err) { hasError = true; return cb(err); }
+                          completed++;
+                          if (completed === scheduleIds.length) cb(null, { affected_count: completed });
+                        });
+                      });
+                    });
+                  };
+
+                  const affectedIds = filteredSchedules.map(s => s.id);
+                  delayInTransaction(connection, affectedIds, finalDuration, (err, delayResult) => {
+                    if (err) {
+                      return connection.rollback(() => {
+                        connection.release();
+                        reject(new Error(`顺延排班失败: ${err.message}`));
+                      });
+                    }
+
+                    connection.commit((err) => {
+                      connection.release();
+                      if (err) return reject(new Error(`提交事务失败: ${err.message}`));
+                      resolve(JSON.stringify({
+                        success: true,
+                        schedule_id: schedule_id,
+                        affected_count: delayResult.affected_count,
+                        message: '排班时间强制修改成功，已顺延受影响排班',
+                        details: { room: finalRoom, start_time: start_time, duration: finalDuration }
+                      }));
+                    });
+                  });
+                }, endTime);
+              });
+          });
+        });
+      });
+    } catch (error) {
+      return JSON.stringify({ success: false, message: `排班强制修改失败: ${error.message}` });
+    }
+  }
+});
+
 module.exports = {
   queryScheduleTool,
   checkConflictTool,
   createScheduleTool,
-  vipPriorityInsertTool,
+  forceInsertScheduleTool,
   delaySchedulesTool,
-  updateScheduleTool
+  updateScheduleTool,
+  forceUpdateScheduleTool
 };
