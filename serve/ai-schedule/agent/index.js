@@ -2,7 +2,7 @@ const { createAgent, HumanMessage, AIMessage, SystemMessage } = require('langcha
 const { createLLM } = require('./config');
 const { systemPrompt } = require('./prompt');
 const { queryScheduleTool, checkConflictTool, createScheduleTool, vipPriorityInsertTool, delaySchedulesTool, updateScheduleTool } = require('../tools/schedule-tools');
-const { queryUserTool, queryCustomerTool } = require('../tools/user-tools');
+const { queryUserTool } = require('../tools/user-tools');
 const { queryAvailableResourcesTool } = require('../tools/resource-tools');
 const MemoryManager = require('../memory/manager');
 const { extractScheduleInfo } = require('../parsers/info-extractor');
@@ -22,7 +22,6 @@ class ScheduleAgent {
       vipPriorityInsertTool,
       delaySchedulesTool,
       queryUserTool,
-      queryCustomerTool,
       queryAvailableResourcesTool
     ];
     this.agent = null;
@@ -92,9 +91,10 @@ class ScheduleAgent {
     const extractedInfo = extractScheduleInfo(userMessage);
     
     const shortTermMemory = this.memoryManager.getShortTermMemory(sessionId);
-    const longTermHistory = await this.memoryManager.loadLongTermMemory(sessionId);
-    
-    const memoryVariables = await shortTermMemory.loadMemoryVariables({});
+    const [longTermHistory, memoryVariables] = await Promise.all([
+      this.memoryManager.loadLongTermMemory(sessionId),
+      shortTermMemory.loadMemoryVariables({})
+    ]);
     const chatHistory = memoryVariables.chat_history || [];
 
     const allHistory = [...(longTermHistory.messages || []), ...chatHistory];
@@ -104,26 +104,26 @@ class ScheduleAgent {
 
     const output = this._extractResponse(result);
 
-    await shortTermMemory.saveContext(
-      { input: userMessage },
-      { output: output }
-    );
-
-    await this.memoryManager.saveToLongTerm(
-      sessionId,
-      userId,
-      'user',
-      userMessage,
-      { extracted_info: extractedInfo }
-    );
-
-    await this.memoryManager.saveToLongTerm(
-      sessionId,
-      userId,
-      'assistant',
-      output,
-      { tool_calls: result.intermediateSteps || [] }
-    );
+    await Promise.all([
+      shortTermMemory.saveContext(
+        { input: userMessage },
+        { output: output }
+      ),
+      this.memoryManager.saveToLongTerm(
+        sessionId,
+        userId,
+        'user',
+        userMessage,
+        { extracted_info: extractedInfo }
+      ),
+      this.memoryManager.saveToLongTerm(
+        sessionId,
+        userId,
+        'assistant',
+        output,
+        { tool_calls: result.intermediateSteps || [] }
+      )
+    ]);
 
     return {
       response: output,
@@ -145,18 +145,19 @@ class ScheduleAgent {
       const extractedInfo = extractScheduleInfo(userMessage);
       console.log('extractedInfo in streamMessage--->', extractedInfo);
       
-      await this.memoryManager.saveToLongTerm(
+      this.memoryManager.saveToLongTerm(
         sessionId,
         userId,
         'user',
         userMessage,
         { extracted_info: extractedInfo }
-      );
+      ).catch(err => console.error('保存用户消息失败:', err));
       
       const shortTermMemory = this.memoryManager.getShortTermMemory(sessionId);
-      const longTermHistory = await this.memoryManager.loadLongTermMemory(sessionId);
-      
-      const memoryVariables = await shortTermMemory.loadMemoryVariables({});
+      const [longTermHistory, memoryVariables] = await Promise.all([
+        this.memoryManager.loadLongTermMemory(sessionId),
+        shortTermMemory.loadMemoryVariables({})
+      ]);
       const chatHistory = memoryVariables.chat_history || [];
 
       const allHistory = [...(longTermHistory.messages || []), ...chatHistory];
@@ -261,18 +262,19 @@ class ScheduleAgent {
         }
       }
 
-      await shortTermMemory.saveContext(
-        { input: userMessage },
-        { output: fullResponse }
-      );
-
-      await this.memoryManager.saveToLongTerm(
-        sessionId,
-        userId,
-        'assistant',
-        fullResponse,
-        {}
-      );
+      await Promise.all([
+        shortTermMemory.saveContext(
+          { input: userMessage },
+          { output: fullResponse }
+        ),
+        this.memoryManager.saveToLongTerm(
+          sessionId,
+          userId,
+          'assistant',
+          fullResponse,
+          {}
+        )
+      ]);
 
       yield { type: 'complete', response: fullResponse, extracted_info: extractedInfo };
     } catch (error) {

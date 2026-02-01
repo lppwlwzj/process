@@ -36,19 +36,48 @@ function extractScheduleInfo(text) {
     }
   }
 
-  const doctorMatch = normalizedText.match(/(.*?)(医生|总)/);
-  if (doctorMatch) {
-    info.doctor_name = doctorMatch[1].trim();
+  const doctorPatterns = [
+    /[，,、]([^\s，,、。]+?)(医生|总)[，,。]?/,
+    /([一-龥]{1,4})(医生|总)[，,。]?/,
+  ];
+  for (const pattern of doctorPatterns) {
+    const match = normalizedText.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      if (name.length <= 4 && !/[帮给约安排]/.test(name)) {
+        info.doctor_name = name;
+        break;
+      }
+    }
   }
 
-  const nurseMatch = normalizedText.match(/(.*?)(护士)/);
-  if (nurseMatch) {
-    info.nurse_name = nurseMatch[1].trim();
+  const nursePatterns = [
+    /[，,、]([^\s，,、。]+?)(护士)[，,。]?/,
+    /([一-龥]{1,4})(护士)[，,。]?/,
+  ];
+  for (const pattern of nursePatterns) {
+    const match = normalizedText.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      if (name.length <= 4 && !/[帮给约安排]/.test(name)) {
+        info.nurse_name = name;
+        break;
+      }
+    }
   }
 
-  const customerMatch = normalizedText.match(/客户\s*([^\s，,。]+)|给\s*([^\s，,。]+)\s*(安排|面诊|备牙|戴牙|复诊|雕蜡|蜡形试戴|休息)/);
-  if (customerMatch) {
-    info.customer_name = (customerMatch[1] || customerMatch[2]).trim();
+  const customerPatterns = [
+    /[帮给为]([一-龥]{2,4})客户/,
+    /客户([一-龥]{2,4})/,
+    /[帮给为]([一-龥]{2,4})[约安排]+(面诊|备牙|戴牙|椅旁|复诊|雕蜡|蜡形试戴|休息)/,
+    /给([一-龥]{2,4})\s*(安排|约)/,
+  ];
+  for (const pattern of customerPatterns) {
+    const match = normalizedText.match(pattern);
+    if (match && match[1]) {
+      info.customer_name = match[1].trim();
+      break;
+    }
   }
 
   const timeResult = parseTimeExpression(normalizedText);
@@ -77,9 +106,9 @@ function extractScheduleInfo(text) {
     info.room = `诊室${roomMatch[1]}`;
   }
 
-  const remarkMatch = normalizedText.match(/备注[：:]\s*([^，,。]+)|，\s*([^，,。]+)$/);
+  const remarkMatch = normalizedText.match(/备注[：:]\s*([^，,。]+)/);
   if (remarkMatch) {
-    info.remark = (remarkMatch[1] || remarkMatch[2]).trim();
+    info.remark = remarkMatch[1].trim();
   }
 
   return info;
