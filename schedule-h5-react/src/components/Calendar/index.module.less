@@ -28,6 +28,71 @@
   margin-bottom: 14px;
 }
 
+.leftActions {
+  position: absolute;
+  left: -0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 1;
+}
+
+.selectButton {
+  padding: 6px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3498db;
+  background: rgba(52, 152, 219, 0.1);
+  border: 1.5px solid #3498db;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  
+  &:hover {
+    background: rgba(52, 152, 219, 0.15);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+  }
+  
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(52, 152, 219, 0.15);
+  }
+}
+
+.deleteButton {
+  padding: 6px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #e74c3c;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+  
+  &:hover:not(:disabled) {
+    background: #c0392b;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(231, 76, 60, 0.3);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #95a5a6;
+    box-shadow: none;
+  }
+}
+
 .yearTitle {
   text-align: center;
   font-size: 22px;

@@ -6,6 +6,8 @@ import ScheduleForm from './ScheduleForm'
 import { Schedule } from '@/types/schedule'
 import { useNavigate } from 'react-router-dom'
 import { request } from '@/utils/request'
+import { Dialog } from 'antd-mobile'
+import { getScheduleList, deleteSchedule } from '@/services/schedule'
 
 interface User {
   id: number
@@ -68,6 +70,8 @@ export default function Calendar({
   const [formVisible, setFormVisible] = useState(false)
   const [doctors, setDoctors] = useState<User[]>([])
   const [nurses, setNurses] = useState<User[]>([])
+  const [isSelectMode, setIsSelectMode] = useState(false)
+  const [checkedDates, setCheckedDates] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     loadUsers()
@@ -168,11 +172,89 @@ export default function Calendar({
 
   const handleDateClick = (date: dayjs.Dayjs) => {
     const dateStr = date.format('YYYY-MM-DD')
-    navigate(`/app/schedule/detail?date=${dateStr}`)
+    
+    if (isSelectMode) {
+      setCheckedDates(prev => {
+        const newSet = new Set(prev)
+        if (newSet.has(dateStr)) {
+          newSet.delete(dateStr)
+        } else {
+          newSet.add(dateStr)
+        }
+        return newSet
+      })
+    } else {
+      navigate(`/app/schedule/detail?date=${dateStr}`)
+    }
+  }
+  
+  const handleToggleSelectMode = () => {
+    if (isSelectMode) {
+      setCheckedDates(new Set())
+    }
+    setIsSelectMode(!isSelectMode)
+  }
+  
+  const handleBatchDelete = async () => {
+    if (checkedDates.size === 0) {
+      return
+    }
+    
+    const result = await Dialog.confirm({
+      content: `确认删除所选 ${checkedDates.size} 个日期的所有排班吗？`,
+      confirmText: '删除',
+      cancelText: '取消',
+    })
+    
+    if (!result) {
+      return
+    }
+    
+    try {
+      const datesArray = Array.from(checkedDates)
+      const allScheduleIds: number[] = []
+      
+      for (const date of datesArray) {
+        const res = await getScheduleList({ date })
+        if (res.re && Array.isArray(res.re)) {
+          const ids = res.re.map((s: Schedule) => Number(s.id))
+          allScheduleIds.push(...ids)
+        }
+      }
+      
+      if (allScheduleIds.length === 0) {
+        Dialog.alert({
+          content: '所选日期没有排班记录',
+          confirmText: '确定',
+        })
+        return
+      }
+      
+      await Promise.all(allScheduleIds.map(id => deleteSchedule(id)))
+      
+      Dialog.alert({
+        content: `成功删除 ${allScheduleIds.length} 条排班记录`,
+        confirmText: '确定',
+      })
+      
+      setCheckedDates(new Set())
+      setIsSelectMode(false)
+      onScheduleCreated?.()
+    } catch (error: any) {
+      console.error('批量删除失败:', error)
+      Dialog.alert({
+        content: error?.message || '删除失败，请重试',
+        confirmText: '确定',
+      })
+    }
   }
 
   const isDateSelected = (date: dayjs.Dayjs) => {
-    return selectedDates.includes(date.format('YYYY-MM-DD'))
+    const dateStr = date.format('YYYY-MM-DD')
+    if (isSelectMode) {
+      return checkedDates.has(dateStr)
+    }
+    return selectedDates.includes(dateStr)
   }
 
   const isToday = (date: dayjs.Dayjs) => {
@@ -193,6 +275,25 @@ export default function Calendar({
     <div className={styles.calendar}>
       <div className={styles.stickyHeader}>
         <div className={styles.headerTop}>
+          <div className={styles.leftActions}>
+            <button 
+              className={styles.selectButton}
+              onClick={handleToggleSelectMode}
+              aria-label={isSelectMode ? "取消选择" : "选择"}
+            >
+              {isSelectMode ? '取消选择' : '选择'}
+            </button>
+            {isSelectMode && (
+              <button 
+                className={styles.deleteButton}
+                onClick={handleBatchDelete}
+                disabled={checkedDates.size === 0}
+                aria-label="删除选中"
+              >
+                删除
+              </button>
+            )}
+          </div>
           <div className={styles.yearTitle}>{year}年</div>
           <button 
             className={styles.addButton}
@@ -239,6 +340,7 @@ export default function Calendar({
                     isToday={isToday(date)}
                     isSelected={isDateSelected(date)}
                     isWeekend={isWeekend(date)}
+                    isSelectMode={isSelectMode}
                     onClick={() => handleDateClick(date)}
                   />
                 )

@@ -23,7 +23,7 @@ class ScheduleAgent {
       forceUpdateScheduleTool,
       delaySchedulesTool,
       queryUserTool,
-      queryCustomerTool,
+      // queryCustomerTool,
       queryAvailableResourcesTool
     ];
     this.agent = null;

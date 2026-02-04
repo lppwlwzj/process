@@ -11,12 +11,25 @@ import {
 } from 'antd-mobile'
 import dayjs from 'dayjs'
 import { request } from '@/utils/request'
+import { getLastPreparationDoctor } from '@/services/schedule'
 import styles from './ScheduleForm.module.less'
 
 interface User {
   id: number
   username: string
   role: string
+}
+
+interface ScheduleData {
+  id?: string
+  customer_name?: string
+  project?: string
+  doctor_id?: number
+  nurse_id?: number
+  start_time?: string
+  end_time?: string
+  room?: string
+  remark?: string
 }
 
 interface ScheduleFormProps {
@@ -26,6 +39,7 @@ interface ScheduleFormProps {
   doctors: User[]
   nurses: User[]
   defaultDate?: string
+  editData?: ScheduleData | null
 }
 
 
@@ -58,12 +72,14 @@ const PROJECT_DURATIONS: Record<string, number> = {
   // '休息': 60
 }
 
-export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nurses, defaultDate }: ScheduleFormProps) {
+export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nurses, defaultDate, editData }: ScheduleFormProps) {
+  const isEditMode = !!editData?.id
   const [form] = Form.useForm()
   const project = Form.useWatch('project', form)
   const doctorId = Form.useWatch('doctor_id', form)
   const nurseId = Form.useWatch('nurse_id', form)
   const room = Form.useWatch('room', form)
+  const customerName = Form.useWatch('customer_name', form)
   const [loading, setLoading] = useState(false)
   const [startDateTime, setStartDateTime] = useState<Date | null>(null)
   const [endDateTime, setEndDateTime] = useState<Date | null>(null)
@@ -81,7 +97,25 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
   useEffect(() => {
     if (visible) {
       form.resetFields()
-      if (defaultDate) {
+      
+      if (editData) {
+        const startTime = editData.start_time ? dayjs(editData.start_time).toDate() : null
+        const endTime = editData.end_time ? dayjs(editData.end_time).toDate() : null
+        
+        setStartDateTime(startTime)
+        setEndDateTime(endTime)
+        
+        form.setFieldsValue({
+          customer_name: editData.customer_name || '',
+          project: editData.project || null,
+          doctor_id: editData.doctor_id || null,
+          nurse_id: editData.nurse_id || null,
+          start_time: startTime,
+          end_time: endTime,
+          room: editData.room || null,
+          remark: editData.remark || ''
+        })
+      } else if (defaultDate) {
         const defaultDateTime = dayjs(defaultDate).hour(9).minute(0).second(0).millisecond(0).toDate()
         const defaultEndDateTime = dayjs(defaultDate).hour(10).minute(0).second(0).millisecond(0).toDate()
         setStartDateTime(defaultDateTime)
@@ -102,7 +136,7 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
       setProjectPickerVisible(false)
       setRoomPickerVisible(false)
     }
-  }, [visible, defaultDate])
+  }, [visible, defaultDate, editData])
 
   const handleSubmit = async () => {
     try {
@@ -144,26 +178,34 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
         doctor_id: Array.isArray(values.doctor_id) ? values.doctor_id[0] : values.doctor_id,
         nurse_id: values.nurse_id && Array.isArray(values.nurse_id) ? values.nurse_id[0] : (values.nurse_id || null),
         customer_name: typeof values.customer_name === 'string' ? values.customer_name.trim() : String(values.customer_name || ''),
-        // room: Array.isArray(values.room) ? values.room[0] : values.room,
         start_time: start.format('YYYY-MM-DD HH:mm:ss'),
         end_time: end.format('YYYY-MM-DD HH:mm:ss'),
         duration: duration,
         remark: values.remark || null
       }
 
-      const res = await request({
-        url: '/schedule/create',
-        method: 'POST',
-        data: submitData
-      })
+      let res
+      if (isEditMode && editData?.id) {
+        res = await request({
+          url: '/schedule/update',
+          method: 'POST',
+          data: { ...submitData, id: editData.id }
+        })
+      } else {
+        res = await request({
+          url: '/schedule/create',
+          method: 'POST',
+          data: submitData
+        })
+      }
 
       if (res.code === 0) {
-        Toast.show('创建排班成功')
+        Toast.show(isEditMode ? '修改排班成功' : '创建排班成功')
         onSuccess()
         handleClose()
       } else {
         Modal.confirm({
-          content: <div dangerouslySetInnerHTML={{ __html: res.message || '创建排班失败' }}></div>
+          content: <div dangerouslySetInnerHTML={{ __html: res.message || (isEditMode ? '修改排班失败' : '创建排班失败') }}></div>
         })
       }
     } catch (error: any) {
@@ -191,7 +233,7 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
     <div className={styles.overlay}>
       <div className={styles.formContainer} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <h2 className={styles.title}>新增排班</h2>
+          <h2 className={styles.title}>{isEditMode ? '修改排班' : '新增排班'}</h2>
           <button className={styles.closeButton} onClick={handleClose}>×</button>
         </div>
 
@@ -217,7 +259,7 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
                 onClose={() => setProjectPickerVisible(false)}
                 columns={[PROJECT_TYPES]}
                 value={project ? [project] : ["戴牙"]}
-                onConfirm={(val) => {
+                onConfirm={async (val) => {
                   if (val && Array.isArray(val) && val.length > 0) {
                     const selectedProject = val[0]
                     form.setFieldsValue({ project: selectedProject })
@@ -228,6 +270,21 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
                       const newEndDateTime = dayjs(startDateTime).add(duration, 'minute').toDate()
                       setEndDateTime(newEndDateTime)
                       form.setFieldsValue({ end_time: newEndDateTime })
+                    }
+
+                    // 如果选择的是"戴牙"且客户姓名已填写，查询该客户最近一条"备牙"记录的医生
+                    if (selectedProject === '戴牙') {
+                      const currentCustomerName = form.getFieldValue('customer_name')
+                      if (currentCustomerName && typeof currentCustomerName === 'string' && currentCustomerName.trim()) {
+                        try {
+                          const res = await getLastPreparationDoctor(currentCustomerName.trim())
+                          if (res.code === 0 && res.re && res.re.doctor_id) {
+                            form.setFieldsValue({ doctor_id: res.re.doctor_id })
+                          }
+                        } catch (error) {
+                          console.error('查询备牙记录医生失败:', error)
+                        }
+                      }
                     }
                   } else {
                     form.setFieldsValue({ project: null })
@@ -494,7 +551,7 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
             loading={loading}
             color="primary"
           >
-            创建
+            {isEditMode ? '保存' : '创建'}
           </Button>
         </div>
       </div>

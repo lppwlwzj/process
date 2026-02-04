@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { Schedule } from '@/types/schedule'
 import dayjs from 'dayjs'
-import { DeleteOutline } from 'antd-mobile-icons'
+import { DeleteOutline, EditSOutline } from 'antd-mobile-icons'
 import styles from './index.module.less'
 import { Toast, Dialog } from 'antd-mobile'
 
@@ -9,9 +9,10 @@ interface ScheduleItemProps {
   schedule: Schedule
   onClick?: () => void
   onDelete?: (id: string) => void
+  onEdit?: (schedule: Schedule) => void
 }
 
-export default function ScheduleItem({ schedule, onDelete }: ScheduleItemProps) {
+export default function ScheduleItem({ schedule, onDelete, onEdit }: ScheduleItemProps) {
   const [translateX, setTranslateX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const touchStartX = useRef(0)
@@ -26,6 +27,14 @@ export default function ScheduleItem({ schedule, onDelete }: ScheduleItemProps) 
     const start = dayjs(schedule.start_time)
     const end = dayjs(schedule.end_time)
     return end.diff(start, 'minute')
+  }
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (onEdit) {
+      onEdit(schedule)
+    }
+    resetPosition()
   }
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -72,7 +81,7 @@ export default function ScheduleItem({ schedule, onDelete }: ScheduleItemProps) 
     }
 
     if (deltaX < 0) {
-      const newTranslateX = Math.max(deltaX, -60)
+      const newTranslateX = Math.max(deltaX, -120)
       setTranslateX(newTranslateX)
     } else if (deltaX > 0 && translateX < 0) {
       const newTranslateX = Math.min(translateX + deltaX, 0)
@@ -82,8 +91,8 @@ export default function ScheduleItem({ schedule, onDelete }: ScheduleItemProps) 
 
   const handleTouchEnd = () => {
     setIsSwiping(false)
-    if (translateX < -40) {
-      setTranslateX(-60)
+    if (translateX < -60) {
+      setTranslateX(-120)
     } else {
       resetPosition()
     }
@@ -108,8 +117,7 @@ export default function ScheduleItem({ schedule, onDelete }: ScheduleItemProps) 
         <div className={styles.infoSection}>
           <div className={styles.mainInfoRow}>
             <span className={styles.value}>{schedule.doctor_name}</span>
-            <span className={styles.separator}></span>
-            <span className={`${styles.value}`}>{schedule.project}</span>
+  
             {schedule.nurse_name && (
               <>
                 <span className={styles.separator}></span>
@@ -118,7 +126,9 @@ export default function ScheduleItem({ schedule, onDelete }: ScheduleItemProps) 
             )}
             <span className={styles.separator}></span>
             <span className={styles.value}>{schedule.customer_name}</span>
-
+            
+            <span className={styles.separator}></span>
+            <span className={`${styles.value}`}>{schedule.project}</span>
             {schedule.remark && (
               <span className={styles.remarkRow}>
                 <span className={styles.separator}></span>
@@ -128,13 +138,20 @@ export default function ScheduleItem({ schedule, onDelete }: ScheduleItemProps) 
           </div>
         </div>
       </div>
-      <div className={styles.deleteArea}>
+      <div className={styles.actionArea}>
+        <button
+          className={styles.editButton}
+          onClick={handleEdit}
+          aria-label="修改排班"
+        >
+          <EditSOutline className={styles.actionIcon} />
+        </button>
         <button
           className={styles.deleteButton}
           onClick={handleDelete}
           aria-label="删除排班"
         >
-         <DeleteOutline className={styles.deleteIcon} /> 
+          <DeleteOutline className={styles.actionIcon} />
         </button>
       </div>
     </div>

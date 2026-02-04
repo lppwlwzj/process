@@ -16,3 +16,11 @@ export function deleteSchedule(id: number): Promise<any> {
     data: { id }
   })
 }
+
+export function getLastPreparationDoctor(customerName: string): Promise<any> {
+  return request({
+    url: '/schedule/getLastPreparationDoctor',
+    method: 'POST',
+    data: { customer_name: customerName }
+  })
+}

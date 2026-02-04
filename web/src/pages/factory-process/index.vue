@@ -737,15 +737,12 @@ onMounted(() => {
     <el-card shadow="never">
       <div class="toolbar-wrapper">
         <div style="display: flex; align-items: center; gap: 12px;">
-          <el-input
-            v-model="searchData.customer_name"
-            placeholder="请输入客户名称"
-            clearable
-            style="width: 200px;"
-            @keyup.enter="handleSearch"
-          >
+          <el-input v-model="searchData.customer_name" placeholder="请输入客户名称" clearable style="width: 200px;"
+            @keyup.enter="handleSearch">
             <template #prefix>
-              <el-icon><Search /></el-icon>
+              <el-icon>
+                <Search />
+              </el-icon>
             </template>
           </el-input>
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
@@ -931,34 +928,28 @@ onMounted(() => {
             </template>
           </el-table-column>
 
-          <el-table-column label="操作" width="210" align="center">
+          <el-table-column label="操作" width="500" align="center">
             <template #default="{ row }">
-              <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
-                <div style="display: flex; gap: 4px;">
-                  <el-button type="primary" text size="small" @click="handleProgressRecord(row)">进度记录</el-button>
-                  <el-button type="primary" text size="small" @click="handleChairsideRecord(row)">椅旁记录</el-button>
-                </div>
-                <div style="display: flex; gap: 4px;">
-                  <el-upload :show-file-list="false"
-                    :before-upload="(file) => { handleUploadTechnicianVideo(row, file); return false; }"
-                    accept="video/mp4" style="display: inline-block;">
-                    <el-button type="success" text size="small" :icon="Upload">上传进度视频</el-button>
-                  </el-upload>
-                </div>
-                <div style="display: flex; gap: 4px;">
-                  <el-upload :show-file-list="false"
-                    :before-upload="(file) => { handleUploadWebVideo(row, file); return false; }" accept="video/mp4"
-                    style="display: inline-block;">
-                    <el-button type="success" text size="small" :icon="Upload">上传视频</el-button>
-                  </el-upload>
-                </div>
-                <div style="display: flex; gap: 4px;">
-                  <el-upload :show-file-list="false"
-                    :before-upload="(file) => { handleUploadImage(row, file); return false; }" accept="image/*"
-                    style="display: inline-block;">
-                    <el-button type="success" text size="small" :icon="Upload">上传图片</el-button>
-                  </el-upload>
-                </div>
+              <div style="display: flex; flex-direction: row; align-items: center;">
+                <el-button type="primary" text size="small" @click="handleProgressRecord(row)">进度记录</el-button>
+                <el-button type="primary" text size="small" @click="handleChairsideRecord(row)">椅旁记录</el-button>
+                <el-upload :show-file-list="false"
+                  :before-upload="(file) => { handleUploadTechnicianVideo(row, file); return false; }"
+                  accept="video/mp4" style="display: inline-block;">
+                  <el-button type="success" text size="small" :icon="Upload">上传进度视频</el-button>
+                </el-upload>
+
+                <el-upload :show-file-list="false"
+                  :before-upload="(file) => { handleUploadWebVideo(row, file); return false; }" accept="video/mp4"
+                  style="display: inline-block;">
+                  <el-button type="success" text size="small" :icon="Upload">上传视频</el-button>
+                </el-upload>
+
+                <el-upload :show-file-list="false"
+                  :before-upload="(file) => { handleUploadImage(row, file); return false; }" accept="image/*"
+                  style="display: inline-block;">
+                  <el-button type="success" text size="small" :icon="Upload">上传图片</el-button>
+                </el-upload>
                 <el-button type="danger" text size="small" @click="handleDelete(row)">删除</el-button>
               </div>
             </template>

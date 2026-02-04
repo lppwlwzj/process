@@ -18,6 +18,7 @@ export interface ScheduleData {
 
 export interface ScheduleListRequest {
   date?: string
+  dateRange?: [string, string]
   doctor_id?: number
 }
 

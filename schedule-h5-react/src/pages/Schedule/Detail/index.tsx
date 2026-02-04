@@ -36,6 +36,7 @@ export default function ScheduleDetailPage() {
     searchParams.get('date') || dayjs().format('YYYY-MM-DD')
   )
   const [formVisible, setFormVisible] = useState(false)
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null)
   const [doctors, setDoctors] = useState<User[]>([])
   const [nurses, setNurses] = useState<User[]>([])
 
@@ -103,8 +104,13 @@ export default function ScheduleDetailPage() {
     return { morning, afternoon, evening }
   }
 
-  const formatDate = (date: string) => {
-    return dayjs(date).format('YYYY年MM月DD日')
+  const formatDate = (time: string) => {
+    // return dayjs(date).format('YYYY年MM月DD日')
+    const date = dayjs(time)
+    const dateStr = date.format('MM月DD日')
+    const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+    const weekday = weekdays[date.day()]
+    return `${dateStr} 星期${weekday}`
   }
 
   const handleBack = () => {
@@ -125,8 +131,24 @@ export default function ScheduleDetailPage() {
     }
   }
 
+  const handleEdit = (schedule: Schedule) => {
+    setEditingSchedule(schedule)
+    setFormVisible(true)
+  }
+
+  const handleAddNew = () => {
+    setEditingSchedule(null)
+    setFormVisible(true)
+  }
+
+  const handleFormClose = () => {
+    setFormVisible(false)
+    setEditingSchedule(null)
+  }
+
   const handleFormSuccess = () => {
     loadScheduleList()
+    setEditingSchedule(null)
   }
 
   const groupedSchedules = groupByTimeSlot(scheduleList)
@@ -138,7 +160,7 @@ export default function ScheduleDetailPage() {
           ← 返回
         </button>
         <div className={styles.dateText}>{formatDate(selectedDate)}</div>
-        <button className={styles.addButton} onClick={() => setFormVisible(true)}>
+        <button className={styles.addButton} onClick={handleAddNew}>
           + 新增
         </button>
       </div>
@@ -148,7 +170,7 @@ export default function ScheduleDetailPage() {
           <div className={styles.periodTitle}>早上 (00:00-12:00)</div>
           {groupedSchedules.morning.map((item) => (
             <div key={item.id} className={styles.scheduleItem}>
-              <ScheduleItem schedule={item} onDelete={handleDelete} />
+              <ScheduleItem schedule={item} onDelete={handleDelete} onEdit={handleEdit} />
             </div>
           ))}
         </div>
@@ -160,7 +182,7 @@ export default function ScheduleDetailPage() {
 
           {groupedSchedules.afternoon.map((item) => (
             <div key={item.id} className={styles.scheduleItem}>
-              <ScheduleItem schedule={item} onDelete={handleDelete} />
+              <ScheduleItem schedule={item} onDelete={handleDelete} onEdit={handleEdit} />
             </div>
           ))}
         </div>
@@ -172,7 +194,7 @@ export default function ScheduleDetailPage() {
 
           {groupedSchedules.evening.map((item) => (
             <div key={item.id} className={styles.scheduleItem}>
-              <ScheduleItem schedule={item} onDelete={handleDelete} />
+              <ScheduleItem schedule={item} onDelete={handleDelete} onEdit={handleEdit} />
             </div>
           ))}
         </div>
@@ -184,11 +206,22 @@ export default function ScheduleDetailPage() {
 
       <ScheduleForm
         visible={formVisible}
-        onClose={() => setFormVisible(false)}
+        onClose={handleFormClose}
         onSuccess={handleFormSuccess}
         doctors={doctors}
         nurses={nurses}
         defaultDate={selectedDate}
+        editData={editingSchedule ? {
+          id: editingSchedule.id,
+          customer_name: editingSchedule.customer_name,
+          project: editingSchedule.project,
+          doctor_id: Number(editingSchedule.doctor_id),
+          nurse_id: editingSchedule.nurse_id ? Number(editingSchedule.nurse_id) : undefined,
+          start_time: editingSchedule.start_time,
+          end_time: editingSchedule.end_time,
+          room: editingSchedule.room,
+          remark: editingSchedule.remark
+        } : null}
       />
     </div>
   )

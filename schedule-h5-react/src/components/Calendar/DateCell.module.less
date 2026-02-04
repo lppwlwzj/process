@@ -102,6 +102,55 @@
       color: #555;
     }
   }
+  
+  &.selectMode {
+    cursor: pointer;
+    
+    &:hover {
+      border-color: #3498db;
+      background-color: rgba(52, 152, 219, 0.05);
+    }
+    
+    &.selected {
+      background: linear-gradient(135deg, rgba(52, 152, 219, 0.15) 0%, rgba(52, 152, 219, 0.08) 100%);
+      border: 2px solid #3498db;
+      box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+      
+      .date {
+        color: #3498db;
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+.checkbox {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #3498db;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+  
+  &.checked {
+    background: #3498db;
+    border-color: #3498db;
+    box-shadow: 0 2px 6px rgba(52, 152, 219, 0.4);
+  }
+}
+
+.checkIcon {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .date {

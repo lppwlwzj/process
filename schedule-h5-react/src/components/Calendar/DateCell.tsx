@@ -12,6 +12,7 @@ export interface DateCellProps {
   isSelected?: boolean
   isWeekend?: boolean
   isEmpty?: boolean
+  isSelectMode?: boolean
   onClick?: () => void
   style?: React.CSSProperties
 }
@@ -26,6 +27,7 @@ export default function DateCell({
   isSelected = false,
   isWeekend = false,
   isEmpty = false,
+  isSelectMode = false,
   onClick,
 }: DateCellProps) {
   if (isEmpty) {
@@ -41,11 +43,17 @@ export default function DateCell({
         isWeekend && styles.weekend,
         hasSchedule && styles.hasSchedule,
         isPast && styles.isPast,
-        content && styles.hasContent
+        content && styles.hasContent,
+        isSelectMode && styles.selectMode
       )}
       onClick={onClick}
     >
       <span className={styles.date}>{date}</span>
+      {isSelectMode && (
+        <div className={clsx(styles.checkbox, isSelected && styles.checked)}>
+          {isSelected && <span className={styles.checkIcon}>✓</span>}
+        </div>
+      )}
       {content && <div className={styles.content}>{content}</div>}
     </div>
   )

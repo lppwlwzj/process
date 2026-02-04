@@ -2,7 +2,7 @@ const db = require('../db/index')
 const { findAvailableRooms } = require('../ai-schedule/utils/resource-allocator')
 
 exports.list = (req, res) => {
-  const { date, doctor_id } = req.body;
+  const { date, dateRange, doctor_id } = req.body;
   let sql = `SELECT 
     s.*,
     u1.username as doctor_name,
@@ -13,7 +13,10 @@ exports.list = (req, res) => {
     WHERE 1=1`;
   const params = [];
   
-  if (date) {
+  if (dateRange && Array.isArray(dateRange) && dateRange.length === 2) {
+    sql += ` AND DATE(s.start_time) >= ? AND DATE(s.start_time) <= ?`;
+    params.push(dateRange[0], dateRange[1]);
+  } else if (date) {
     sql += ` AND DATE(s.start_time) = ?`;
     params.push(date);
   }
@@ -36,17 +39,14 @@ exports.list = (req, res) => {
 };
 
 exports.create = (req, res) => {
-  const { project, doctor_id, nurse_id, customer_id, customer_name, room, start_time, duration, remark } = req.body;
+  const { project , doctor_id , nurse_id, customer_name, room, start_time , duration = 0, remark } = req.body;
   
-  const finalCustomerName = customer_name || customer_id;
-  
-  if (!project || !doctor_id || !finalCustomerName  || !start_time || !duration) {
-    return res.cc("缺少必填字段！");
-  }
-  
-  if (duration <= 0) {
-    return res.cc("时长必须大于0！");
-  }
+  const finalCustomerName = customer_name 
+  //休息 填写在备注里
+   const isRest = remark && remark.includes('休息') && !project && !doctor_id && !finalCustomerName;
+  // if (duration <= 0) {
+  //   return res.cc("时长必须大于0！");
+  // }
   
   const startTime = new Date(start_time);
   const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
@@ -70,6 +70,9 @@ exports.create = (req, res) => {
 
   // 如果未指定诊室，自动分配空闲诊室
   const allocateRoom = (callback) => {
+    if (isRest) {
+      return callback(null, null);
+    }
     if (room) {
       // 如果指定了诊室，直接使用
       return callback(null, room);
@@ -131,12 +134,15 @@ exports.create = (req, res) => {
         FROM schedule s
         LEFT JOIN user u ON s.doctor_id = u.id
         WHERE s.doctor_id = ? 
+        AND (s.remark IS NULL OR s.remark NOT LIKE '%休息%')
         AND (
           (s.start_time <= ? AND s.end_time > ?) OR
           (s.start_time < ? AND s.end_time >= ?) OR
           (s.start_time >= ? AND s.end_time <= ?)
         )
         ORDER BY s.start_time ASC`;
+      
+  
       
       conflictChecks.push({
         sql: checkDoctorSql,
@@ -239,19 +245,19 @@ exports.create = (req, res) => {
 };
 
 exports.update = (req, res) => {
-  const { id, project, doctor_id, nurse_id, customer_id, room, start_time, duration, remark } = req.body;
+  const { id, project, doctor_id, nurse_id, customer_name, room, start_time, duration, remark } = req.body;
   
   if (!id) {
     return res.cc("缺少排班ID！");
   }
   
-  if (!project || !doctor_id   || !start_time ) {
-    return res.cc("缺少必填字段！");
-  }
+  // if (!project || !doctor_id   || !start_time ) {
+  //   return res.cc("缺少必填字段！");
+  // }
   
-  if (duration <= 0) {
-    return res.cc("时长必须大于0！");
-  }
+  // if (duration <= 0) {
+  //   return res.cc("时长必须大于0！");
+  // }
   
   const startTime = new Date(start_time);
   const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
@@ -267,11 +273,11 @@ exports.update = (req, res) => {
     if (skipConflictCheck) {
       // 如果是何锐或孙韩宇，直接更新，不检查冲突
       const updateSql = `UPDATE schedule 
-        SET project = ?, doctor_id = ?, nurse_id = ?, customer_id = ?, room = ?,
+        SET project = ?, doctor_id = ?, nurse_id = ?, customer_name = ?, room = ?,
             start_time = ?, duration = ?, end_time = ?, remark = ?
         WHERE id = ?`;
       
-      const updateParams = [project, doctor_id, nurse_id || null, customer_id, room, startTime, duration, endTime, remark || null, id];
+      const updateParams = [project, doctor_id, nurse_id || null, customer_name, room, startTime, duration, endTime, remark || null, id];
       
       db.query(updateSql, updateParams, (err, results) => {
         if (err) return res.cc(err);
@@ -293,6 +299,7 @@ exports.update = (req, res) => {
       LEFT JOIN user u ON s.doctor_id = u.id
       WHERE s.doctor_id = ? 
       AND s.id != ?
+      AND (s.remark IS NULL OR s.remark NOT LIKE '%休息%')
       AND (
         (s.start_time <= ? AND s.end_time > ?) OR
         (s.start_time < ? AND s.end_time >= ?) OR
@@ -348,9 +355,9 @@ exports.update = (req, res) => {
               };
               const startStr = formatTime(start);
               const endStr = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
-              return `${startStr}-${endStr} ${item.doctor_name}、${item.customer_name}、${item.project}`;
-            }).join('、');
-            message = `${check.message}冲突排班：${conflictList}`;
+              return `${startStr}-${endStr} <br>${item.doctor_name}、${item.customer_name}、${item.project}`;
+            }).join('<br>');
+            message = `${check.message} <br>${conflictList}<br> <br> ${`备牙: 70min  <br>戴牙: 90min  <br>复诊: 30min`}`;
           }
           conflictMessages.push(message);
         }
@@ -363,11 +370,11 @@ exports.update = (req, res) => {
           }
           
           const updateSql = `UPDATE schedule 
-            SET project = ?, doctor_id = ?, nurse_id = ?, customer_id = ?, room = ?,
+            SET project = ?, doctor_id = ?, nurse_id = ?, customer_name = ?, room = ?,
                 start_time = ?, duration = ?, end_time = ?, remark = ?
             WHERE id = ?`;
           
-          const updateParams = [project, doctor_id, nurse_id || null, customer_id, room, startTime, duration, endTime, remark || null, id];
+          const updateParams = [project, doctor_id, nurse_id || null, customer_name, room, startTime, duration, endTime, remark || null, id];
           
           db.query(updateSql, updateParams, (err, results) => {
             if (err) return res.cc(err);
@@ -412,12 +419,10 @@ exports.detail = (req, res) => {
   const sql = `SELECT 
     s.*,
     u1.username as doctor_name,
-    u2.username as nurse_name,
-    c.customer_name
+    u2.username as nurse_name
     FROM schedule s
     LEFT JOIN user u1 ON s.doctor_id = u1.id
     LEFT JOIN user u2 ON s.nurse_id = u2.id
-    LEFT JOIN customer c ON s.customer_id = c.id
     WHERE s.id = ?`;
   
   db.query(sql, [id], (err, results) => {
@@ -430,5 +435,39 @@ exports.detail = (req, res) => {
       message: "成功！",
       re: results[0]
     });
+  });
+};
+
+exports.getLastPreparationDoctor = (req, res) => {
+  const { customer_name } = req.body;
+  
+  if (!customer_name) {
+    return res.cc("缺少客户姓名！");
+  }
+  
+  const sql = `SELECT 
+    s.doctor_id,
+    u1.username as doctor_name
+    FROM schedule s
+    LEFT JOIN user u1 ON s.doctor_id = u1.id
+    WHERE s.customer_name = ? AND s.project = '备牙'
+    ORDER BY s.start_time DESC
+    LIMIT 1`;
+  
+  db.query(sql, [customer_name], (err, results) => {
+    if (err) return res.cc(err);
+    if (results.length === 0) {
+      res.send({
+        code: 0,
+        message: "未找到该客户的备牙记录",
+        re: null
+      });
+    } else {
+      res.send({
+        code: 0,
+        message: "成功！",
+        re: results[0]
+      });
+    }
   });
 };

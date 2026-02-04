@@ -8,6 +8,7 @@ import { getCustomerListApi } from "@@/apis/customers"
 import type { FormInstance, FormRules } from "element-plus"
 import type { ScheduleData } from "@@/apis/schedule/type"
 import dayjs from "dayjs"
+import * as XLSX from "xlsx"
 
 interface UserData {
   id: number
@@ -42,7 +43,7 @@ const nurseList = ref<UserData[]>([])
 const customerList = ref<CustomerData[]>([])
 const searchFormRef = ref()
 const searchData = reactive({
-  date: "",
+  dateRange: null as [string, string] | null,
   doctor_id: undefined as number | undefined
 })
 
@@ -109,8 +110,11 @@ const groupedScheduleData = computed(() => {
 const filteredScheduleData = computed(() => {
   let filtered = groupedScheduleData.value
   
-  if (searchData.date) {
-    filtered = filtered.filter(item => item.date === searchData.date)
+  if (searchData.dateRange && searchData.dateRange.length === 2) {
+    const [startDate, endDate] = searchData.dateRange
+    filtered = filtered.filter(item => {
+      return item.date >= startDate && item.date <= endDate
+    })
   }
   
   if (searchData.doctor_id) {
@@ -142,7 +146,7 @@ const getTableData = async () => {
   loading.value = true
   try {
     const res: any = await getScheduleListApi({
-      date: searchData.date || undefined,
+      dateRange: searchData.dateRange || undefined,
       doctor_id: searchData.doctor_id
     })
     if (res && res.re) {
@@ -184,9 +188,91 @@ const handleSearch = () => {
 }
 
 const resetSearch = () => {
-  searchData.date = ""
+  searchData.dateRange = null
   searchData.doctor_id = undefined
   getTableData()
+}
+
+const handleExport = async () => {
+  if (!searchData.dateRange || searchData.dateRange.length !== 2) {
+    ElMessage.warning("请选择日期范围")
+    return
+  }
+
+  try {
+    loading.value = true
+    const res: any = await getScheduleListApi({
+      dateRange: searchData.dateRange,
+      doctor_id: searchData.doctor_id
+    })
+
+    if (!res || !res.re || res.re.length === 0) {
+      ElMessage.warning("所选日期范围内没有排班数据")
+      return
+    }
+
+    const exportData = res.re
+      .sort((a: ScheduleData, b: ScheduleData) => {
+        return dayjs(b.start_time).valueOf() - dayjs(a.start_time).valueOf()
+      })
+      .map((item: ScheduleData) => {
+        const { created_at, updated_at, ...rest } = item
+        return {
+          id: rest.id,
+          project: rest.project,
+          doctor_name: rest.doctor_name || "",
+          nurse_name: rest.nurse_name || "",
+          customer_name: rest.customer_name || "",
+          room: rest.room || "",
+          start_time: rest.start_time,
+          duration: rest.duration,
+          end_time: rest.end_time,
+          remark: rest.remark || ""
+        }
+      })
+
+    const excelData = exportData.map((row: any) => ({
+      ID: row.id,
+      项目: row.project,
+      医生: row.doctor_name || "",
+      护士: row.nurse_name || "",
+      客户姓名: row.customer_name,
+      诊室: row.room || "",
+      开始时间: dayjs(row.start_time).format("YYYY-MM-DD HH:mm:ss"),
+      时长分钟: row.duration,
+      结束时间: dayjs(row.end_time).format("YYYY-MM-DD HH:mm:ss"),
+      备注: row.remark || ""
+    }))
+
+    const wb = XLSX.utils.book_new()
+    const ws = XLSX.utils.json_to_sheet(excelData)
+
+    const colWidths = [
+      { wch: 8 },
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 20 },
+      { wch: 12 },
+      { wch: 20 },
+      { wch: 30 }
+    ]
+    ws["!cols"] = colWidths
+
+    XLSX.utils.book_append_sheet(wb, ws, "排班数据")
+
+    const fileName = `排班数据_${searchData.dateRange[0]}_${searchData.dateRange[1]}_${dayjs().format("YYYYMMDDHHmmss")}.xlsx`
+    XLSX.writeFile(wb, fileName)
+
+    ElMessage.success("导出成功")
+  } catch (error) {
+    console.error("导出失败:", error)
+    ElMessage.error("导出失败，请重试")
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleAdd = () => {
@@ -292,22 +378,24 @@ const formatDate = (date: string) => {
       <template #header>
         <div class="card-header">
           <span>排班管理</span>
-          <el-button type="primary" :icon="CirclePlus" @click="handleAdd">新增排班</el-button>
+          <!-- <el-button type="primary" :icon="CirclePlus" @click="handleAdd">新增排班</el-button> -->
         </div>
       </template>
 
       <el-form ref="searchFormRef" :model="searchData" inline class="search-form">
-        <el-form-item label="日期">
+        <el-form-item label="日期范围">
           <el-date-picker
-            v-model="searchData.date"
-            type="date"
-            placeholder="选择日期"
+            v-model="searchData.dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
-            style="width: 200px"
+            style="width: 300px"
           />
         </el-form-item>
-        <el-form-item label="医生">
+        <!-- <el-form-item label="医生">
           <el-select
             v-model="searchData.doctor_id"
             placeholder="选择医生"
@@ -321,14 +409,15 @@ const formatDate = (date: string) => {
               :value="doctor.id"
             />
           </el-select>
-        </el-form-item>
+        </el-form-item> -->
         <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
+          <el-button type="primary" :icon="Search" @click="handleExport">导出</el-button>
+          <!-- <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button> -->
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
         </el-form-item>
       </el-form>
 
-      <el-table
+      <!-- <el-table
         :data="filteredScheduleData"
         v-loading="loading"
         row-key="date"
@@ -382,7 +471,7 @@ const formatDate = (date: string) => {
             {{ row.schedules.length }} 条
           </template>
         </el-table-column>
-      </el-table>
+      </el-table> -->
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" @close="formRef?.resetFields()">

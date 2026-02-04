@@ -97,16 +97,14 @@
 
 }
 
-.deleteArea {
+.actionArea {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 60px;
+  width: 120px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #ff6b6b;
+  align-items: stretch;
   z-index: 0;
   border: none;
   outline: none;
@@ -116,35 +114,39 @@
   isolation: isolate;
 }
 
-.deleteButton {
-  width: 2rem;
-  height: 2rem;
+.editButton {
+  width: 60px;
   border: none;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
+  background: #3498db;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
   
-  // &:active {
-  //   background: rgba(255, 255, 255, 0.3);
-  //   transform: scale(0.95);
-  // }
+  &:active {
+    background: #2980b9;
+  }
 }
 
-.deleteIcon {
-  font-size: 0.9rem;
+.deleteButton {
+  width: 60px;
+  border: none;
+  background: #ff6b6b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:active {
+    background: #e74c3c;
+  }
+}
+
+.actionIcon {
+  font-size: 1.2rem;
   color: #fff;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
   transition: transform 0.2s;
-  
-  .deleteButton:hover & {
-    transform: scale(1.15);
-  }
-  
-  .deleteButton:active & {
-    transform: scale(0.9);
-  }
 }
