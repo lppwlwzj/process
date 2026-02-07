@@ -17,6 +17,7 @@ export default function ScheduleItem({ schedule, onDelete, onEdit }: ScheduleIte
   const [isSwiping, setIsSwiping] = useState(false)
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
+  const [isHovered, setIsHovered] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   const formatTime = (time: string) => {
@@ -108,6 +109,8 @@ export default function ScheduleItem({ schedule, onDelete, onEdit }: ScheduleIte
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         <div className={styles.timeSection}>
           <div className={styles.time}>
@@ -117,7 +120,7 @@ export default function ScheduleItem({ schedule, onDelete, onEdit }: ScheduleIte
         <div className={styles.infoSection}>
           <div className={styles.mainInfoRow}>
             <span className={styles.value}>{schedule.doctor_name}</span>
-  
+
             {schedule.nurse_name && (
               <>
                 <span className={styles.separator}></span>
@@ -126,7 +129,7 @@ export default function ScheduleItem({ schedule, onDelete, onEdit }: ScheduleIte
             )}
             <span className={styles.separator}></span>
             <span className={styles.value}>{schedule.customer_name}</span>
-            
+
             <span className={styles.separator}></span>
             <span className={`${styles.value}`}>{schedule.project}</span>
             {schedule.remark && (
@@ -137,6 +140,14 @@ export default function ScheduleItem({ schedule, onDelete, onEdit }: ScheduleIte
             )}
           </div>
         </div>
+        {
+          isHovered && (
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', }}>
+              <EditSOutline style={{ fontSize: '1rem', color: '#000', filter: 'drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1))', transition: 'transform 0.2s' }} onClick={handleEdit} />
+              <DeleteOutline style={{ fontSize: '1rem', color: '#000', filter: 'drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1))', transition: 'transform 0.2s' }} onClick={handleDelete} />
+            </div>
+          )
+        }
       </div>
       <div className={styles.actionArea}>
         <button
@@ -154,6 +165,8 @@ export default function ScheduleItem({ schedule, onDelete, onEdit }: ScheduleIte
           <DeleteOutline className={styles.actionIcon} />
         </button>
       </div>
+
+
     </div>
   )
 }

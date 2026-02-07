@@ -188,6 +188,8 @@ export default function ScheduleDetailPage() {
         </div>
       )}
 
+
+
       {groupedSchedules.evening.length > 0 && (
         <div className={styles.periodSection}>
           <div className={styles.periodTitle}>晚上 (17:00-21:00)</div>
