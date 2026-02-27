@@ -140,6 +140,11 @@ app.use("/api/schedule", scheduleRouter);
 const aiScheduleRouter = require("./router/ai-schedule");
 app.use("/api/ai-schedule", aiScheduleRouter);
 
+const { initializeAgent } = require("./ai-schedule/handlers/chat-handler");
+initializeAgent().catch(err => {
+  console.error('Failed to initialize AI agent on startup:', err);
+});
+
 // const kehuRouter = require("./router/kehu");
 // app.use("/api/kehu", kehuRouter);
 

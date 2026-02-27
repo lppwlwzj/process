@@ -1,8 +1,7 @@
 const { createAgent, HumanMessage, AIMessage, SystemMessage } = require('langchain');
 const { createLLM } = require('./config');
 const { systemPrompt } = require('./prompt');
-const { queryScheduleTool, checkConflictTool, createScheduleTool, forceInsertScheduleTool, delaySchedulesTool, updateScheduleTool, forceUpdateScheduleTool } = require('../tools/schedule-tools');
-const { queryUserTool, queryCustomerTool } = require('../tools/user-tools');
+const { manageScheduleTool, queryUserTool } = require('../tools/schedule-tools-optimized');
 const { queryAvailableResourcesTool } = require('../tools/resource-tools');
 const MemoryManager = require('../memory/manager');
 const { extractScheduleInfo } = require('../parsers/info-extractor');
@@ -15,53 +14,58 @@ class ScheduleAgent {
     this.llm = createLLM();
     this.memoryManager = new MemoryManager();
     this.tools = [
-      queryScheduleTool,
-      checkConflictTool,
-      createScheduleTool,
-      updateScheduleTool,
-      forceInsertScheduleTool,
-      forceUpdateScheduleTool,
-      delaySchedulesTool,
+      manageScheduleTool,
       queryUserTool,
-      // queryCustomerTool,
       queryAvailableResourcesTool
     ];
     this.agent = null;
+    this.initializing = null;
   }
 
   async initialize() {
-    try {
-      this.agent = createAgent({
-        model: this.llm,
-        tools: this.tools,
-        systemPrompt: systemPrompt
-      });
-    } catch (error) {
-      console.error('Error initializing agent:', error);
-      throw error;
+    if (this.agent) {
+      return;
     }
+    
+    if (this.initializing) {
+      return this.initializing;
+    }
+    
+    this.initializing = (async () => {
+      try {
+        this.agent = createAgent({
+          model: this.llm,
+          tools: this.tools,
+          systemPrompt: systemPrompt
+        });
+      } catch (error) {
+        console.error('Error initializing agent:', error);
+        this.initializing = null;
+        throw error;
+      }
+    })();
+    
+    return this.initializing;
   }
 
   _buildMessages(chatHistory, userMessage) {
     const messages = [];
     
     if (Array.isArray(chatHistory) && chatHistory.length > 0) {
-      const recentHistory = chatHistory.slice(-10);
+      const recentHistory = chatHistory.slice(-4);
       
       for (const msg of recentHistory) {
         if (msg.role === 'user' || msg.type === 'human') {
           messages.push(new HumanMessage(msg.content || msg.text || ''));
         } else if (msg.role === 'assistant' || msg.type === 'ai') {
-          messages.push(new AIMessage(msg.content || msg.text || ''));
+          const content = msg.content || msg.text || '';
+          const truncated = content.length > 500 ? content.substring(0, 500) + '...' : content;
+          messages.push(new AIMessage(truncated));
         }
       }
     }
     
-    const currentRequestHint = `【新请求】以下是用户的当前请求，请基于这条消息重新处理，如果用户修改了之前提到的信息（如医生名、客户名等），请使用新的信息重新调用工具查询，不要参考历史对话中的工具调用结果。
-
-用户说：${userMessage}`;
-    
-    messages.push(new HumanMessage(currentRequestHint));
+    messages.push(new HumanMessage(userMessage));
     
     return messages;
   }
@@ -133,51 +137,61 @@ class ScheduleAgent {
     };
   }
 
-  async *streamMessage(sessionId, userId, userMessage) {
+  async *streamMessage(sessionId, userId, userMessage, extractedInfo = null) {
     try {
-      console.log('streamMessage--->', sessionId, userId, userMessage);
-
+      const perfStart = Date.now();
+      
       if (!this.agent) {
-        console.log('Initializing agent...');
         await this.initialize();
-        console.log('Agent initialized');
       }
 
-      const extractedInfo = extractScheduleInfo(userMessage);
-      console.log('extractedInfo in streamMessage--->', extractedInfo);
+      if (!extractedInfo) {
+        extractedInfo = extractScheduleInfo(userMessage);
+      }
       
-      await this.memoryManager.saveToLongTerm(
-        sessionId,
-        userId,
-        'user',
-        userMessage,
-        { extracted_info: extractedInfo }
-      );
+      const memoryStart = Date.now();
+      const [, shortTermMemory] = await Promise.all([
+        this.memoryManager.saveToLongTerm(
+          sessionId,
+          userId,
+          'user',
+          userMessage,
+          { extracted_info: extractedInfo }
+        ),
+        Promise.resolve(this.memoryManager.getShortTermMemory(sessionId))
+      ]);
       
-      const shortTermMemory = this.memoryManager.getShortTermMemory(sessionId);
-      const longTermHistory = await this.memoryManager.loadLongTermMemory(sessionId);
+      const [longTermHistory, memoryVariables] = await Promise.all([
+        this.memoryManager.loadLongTermMemory(sessionId),
+        shortTermMemory.loadMemoryVariables({})
+      ]);
+      console.log(`[PERF] Memory loaded: ${Date.now() - memoryStart}ms`);
       
-      const memoryVariables = await shortTermMemory.loadMemoryVariables({});
+      const buildStart = Date.now();
       const chatHistory = memoryVariables.chat_history || [];
-
       const allHistory = [...(longTermHistory.messages || []), ...chatHistory];
       const messages = this._buildMessages(allHistory, userMessage);
-      
-      console.log('Built messages for agent:', messages.length, 'messages');
+      console.log(`[PERF] Messages built: ${Date.now() - buildStart}ms, messages: ${messages.length}`);
 
       let fullResponse = '';
-      let chunkCount = 0;
       let hasYieldedChunk = false;
+      const aiStart = Date.now();
+      let toolCallCount = 0;
 
       try {
         const streamEvents = this.agent.streamEvents({ messages }, { version: "v2" });
 
         for await (const event of streamEvents) {
-          chunkCount++;
-          const eventStr = JSON.stringify(event);
-          console.log(`Event ${chunkCount} [${event.event}] [${event.name}]--->`, eventStr.substring(0, 400));
-
-          if (event.event === 'on_chat_model_stream' || event.event === 'on_llm_stream') {
+          if (event.event === 'on_tool_start') {
+            toolCallCount++;
+            console.log(`[PERF] Tool call #${toolCallCount} started: ${event.name}, elapsed: ${Date.now() - perfStart}ms`);
+          } else if (event.event === 'on_tool_end') {
+            console.log(`[PERF] Tool call ended: ${event.name}, elapsed: ${Date.now() - perfStart}ms`);
+          } else if (event.event === 'on_chat_model_stream' || event.event === 'on_llm_stream') {
+            if (!hasYieldedChunk) {
+              console.log(`[PERF] First token: ${Date.now() - aiStart}ms, total: ${Date.now() - perfStart}ms, tools called: ${toolCallCount}`);
+            }
+            
             const chunk = event.data?.chunk;
             let content = '';
             
@@ -196,7 +210,6 @@ class ScheduleAgent {
             if (content && content.trim()) {
               fullResponse += content;
               hasYieldedChunk = true;
-              console.log(`Yielding chunk content: ${content.substring(0, 100)}`);
               yield { type: 'chunk', content: content };
             }
           } else if (event.event === 'on_chain_end' && event.name === 'LangGraph') {
@@ -212,20 +225,14 @@ class ScheduleAgent {
                 if (content && !hasYieldedChunk) {
                   fullResponse = typeof content === 'string' ? content : String(content);
                   hasYieldedChunk = true;
-                  console.log(`Yielding final output from LangGraph chain_end: ${fullResponse.substring(0, 100)}`);
                   yield { type: 'chunk', content: fullResponse };
                 }
               }
             }
-          } else if (event.event === 'on_tool_start' || event.event === 'on_tool_end') {
-            console.log(`Tool event: ${event.event}, tool: ${event.name}`);
           }
         }
 
-        console.log(`Stream completed, total events: ${chunkCount}, fullResponse length: ${fullResponse.length}, hasYieldedChunk: ${hasYieldedChunk}`);
-
         if (!hasYieldedChunk || fullResponse.length === 0) {
-          console.warn('No chunks were yielded from streamEvents, trying agent.invoke...');
           try {
             const result = await this.agent.invoke({ messages });
             fullResponse = this._extractResponse(result);
@@ -243,9 +250,7 @@ class ScheduleAgent {
         }
       } catch (streamError) {
         console.error('Error in streamEvents:', streamError);
-        console.error('Error stack:', streamError.stack);
         
-        console.log('Trying agent.invoke as fallback...');
         try {
           const result = await this.agent.invoke({ messages });
           fullResponse = this._extractResponse(result);
@@ -261,19 +266,22 @@ class ScheduleAgent {
           }
         }
       }
+      
+      console.log(`[PERF] Total completed: ${Date.now() - perfStart}ms, tool calls: ${toolCallCount}`);
 
-      await shortTermMemory.saveContext(
-        { input: userMessage },
-        { output: fullResponse }
-      );
-
-      await this.memoryManager.saveToLongTerm(
-        sessionId,
-        userId,
-        'assistant',
-        fullResponse,
-        {}
-      );
+      await Promise.all([
+        shortTermMemory.saveContext(
+          { input: userMessage },
+          { output: fullResponse }
+        ),
+        this.memoryManager.saveToLongTerm(
+          sessionId,
+          userId,
+          'assistant',
+          fullResponse,
+          {}
+        )
+      ]);
 
       yield { type: 'complete', response: fullResponse, extracted_info: extractedInfo };
     } catch (error) {
@@ -281,7 +289,7 @@ class ScheduleAgent {
       yield { 
         type: 'complete', 
         response: `处理消息时出错: ${error.message}`,
-        extracted_info: {}
+        extracted_info: extractedInfo || {}
       };
     }
   }

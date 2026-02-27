@@ -159,22 +159,16 @@ class DeepSeekChatModel extends BaseChatModel {
   }
 
   async *_streamResponseChunks(messages, options) {
-    
-    // console.log('_streamResponseChunks called with messages:', JSON.stringify(messages, null, 2),);
-    
     let formattedMessages = [];
     
     if (Array.isArray(messages)) {
       if (messages.length === 0) {
-        console.warn('_streamResponseChunks received empty messages array');
         formattedMessages = [{ role: 'user', content: '' }];
       } else {
-        
         formattedMessages = messages
           .filter(msg => msg != null)
           .map(msg => {
             if (Array.isArray(msg)) {
-              console.warn('_streamResponseChunks: Found nested array in messages:', msg);
               return null;
             }
             
@@ -194,7 +188,6 @@ class DeepSeekChatModel extends BaseChatModel {
                          : 'user';
               return { role, content: String(content || '') };
             }
-            console.warn('_streamResponseChunks: Unknown message format:', typeof msg, msg);
             return { role: 'user', content: String(msg || '') };
           })
           .filter(msg => msg != null && msg.content !== undefined && msg.content !== null);
@@ -204,11 +197,8 @@ class DeepSeekChatModel extends BaseChatModel {
     }
 
     if (formattedMessages.length === 0) {
-      console.warn('_streamResponseChunks: No valid messages after processing, using default');
       formattedMessages = [{ role: 'user', content: '' }];
     }
-    
-    console.log('_streamResponseChunks formattedMessages:', JSON.stringify(formattedMessages, null, 2));
 
     const requestBody = {
       model: this.model,
@@ -216,8 +206,6 @@ class DeepSeekChatModel extends BaseChatModel {
       temperature: this.temperature,
       stream: true
     };
-
-    console.log('DeepSeek boundTools count:', this.boundTools?.length || 0);
     
     if (this.boundTools && this.boundTools.length > 0) {
       const toolsFormat = this.boundTools.map(tool => ({
@@ -231,9 +219,6 @@ class DeepSeekChatModel extends BaseChatModel {
       requestBody.tools = toolsFormat;
       requestBody.tool_choice = 'auto';
     }
-    
-    // console.log('DeepSeek request messages count:', requestBody.messages.length);
-    console.log('DeepSeek has tools:', !!requestBody.tools,'DeepSeek last message:', JSON.stringify(requestBody.messages[requestBody.messages.length - 1]));
 
     try {
       const response = await axios.post(
@@ -269,7 +254,6 @@ class DeepSeekChatModel extends BaseChatModel {
                   id: tc.id,
                   type: 'tool_call'
                 }));
-                console.log('DeepSeek final tool_calls:', JSON.stringify(toolCalls));
                 
                 const message = new AIMessageChunk({
                   content: fullContent,
@@ -331,7 +315,6 @@ class DeepSeekChatModel extends BaseChatModel {
           id: tc.id,
           type: 'tool_call'
         }));
-        console.log('DeepSeek final tool_calls (end of stream):', JSON.stringify(toolCalls));
         
         const message = new AIMessageChunk({
           content: fullContent,
@@ -353,11 +336,7 @@ class DeepSeekChatModel extends BaseChatModel {
       const errorDetails = error.response 
         ? `Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`
         : error.message;
-      console.error('DeepSeek API流式调用错误详情:', {
-        url: `${this.baseURL}/chat/completions`,
-        requestBody: JSON.stringify(requestBody, null, 2),
-        error: errorDetails
-      });
+      console.error('DeepSeek API流式调用错误:', errorDetails);
       throw new Error(`DeepSeek API流式调用失败: ${errorDetails}`);
     }
   }

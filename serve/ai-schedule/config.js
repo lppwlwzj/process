@@ -17,7 +17,7 @@ const config = {
   },
   memory: {
     retentionDays: 30,
-    maxMessagesPerSession: 5
+    maxMessagesPerSession: 3
   },
   schedule: {
     projectTypes: {

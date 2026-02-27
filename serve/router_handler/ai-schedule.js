@@ -36,7 +36,6 @@ exports.chat = async (req, res) => {
       if (chunk.type === 'chunk') {
         res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk.content })}\n\n`);
       } else if (chunk.type === 'complete') {
-        console.log('Complete chunk received, ending stream');
         clearInterval(heartbeatInterval);
         clearTimeout(timeout);
         res.write(`data: ${JSON.stringify({ 

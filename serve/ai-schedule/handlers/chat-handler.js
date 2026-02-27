@@ -8,6 +8,11 @@ const db = require('../../db/index');
 
 const agent = new ScheduleAgent();
 
+async function initializeAgent() {
+  await agent.initialize();
+  return agent;
+}
+
 async function processChatMessage(sessionId, userId, message) {
   await agent.initialize();
   
@@ -31,26 +36,22 @@ async function processChatMessage(sessionId, userId, message) {
 
 async function* streamChatMessage(sessionId, userId, message) {
   try {
-    console.log('streamChatMessage start--->', sessionId, userId, message);
-    
-    await agent.initialize();
+    if (!agent.agent) {
+      await agent.initialize();
+    }
     
     const extractedInfo = extractScheduleInfo(message);
     const projectType = extractedInfo.project;
 
-    console.log('extractedInfo--->', extractedInfo);
     if (isNoConflictProject(projectType)) {
-      console.log('isNoConflictProject=true, handling direct insert');
       const result = await handleDirectInsert(sessionId, userId, extractedInfo, message);
       yield { type: 'complete', data: result };
       return;
     }
     
-    for await (const chunk of agent.streamMessage(sessionId, userId, message)) {
-      console.log('yielding chunk--->', chunk);
+    for await (const chunk of agent.streamMessage(sessionId, userId, message, extractedInfo)) {
       yield chunk;
     }
-    console.log('streamChatMessage completed');
   } catch (error) {
     console.error('streamChatMessage error--->', error);
     yield { 
@@ -79,13 +80,28 @@ async function handleDirectInsert(sessionId, userId, extractedInfo, originalMess
     };
   }
   
-  const doctorResult = await new Promise((resolve, reject) => {
-    db.query('SELECT id FROM user WHERE username LIKE ? AND role = ?', 
-      [`%${doctor_name}%`, '医生椅旁技师'], (err, results) => {
+  const finalDuration = duration || getProjectDefaultDuration(project);
+  const startTime = new Date(start_time);
+  const endTime = new Date(startTime.getTime() + finalDuration * 60 * 1000);
+  
+  const [doctorResult, availableRooms] = await Promise.all([
+    new Promise((resolve, reject) => {
+      db.query('SELECT id FROM user WHERE username LIKE ? AND role = ?', 
+        [`%${doctor_name}%`, '医生椅旁技师'], (err, results) => {
+          if (err) reject(err);
+          else resolve(results[0]);
+        });
+    }),
+    new Promise((resolve, reject) => {
+      findAvailableRooms(start_time.split(' ')[0], {
+        start_time: startTime,
+        end_time: endTime
+      }, (err, rooms) => {
         if (err) reject(err);
-        else resolve(results[0]);
+        else resolve(rooms);
       });
-  });
+    })
+  ]);
   
   if (!doctorResult) {
     return {
@@ -96,20 +112,6 @@ async function handleDirectInsert(sessionId, userId, extractedInfo, originalMess
       has_conflict: false
     };
   }
-  
-  const finalDuration = duration || getProjectDefaultDuration(project);
-  const startTime = new Date(start_time);
-  const endTime = new Date(startTime.getTime() + finalDuration * 60 * 1000);
-  
-  const availableRooms = await new Promise((resolve, reject) => {
-    findAvailableRooms(start_time.split(' ')[0], {
-      start_time: startTime,
-      end_time: endTime
-    }, (err, rooms) => {
-      if (err) reject(err);
-      else resolve(rooms);
-    });
-  });
   
   const room = availableRooms.length > 0 ? availableRooms[0].room : '诊室1';
   
@@ -237,5 +239,6 @@ async function handleVipInsert(sessionId, scheduleInfo) {
 module.exports = {
   processChatMessage,
   streamChatMessage,
-  confirmSchedule
+  confirmSchedule,
+  initializeAgent
 };

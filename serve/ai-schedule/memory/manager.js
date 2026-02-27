@@ -6,6 +6,8 @@ const { HumanMessage, AIMessage } = require('@langchain/core/messages');
 class MemoryManager {
   constructor() {
     this.shortTermMemories = new Map();
+    this.longTermCache = new Map();
+    this.cacheTTL = 5 * 60 * 1000;
   }
 
   getShortTermMemory(sessionId) {
@@ -16,6 +18,11 @@ class MemoryManager {
   }
 
   async loadLongTermMemory(sessionId) {
+    const cached = this.longTermCache.get(sessionId);
+    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
+      return cached.data;
+    }
+
     return new Promise((resolve, reject) => {
       getRecentMessages(sessionId, null, async (err, messages) => {
         if (err) {
@@ -32,12 +39,21 @@ class MemoryManager {
           }
         }
 
-        resolve({ messages: await history.getMessages() });
+        const result = { messages: await history.getMessages() };
+        
+        this.longTermCache.set(sessionId, {
+          data: result,
+          timestamp: Date.now()
+        });
+
+        resolve(result);
       });
     });
   }
 
   async saveToLongTerm(sessionId, userId, role, content, metadata) {
+    this.longTermCache.delete(sessionId);
+    
     return new Promise((resolve, reject) => {
       saveMessage(sessionId, userId, role, content, metadata, (err, id) => {
         if (err) {
@@ -57,6 +73,7 @@ class MemoryManager {
           return;
         }
         this.shortTermMemories.delete(sessionId);
+        this.longTermCache.delete(sessionId);
         resolve(count);
       });
     });
