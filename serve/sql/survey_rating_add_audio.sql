@@ -1,0 +1,1 @@
+ALTER TABLE survey_rating ADD COLUMN audio_url VARCHAR(512) DEFAULT NULL;

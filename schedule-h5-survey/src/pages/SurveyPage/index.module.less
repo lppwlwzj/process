@@ -1,0 +1,40 @@
+@import '@/styles/variables.less';
+
+.page {
+  min-height: 100vh;
+  background: @bg-color;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.header {
+  padding: 16px 20px 16px;
+  background: @bg-color;
+}
+
+.title {
+  font-family: 'LXGW WenKai', 'PingFang SC', -apple-system, sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: @text-color;
+  margin: 0;
+}
+
+.main {
+  padding: 0 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tip {
+  font-family: 'LXGW WenKai', 'PingFang SC', -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: @survey-muted;
+  margin: 0;
+  padding: 16px 20px;
+  background: rgba(45, 106, 106, 0.05);
+  border-left: 3px solid @primary-color;
+  border-radius: 0 8px 8px 0;
+  box-shadow: 0 1px 3px rgba(45, 106, 106, 0.04);
+}

@@ -1,0 +1,143 @@
+@import '@/styles/variables.less';
+
+.wrapper {
+  background: @survey-card;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(45, 106, 106, 0.06);
+  animation: slideUp 0.5s ease backwards;
+  animation-delay: 480ms;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.title {
+  font-family: 'LXGW WenKai', 'PingFang SC', -apple-system, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: @text-color;
+  margin: 0 0 6px 0;
+}
+
+.desc {
+  font-size: 13px;
+  color: @survey-muted;
+  margin: 0 0 16px 0;
+}
+
+.error {
+  font-size: 13px;
+  color: @survey-negative;
+  margin: 0 0 12px 0;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.recordBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  color: @primary-color;
+  background: rgba(45, 106, 106, 0.08);
+  border: 1px solid rgba(45, 106, 106, 0.3);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:active {
+    transform: scale(0.98);
+    background: rgba(45, 106, 106, 0.12);
+  }
+}
+
+.micIcon {
+  font-size: 18px;
+}
+
+.recordingIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: @survey-negative;
+  background: rgba(184, 84, 80, 0.08);
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: @survey-negative;
+    animation: pulse 1s ease infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.stopBtn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  background: @survey-negative;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.readyRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.readyLabel {
+  font-size: 14px;
+  color: @survey-positive;
+  font-weight: 500;
+}
+
+.deleteBtn {
+  padding: 6px 14px;
+  font-size: 13px;
+  color: @survey-muted;
+  background: transparent;
+  border: 1px solid rgba(140, 140, 140, 0.4);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}

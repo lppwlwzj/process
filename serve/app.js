@@ -140,6 +140,9 @@ app.use("/api/schedule", scheduleRouter);
 const aiScheduleRouter = require("./router/ai-schedule");
 app.use("/api/ai-schedule", aiScheduleRouter);
 
+const surveyRouter = require("./router/survey");
+app.use("/api/survey", surveyRouter);
+
 const { initializeAgent } = require("./ai-schedule/handlers/chat-handler");
 initializeAgent().catch(err => {
   console.error('Failed to initialize AI agent on startup:', err);
