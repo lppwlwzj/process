@@ -176,6 +176,28 @@
 
 }
 
+.pickerTrigger {
+  background: #f5f7fa;
+  // border: 1px solid #e4e7ed;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #fff;
+    border-color: @primary-color;
+  }
+
+  &:active {
+    background: #f0f0f0;
+  }
+}
+
 .pickerContent {
   display: flex;
   align-items: center;
