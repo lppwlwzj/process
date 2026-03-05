@@ -220,7 +220,7 @@ const handleBatchDelete = async () => {
 
 const historyDialogVisible = ref(false)
 const chairsideHistoryDialogVisible = ref(false)
-const selectedCustomer = ref({
+const selectedCustomer = ref<{ id: number; customer_id?: number; name: string }>({
   id: 0,
   name: ""
 })
@@ -243,8 +243,13 @@ const loadUserList = async () => {
 }
 
 const handleProgressRecord = (row: ProcessData) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
   selectedCustomer.value = {
     id: row.id,
+    customer_id: row.customer_id,
     name: row.customer_name
   }
   historyDialogVisible.value = true
@@ -253,6 +258,7 @@ const handleProgressRecord = (row: ProcessData) => {
 const handleChairsideRecord = (row: ProcessData) => {
   selectedCustomer.value = {
     id: row.id,
+    customer_id: row.customer_id,
     name: row.customer_name
   }
   chairsideHistoryDialogVisible.value = true
@@ -961,7 +967,7 @@ onMounted(() => {
       </div>
     </el-card>
 
-    <ProcessHistoryDialog v-model:visible="historyDialogVisible" :customer-id="selectedCustomer.id"
+    <ProcessHistoryDialog v-model:visible="historyDialogVisible" :customer-id="selectedCustomer.customer_id!"
       :customer-name="selectedCustomer.name" :user-map="userMap" />
 
     <ChairsideHistoryDialog v-model:visible="chairsideHistoryDialogVisible" :customer-id="selectedCustomer.id"

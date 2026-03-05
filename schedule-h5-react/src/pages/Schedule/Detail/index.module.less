@@ -13,7 +13,7 @@
   left: 0;
   right: 0;
   z-index: 100;
-  padding:0.66rem 0.75rem;
+  padding: calc(0.66rem + env(safe-area-inset-top, 0px)) 0.75rem 0.66rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);

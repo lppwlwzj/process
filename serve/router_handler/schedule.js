@@ -447,9 +447,12 @@ exports.getLastPreparationDoctor = (req, res) => {
   
   const sql = `SELECT 
     s.doctor_id,
-    u1.username as doctor_name
+    s.nurse_id,
+    u1.username as doctor_name,
+    u2.username as nurse_name
     FROM schedule s
     LEFT JOIN user u1 ON s.doctor_id = u1.id
+    LEFT JOIN user u2 ON s.nurse_id = u2.id
     WHERE s.customer_name = ? AND s.project = '备牙'
     ORDER BY s.start_time DESC
     LIMIT 1`;

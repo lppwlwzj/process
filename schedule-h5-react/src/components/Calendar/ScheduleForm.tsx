@@ -272,17 +272,22 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
                       form.setFieldsValue({ end_time: newEndDateTime })
                     }
 
-                    // 如果选择的是"戴牙"且客户姓名已填写，查询该客户最近一条"备牙"记录的医生
+                    // 如果选择的是"戴牙"且客户姓名已填写，查询该客户最近一条"备牙"记录的医生和护士
                     if (selectedProject === '戴牙') {
                       const currentCustomerName = form.getFieldValue('customer_name')
                       if (currentCustomerName && typeof currentCustomerName === 'string' && currentCustomerName.trim()) {
                         try {
                           const res = await getLastPreparationDoctor(currentCustomerName.trim())
-                          if (res.code === 0 && res.re && res.re.doctor_id) {
-                            form.setFieldsValue({ doctor_id: res.re.doctor_id })
+                          if (res.code === 0 && res.re) {
+                            const updates: Record<string, number | null> = {}
+                            if (res.re.doctor_id) updates.doctor_id = res.re.doctor_id
+                            if (res.re.nurse_id) updates.nurse_id = res.re.nurse_id
+                            if (Object.keys(updates).length > 0) {
+                              form.setFieldsValue(updates)
+                            }
                           }
                         } catch (error) {
-                          console.error('查询备牙记录医生失败:', error)
+                          console.error('查询备牙记录医生护士失败:', error)
                         }
                       }
                     }
