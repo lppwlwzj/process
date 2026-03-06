@@ -26,11 +26,28 @@
   gap: 16px;
 }
 
+.tipBg {
+  width: 100%;
+  min-height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .tipBgImg {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
+  }
+}
+
 .tip {
   font-family: 'LXGW WenKai', 'PingFang SC', -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.7;
-  color: @survey-muted;
+  // color: @survey-muted;
+  color: #000;
+  font-weight: 600;
   margin: 0;
   padding: 16px 20px;
   background: rgba(45, 106, 106, 0.05);

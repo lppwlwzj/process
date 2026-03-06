@@ -8,6 +8,7 @@ import { SURVEY_ROLES, INITIAL_RATINGS } from '@/types/survey'
 import type { SurveyRating } from '@/types/survey'
 import { submitSurvey } from '@/services/survey'
 import { showToast } from '@/utils/toast'
+import bgImg from '@/assets/bg.jpg'
 import styles from './index.module.less'
 
 function useCustomerId(): string | null {
@@ -69,9 +70,11 @@ export default function SurveyPage() {
         <h1 className={styles.title}>服务评价</h1>
       </header>
       <main className={styles.main}>
-        <p className={styles.tip}>
-          这次的体验反馈表，恳请您真实填写哦！为了能让您下次来戴牙或者保养时有更好的体验感，您的意见很重要！
-        </p>
+        {/* <div className={styles.tipBg} /> */}
+        <div className={styles.tipBg}>
+          <img src={bgImg} alt="" className={styles.tipBgImg} />
+        </div>
+
         {SURVEY_ROLES.map(({ key, label }, index) => (
           <RatingCard
             key={key}

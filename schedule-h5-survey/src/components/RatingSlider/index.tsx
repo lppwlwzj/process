@@ -22,6 +22,11 @@ export default function RatingSlider({ value, onChange }: RatingSliderProps) {
 
   return (
     <div className={styles.wrapper}>
+      <div className={styles.labels} style={{ marginBottom: '6px' }}>
+        <span></span>
+        <span style={{ margin: '0 10px' }}> <span>← 左滑</span>  <span>右滑 →</span></span>
+        <span></span>
+      </div>
       <div className={styles.track}>
         <div
           className={styles.trackFill}
