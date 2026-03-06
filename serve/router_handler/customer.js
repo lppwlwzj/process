@@ -1,4 +1,6 @@
 const db = require("../db/index");
+const QRCode = require("qrcode");
+const uploadFileToCOS = require("../common/cosUpload");
 
 // 安全解析 JSON 字段的辅助函数
 const parseMaterials = (materials) => {
@@ -227,6 +229,28 @@ exports.batchDelete = (req, res) => {
       });
     });
   });
+};
+
+exports.generateSurveyQrCode = (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.cc("缺少客户ID！");
+  const surveyUrl = `https://gdcasa.cn/survey/?customer_id=${id}`;
+  QRCode.toBuffer(surveyUrl, { type: "png", width: 280 })
+    .then((buffer) => {
+      const fileKey = `survey-qr/${id}.png`;
+      return uploadFileToCOS(buffer, fileKey, "image/png").then((location) => `https://${location}`);
+    })
+    .then((imgUrl) => {
+      const sql = `UPDATE customer SET survey_code=? WHERE id=?`;
+      db.query(sql, [imgUrl, id], (err) => {
+        if (err) return res.cc(err);
+        res.send({ code: 0, message: "生成成功！", re: { img: imgUrl } });
+      });
+    })
+    .catch((err) => {
+      console.error("生成问卷二维码失败", err);
+      res.cc("生成问卷二维码失败", 1);
+    });
 };
 
 // 获取客户详情

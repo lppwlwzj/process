@@ -8,6 +8,13 @@ const instance: AxiosInstance = axios.create({
   }
 })
 
+instance.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type']
+  }
+  return config
+})
+
 instance.interceptors.response.use(
   (response: AxiosResponse) => {
     const { code, message, data } = response.data

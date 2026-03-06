@@ -168,6 +168,27 @@ export const constantRoutes: RouteRecordRaw[] = [
       }
     ]
   },
+  {
+    path: "/survey",
+    component: Layouts,
+    redirect: "/survey/index",
+    name: "Survey",
+    meta: {
+      title: "问卷调查",
+      elIcon: "Document"
+    },
+    children: [
+      {
+        path: "index",
+        component: () => import("@/pages/survey/index.vue"),
+        name: "SurveyList",
+        meta: {
+          title: "问卷结果列表",
+          elIcon: "Document"
+        }
+      }
+    ]
+  },
   // {
   //   path: "/demo",
   //   component: Layouts,

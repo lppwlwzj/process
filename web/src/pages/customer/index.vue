@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { usePagination } from "@@/composables/usePagination"
-import { getCustomerListApi, createCustomerApi, updateCustomerApi, deleteCustomerApi, batchDeleteCustomerApi, generateQrCodeApi } from "@@/apis/customers"
+import { getCustomerListApi, createCustomerApi, updateCustomerApi, deleteCustomerApi, batchDeleteCustomerApi, generateQrCodeApi, generateSurveyQrCodeApi } from "@@/apis/customers"
 import type { FormInstance, FormRules } from "element-plus"
 import { materialOptions } from "../process/constant"
 
@@ -26,6 +26,7 @@ interface CustomerData {
   materials: MaterialItem[]
   image?: string
   qr_code?: string
+  survey_code?: string
   technician_video?: string
   remark?: string
   created_at?: string
@@ -323,6 +324,28 @@ const handleGenerateQrCode = async (row: CustomerData) => {
   }
 }
 
+const handleGenerateSurveyCode = async (row: CustomerData) => {
+  try {
+    loading.value = true
+    const res = await generateSurveyQrCodeApi({ id: row.id })
+    if (res.code === 0 && res.re?.img) {
+      const index = allTableData.value.findIndex(item => item.id === row.id)
+      if (index !== -1) {
+        allTableData.value[index].survey_code = res.re.img
+        updateTableData()
+      }
+      ElMessage.success("生成问卷二维码成功")
+    } else {
+      ElMessage.error("生成问卷二维码失败")
+    }
+  } catch (error) {
+    console.error("生成问卷二维码失败:", error)
+    ElMessage.error("生成问卷二维码失败")
+  } finally {
+    loading.value = false
+  }
+}
+
 const handlePlayVideo = (row: CustomerData) => {
   if (!row.technician_video) {
     ElMessage.warning("暂无视频")
@@ -409,6 +432,13 @@ onMounted(() => {
               <el-image v-if="row.qr_code" :src="row.qr_code" style="width: 50px; height: 50px; cursor: pointer;"
                 @click="handleViewImage(row.qr_code)" />
               <el-button v-else type="primary" size="small" @click="handleGenerateQrCode(row)">生成</el-button>
+            </template>
+          </el-table-column>
+          <el-table-column prop="survey_code" label="问卷二维码" width="120" align="center">
+            <template #default="{ row }">
+              <el-image v-if="row.survey_code" :src="row.survey_code"
+                style="width: 50px; height: 50px; cursor: pointer;" @click="handleViewImage(row.survey_code)" />
+              <el-button v-else type="primary" size="small" @click="handleGenerateSurveyCode(row)">生成</el-button>
             </template>
           </el-table-column>
           <!-- <el-table-column prop="technician_video" label="视频" width="100" align="center">

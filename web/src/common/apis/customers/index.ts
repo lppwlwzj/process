@@ -63,3 +63,12 @@ export function generateQrCodeApi(data: { id: number; page?: string }) {
   })
 }
 
+/** 生成问卷二维码 */
+export function generateSurveyQrCodeApi(data: { id: number }) {
+  return request<any>({
+    url: "customer/generateSurveyQrCode",
+    method: "post",
+    data
+  })
+}
+

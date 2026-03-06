@@ -33,6 +33,7 @@ export default function AudioRecorder({ onRecordingChange }: AudioRecorderProps)
   }, [])
 
   const handleStart = useCallback(async () => {
+    console.log('handleStart')
     if (status === 'recording') return
     if (!recorderRef.current && !(await initRecorder())) return
     if (!recorderRef.current) return
@@ -59,6 +60,7 @@ export default function AudioRecorder({ onRecordingChange }: AudioRecorderProps)
     try {
       const { blob } = await recorderRef.current.stop()
       blobRef.current = blob
+      console.log('blob-----', blob)
       onRecordingChange?.(blob)
       setStatus('ready')
     } catch (e) {

@@ -8,5 +8,6 @@ router.post('/update', customer_handler.update)
 router.post('/delete', customer_handler.delete)
 router.post('/batchDelete', customer_handler.batchDelete)
 router.post('/detail', customer_handler.detail)
+router.post('/generateSurveyQrCode', customer_handler.generateSurveyQrCode)
 
 module.exports = router

@@ -41,10 +41,14 @@ export default function SurveyPage() {
     if (!customerId || !canSubmit || submitting) return
     setSubmitting(true)
     try {
-      await submitSurvey(customerId, ratings, audioBlob)
+      const res = await submitSurvey(customerId, ratings, audioBlob)
+      if (audioBlob) {
+        console.log('[survey] 录音上传结果 audio_url=', (res as { audio_url?: string | null })?.audio_url ?? '无')
+      }
       showToast({ title: '感谢您的评价！', icon: 'success' })
       setRatings({ ...INITIAL_RATINGS })
       setAudioBlob(null)
+      setResetKey((k) => k + 1)
     } catch (e) {
       showToast({
         title: e instanceof Error ? e.message : '提交失败，请重试',

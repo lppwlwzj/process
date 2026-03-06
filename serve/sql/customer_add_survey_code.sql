@@ -1,0 +1,1 @@
+ALTER TABLE customer ADD COLUMN survey_code VARCHAR(512) DEFAULT NULL;
