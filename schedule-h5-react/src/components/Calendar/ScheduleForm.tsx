@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
-  DatePicker,
   Picker,
   Input,
   TextArea,
@@ -12,6 +11,7 @@ import {
 import dayjs from 'dayjs'
 import { request } from '@/utils/request'
 import { getLastPreparationDoctor } from '@/services/schedule'
+import TimePickerPopup from './TimePickerPopup'
 import styles from './ScheduleForm.module.less'
 
 interface User {
@@ -423,41 +423,31 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
             label="开始时间"
           >
             <div style={{ width: '100%' }}>
-              <DatePicker
+              <div
+                onClick={() => setStartPickerVisible(true)}
+                className={styles.pickerTrigger}
+              >
+                {startDateTime ? dayjs(startDateTime).format('YYYY-MM-DD HH:mm') : '请选择开始时间'}
+              </div>
+              <TimePickerPopup
                 visible={startPickerVisible}
                 onClose={() => setStartPickerVisible(false)}
-                precision="minute"
                 value={startDateTime}
+                title="选择开始时间"
                 min={defaultDate ? dayjs(defaultDate).startOf('day').toDate() : undefined}
                 max={defaultDate ? dayjs(defaultDate).endOf('day').toDate() : undefined}
-                onConfirm={(val) => {
-                  const date = val as Date
+                onConfirm={(date) => {
                   setStartDateTime(date)
                   form.setFieldsValue({ start_time: date })
-                  setStartPickerVisible(false)
-
-                  // 如果已经选择了项目，根据项目时长计算结束时间；否则默认1小时
                   const projectValue = form.getFieldValue('project')
                   const duration = projectValue && PROJECT_DURATIONS[projectValue]
                     ? PROJECT_DURATIONS[projectValue]
                     : 60
-
-                    const newEndDateTime = dayjs(date).add(duration, 'minute').toDate()
-                    setEndDateTime(newEndDateTime)
-                    form.setFieldsValue({ end_time: newEndDateTime })
-                  // if (!endDateTime || dayjs(date).isBefore(endDateTime) || dayjs(date).isSame(endDateTime)) {
-                  //   const newEndDateTime = dayjs(date).add(duration, 'minute').toDate()
-                  //   setEndDateTime(newEndDateTime)
-                  //   form.setFieldsValue({ end_time: newEndDateTime })
-                  // }
+                  const newEndDateTime = dayjs(date).add(duration, 'minute').toDate()
+                  setEndDateTime(newEndDateTime)
+                  form.setFieldsValue({ end_time: newEndDateTime })
                 }}
-              >
-                {(value) => (
-                  <div onClick={() => setStartPickerVisible(true)}>
-                    {value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '请选择开始时间'}
-                  </div>
-                )}
-              </DatePicker>
+              />
             </div>
           </Form.Item>
 
@@ -465,28 +455,25 @@ export default function ScheduleForm({ visible, onClose, onSuccess, doctors, nur
             name="end_time"
             label="结束时间"
           >
-
             <div style={{ width: '100%' }}>
-              <DatePicker
+              <div
+                onClick={() => setEndPickerVisible(true)}
+                className={styles.pickerTrigger}
+              >
+                {endDateTime ? dayjs(endDateTime).format('YYYY-MM-DD HH:mm') : '请选择结束时间'}
+              </div>
+              <TimePickerPopup
                 visible={endPickerVisible}
                 onClose={() => setEndPickerVisible(false)}
-                precision="minute"
                 value={endDateTime}
+                title="选择结束时间"
                 min={startDateTime || (defaultDate ? dayjs(defaultDate).startOf('day').toDate() : undefined)}
                 max={defaultDate ? dayjs(defaultDate).endOf('day').toDate() : undefined}
-                onConfirm={(val) => {
-                  const date = val as Date
+                onConfirm={(date) => {
                   setEndDateTime(date)
                   form.setFieldsValue({ end_time: date })
-                  setEndPickerVisible(false)
                 }}
-              >
-                {(value) => (
-                  <div onClick={() => setEndPickerVisible(true)}>
-                    {value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '请选择结束时间'}
-                  </div>
-                )}
-              </DatePicker>
+              />
             </div>
           </Form.Item>
 
