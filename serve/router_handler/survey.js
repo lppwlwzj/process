@@ -5,7 +5,7 @@ const uploadFileToCOS = require('../common/cosUpload')
 const ROLES = ['reception', 'consultant', 'photographer', 'doctor', 'nurse', 'waxDesigner']
 exports.list = (req, res) => {
   const { customer_id, start_date, end_date, page = 1, pageSize = 20 } = req.body
-  let sql = `SELECT sr.id, sr.customer_id, c.customer_name, sr.reception, sr.consultant, sr.photographer, sr.doctor, sr.nurse, sr.wax_designer, sr.audio_url, sr.created_at
+  let sql = `SELECT sr.id, sr.customer_id, c.customer_name, sr.reception, sr.consultant, sr.photographer, sr.doctor, sr.nurse, sr.wax_designer, sr.audio_url, sr.remark, sr.created_at
     FROM survey_rating sr
     LEFT JOIN customer c ON sr.customer_id = c.id
     WHERE 1=1`
@@ -81,6 +81,8 @@ function submitHandler(req, res) {
     }
   }
 
+  const remark = (req.body.remark && typeof req.body.remark === 'string') ? req.body.remark.trim() : null
+
   const row = {
     customer_id: customer_id.trim(),
     reception: ratings.reception,
@@ -89,13 +91,14 @@ function submitHandler(req, res) {
     doctor: ratings.doctor,
     nurse: ratings.nurse,
     wax_designer: ratings.waxDesigner,
-    audio_url: null
+    audio_url: null,
+    remark
   }
 
   const insertRow = (audioUrl) => {
     row.audio_url = audioUrl
-    const sql = `INSERT INTO survey_rating (customer_id, reception, consultant, photographer, doctor, nurse, wax_designer, audio_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    const sql = `INSERT INTO survey_rating (customer_id, reception, consultant, photographer, doctor, nurse, wax_designer, audio_url, remark)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     const params = [
       row.customer_id,
       row.reception,
@@ -104,7 +107,8 @@ function submitHandler(req, res) {
       row.doctor,
       row.nurse,
       row.wax_designer,
-      row.audio_url
+      row.audio_url,
+      row.remark
     ]
     db.query(sql, params, (err) => {
       if (err) return res.cc(err)
@@ -134,6 +138,17 @@ function submitHandler(req, res) {
     }
     insertRow(null)
   }
+}
+
+exports.delete = (req, res) => {
+  const { id } = req.body
+  if (!id) return res.cc('缺少问卷ID', 1)
+  const sql = `DELETE FROM survey_rating WHERE id = ?`
+  db.query(sql, [id], (err, results) => {
+    if (err) return res.cc(err)
+    if (results.affectedRows === 0) return res.cc('记录不存在或已删除', 1)
+    res.send({ code: 0, message: '删除成功' })
+  })
 }
 
 exports.submit = [

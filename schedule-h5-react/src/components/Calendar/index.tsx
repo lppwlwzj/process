@@ -1,4 +1,4 @@
-import { useMemo, ReactNode, useState, useEffect } from 'react'
+import { useMemo, ReactNode, useState, useEffect, useRef } from 'react'
 import dayjs from 'dayjs'
 import styles from './index.module.less'
 import DateCell from './DateCell'
@@ -72,9 +72,18 @@ export default function Calendar({
   const [nurses, setNurses] = useState<User[]>([])
   const [isSelectMode, setIsSelectMode] = useState(false)
   const [checkedDates, setCheckedDates] = useState<Set<string>>(new Set())
+  const monthsContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadUsers()
+  }, [])
+
+  useEffect(() => {
+    const currentMonth = dayjs().month()
+    const el = monthsContainerRef.current?.querySelector(`[data-month="${currentMonth}"]`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'instant', block: 'start' })
+    }
   }, [])
 
   const loadUsers = async () => {
@@ -316,9 +325,9 @@ export default function Calendar({
         </div>
       </div>
 
-      <div className={styles.monthsContainer}>
+      <div ref={monthsContainerRef} className={styles.monthsContainer}>
         {months.map(({ month, label, days }) => (
-          <div key={month} className={styles.monthSection}>
+          <div key={month} className={styles.monthSection} data-month={month}>
             <div className={styles.monthHeader}>{label}</div>
             <div className={styles.days}>
               {days.map((date, index) => {

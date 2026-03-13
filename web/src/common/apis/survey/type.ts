@@ -9,6 +9,7 @@ export interface SurveyRatingItem {
   nurse: number
   wax_designer: number
   audio_url: string | null
+  remark: string | null
   created_at: string
 }
 

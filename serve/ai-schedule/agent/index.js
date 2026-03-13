@@ -252,6 +252,8 @@ class ScheduleAgent {
         console.error('Error in streamEvents:', streamError);
         
         try {
+          //使用invoke返回的消息是等大模型将全部的信息都生成后才返回。大多数模型可以在生成时流式传输其输出内容。
+          // 通过逐步显示输出，流式传输可以显著改善用户体验，特别是对于较长的响应。此时可以使用 stream方法
           const result = await this.agent.invoke({ messages });
           fullResponse = this._extractResponse(result);
           if (!hasYieldedChunk) {

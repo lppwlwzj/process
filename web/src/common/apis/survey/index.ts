@@ -8,3 +8,11 @@ export function getSurveyListApi(data: SurveyListRequest) {
     data
   })
 }
+
+export function deleteSurveyApi(id: number) {
+  return request({
+    url: "survey/delete",
+    method: "post",
+    data: { id }
+  })
+}

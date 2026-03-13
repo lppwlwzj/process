@@ -22,6 +22,7 @@ export default function SurveyPage() {
   const customerId = useCustomerId()
   const [ratings, setRatings] = useState<SurveyRating>(() => ({ ...INITIAL_RATINGS }))
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
+  const [remark, setRemark] = useState('')
   const [resetKey, setResetKey] = useState(0)
   const [submitting, setSubmitting] = useState(false)
 
@@ -34,6 +35,7 @@ export default function SurveyPage() {
   const handleReset = useCallback(() => {
     setRatings({ ...INITIAL_RATINGS })
     setAudioBlob(null)
+    setRemark('')
     setResetKey((k) => k + 1)
     showToast({ title: '已清空，请重新填写', icon: 'none' })
   }, [])
@@ -42,13 +44,14 @@ export default function SurveyPage() {
     if (!customerId || !canSubmit || submitting) return
     setSubmitting(true)
     try {
-      const res = await submitSurvey(customerId, ratings, audioBlob)
+      const res = await submitSurvey(customerId, ratings, audioBlob, remark)
       if (audioBlob) {
         console.log('[survey] 录音上传结果 audio_url=', (res as { audio_url?: string | null })?.audio_url ?? '无')
       }
       showToast({ title: '感谢您的评价！', icon: 'success' })
       setRatings({ ...INITIAL_RATINGS })
       setAudioBlob(null)
+      setRemark('')
       setResetKey((k) => k + 1)
     } catch (e) {
       showToast({
@@ -58,7 +61,7 @@ export default function SurveyPage() {
     } finally {
       setSubmitting(false)
     }
-  }, [customerId, ratings, audioBlob, canSubmit, submitting])
+  }, [customerId, ratings, audioBlob, remark, canSubmit, submitting])
 
   if (!customerId) {
     return <SurveyErrorState />
@@ -85,6 +88,16 @@ export default function SurveyPage() {
           />
         ))}
         <AudioRecorder key={resetKey} onRecordingChange={setAudioBlob} />
+        <div className={styles.remarkWrap}>
+          <label className={styles.remarkLabel}>文字反馈</label>
+          <textarea
+            className={styles.remarkInput}
+            placeholder="如有其他意见或建议，请在此填写"
+            value={remark}
+            onChange={(e) => setRemark(e.target.value)}
+            rows={3}
+          />
+        </div>
       </main>
       <SurveyActions
         onReset={handleReset}

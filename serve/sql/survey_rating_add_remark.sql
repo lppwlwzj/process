@@ -1,0 +1,1 @@
+ALTER TABLE survey_rating ADD COLUMN remark TEXT DEFAULT NULL;

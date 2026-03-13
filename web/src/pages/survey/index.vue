@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted } from "vue"
-import { ElMessage } from "element-plus"
+import { ElMessage, ElMessageBox } from "element-plus"
 import { Search, Refresh } from "@element-plus/icons-vue"
-import { getSurveyListApi } from "@@/apis/survey"
+import { getSurveyListApi, deleteSurveyApi } from "@@/apis/survey"
 import type { SurveyRatingItem } from "@@/apis/survey/type"
 import dayjs from "dayjs"
 
@@ -83,6 +83,26 @@ const getScoreColor = (score: number) => {
 const getScore = (row: SurveyRatingItem, key: string): string | number => {
   const v = (row as unknown as Record<string, number>)[key]
   return v !== undefined && v !== null ? v : "-"
+}
+
+const handleDelete = (row: SurveyRatingItem) => {
+  ElMessageBox.confirm(`确认删除该条问卷记录？`, "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(async () => {
+    try {
+      loading.value = true
+      await deleteSurveyApi(row.id)
+      ElMessage.success("删除成功")
+      getTableData()
+    } catch (error) {
+      console.error("删除失败:", error)
+      ElMessage.error("删除失败")
+    } finally {
+      loading.value = false
+    }
+  })
 }
 
 const handlePlayAudio = (row: SurveyRatingItem) => {
@@ -175,6 +195,14 @@ onMounted(() => {
               {{ playingId === row.id ? "停止" : "播放" }}
             </el-button>
             <span v-else class="text-gray-400">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="remark" label="文字反馈" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.remark || "-" }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="80" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>

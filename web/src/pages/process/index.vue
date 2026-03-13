@@ -756,6 +756,9 @@ onMounted(() => {
               </el-icon>
             </template>
           </el-input>
+          <el-select v-model="searchData.progress" placeholder="请选择进度" clearable style="width: 200px;">
+            <el-option v-for="item in progressOptions" :key="item.key" :label="item.label" :value="item.key" />
+          </el-select>
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
         </div>

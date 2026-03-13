@@ -41,6 +41,39 @@
   }
 }
 
+.remarkWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.remarkLabel {
+  font-family: 'LXGW WenKai', 'PingFang SC', -apple-system, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  // color: @text-color;
+  color: #000;
+  font-weight: 600;
+}
+
+.remarkInput {
+  width: 100%;
+  padding: 12px;
+  font-family: 'LXGW WenKai', 'PingFang SC', -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: @text-color;
+  background: @survey-card;
+  border: 1px solid rgba(140, 140, 140, 0.3);
+  border-radius: 8px;
+  resize: vertical;
+  min-height: 72px;
+
+  &::placeholder {
+    color: @survey-muted;
+  }
+}
+
 .tip {
   font-family: 'LXGW WenKai', 'PingFang SC', -apple-system, sans-serif;
   font-size: 14px;
