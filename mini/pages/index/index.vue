@@ -4,9 +4,12 @@
     </view>
 
     <view class="preparation-time">
-      <text class="preparation-time-text">备牙时间:{{
-  formatDateSimple(form.preparation_time)
-        }}</text>
+      <!-- <view class="preparation-time-text">备牙时间:{{
+        formatDateSimple(form.preparation_time)
+}}</view> -->
+      备牙时间:{{
+        formatDateSimple(form.preparation_time)
+      }}
     </view>
 
     <view class="form-container">
@@ -33,7 +36,7 @@
           </view>
         </view>
 
-        <view class="action-card" :class="{ selected: technicianLabel }" @click="showTechnicianPicker = true">
+        <view class="action-card" :class="{ selected: technicianLabel }" @click="openTechnicianPicker">
           <view class="card-icon-wrapper" :class="{ selected: technicianLabel }">
             <text class="card-icon">👨‍🔧</text>
           </view>
@@ -145,26 +148,30 @@
 
       </view>
 
-      <view class="yipan-button-container">
-        <button class="yipan-action-btn" @click="goToYipan">
-          <view class="btn-icon">🦷</view>
-          <view class="btn-text">贴面质检/椅旁操作</view>
-        </button>
-      </view>
+      <view class="yipan-action-btn" @click="goToYipan">贴面质检/椅旁操作</view>
 
     </view>
 
-    <u-picker :show="showProgressPicker" :columns="progressColumns" keyName="label" @confirm="onProgressConfirm"
-      @cancel="showProgressPicker = false" @close="showProgressPicker = false"></u-picker>
+    <u-action-sheet :show="showProgressPicker" :actions="progressActions" title="选择进度"
+      closeOnClickOverlay @select="onProgressSelect" @close="showProgressPicker = false"></u-action-sheet>
 
-    <u-picker :show="showTechnicianPicker" :columns="technicianColumns" @confirm="onTechnicianConfirm" keyName="label"
-      @cancel="showTechnicianPicker = false" @close="showTechnicianPicker = false"></u-picker>
+    <u-action-sheet :show="showTechnicianPicker" :actions="technicianActions" title="选择技工师"
+      closeOnClickOverlay @select="onTechnicianSelect" @close="showTechnicianPicker = false"></u-action-sheet>
+
+    <u-modal :show="confirmModalShow" title="确认操作" content="确定要开始操作吗？" :showCancelButton="true"
+      @confirm="onConfirmStart" @cancel="confirmModalShow = false" @close="confirmModalShow = false"></u-modal>
+
+    <u-modal :show="successModalShow" title="成功" :content="successModalContent" :showCancelButton="false"
+      @confirm="successModalShow = false" @close="successModalShow = false"></u-modal>
+
+    <u-toast ref="uToast"></u-toast>
   </view>
 </template>
 
 <script>
 import VideoList from '../../components/video-list.vue';
 import ImagesList from '../../components/images-list.vue';
+import config from '@/common/config';
 
 
 export const materialOptions = [
@@ -188,7 +195,7 @@ export default {
   },
   data() {
     return {
-      statusBarHeight: +(+uni.getSystemInfoSync().statusBarHeight + 10) + "px",
+      statusBarHeight: ((uni.getSystemInfoSync().statusBarHeight || 0) + 10) + "px",
       customerId: null,
       cacheLastProgress: null, // 缓存上次选择的进度
       cacheLastTechnician: null, // 缓存上次选择的技工师
@@ -224,24 +231,31 @@ export default {
       showProgressPicker: false,
       showTechnicianPicker: false,
       isSubmitting: false,
+      confirmModalShow: false,
+      successModalShow: false,
+      successModalContent: "",
       progressColumns: [
         [
           { key: "not_started", label: "未开始" },
-          { key: "guan_mo", label: "灌模" },
-          { key: "xiu_mo", label: "修模" },
+          { key: "guan_mo", label: "灌模完成" },
+          { key: "xiu_mo", label: "修模完成" },
           { key: "cad_design", label: "CAD设计" },
-          { key: "qie_xue", label: "切削" },
-          { key: "che_jin", label: "车金" },
-          { key: "shang_ci", label: "上瓷" },
-          { key: "che_ci", label: "车瓷" },
-          { key: "shang_you", label: "上釉" },
-          { key: "completed", label: "已完成" }
+          { key: "qie_xue", label: "切削完成" },
+          { key: "che_jin", label: "车金完成" },
+          { key: "shang_ci", label: "上瓷完成" },
+          { key: "che_ci", label: "车瓷完成" },
+          { key: "shang_you", label: "上釉完成" },
+          { key: "completed", label: "戴牙结束" }
         ]
       ],
-      technicianColumns: [
-        []
-      ]
+      technicianActions: []
     };
+  },
+
+  computed: {
+    progressActions() {
+      return (this.progressColumns[0] || []).map(item => ({ name: item.label, key: item.key }));
+    }
   },
 
   async onReady() {
@@ -259,32 +273,23 @@ export default {
       console.log("option.customerId", option.customerId);
       this.customerId = option.customerId;
       await this.fetchData();
+    } else {
+      // #ifdef H5
+      const urlParams = new URLSearchParams(window.location.search);
+      let customerIdFromUrl = urlParams.get('customerId') || urlParams.get('customer_id');
+      if (!customerIdFromUrl && window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+        customerIdFromUrl = hashParams.get('customerId') || hashParams.get('customer_id');
+      }
+      if (customerIdFromUrl) {
+        this.customerId = customerIdFromUrl;
+        await this.fetchData();
+      }
+      // #endif
     }
-    // H5 环境从 URL 参数获取
-    // else {
-    //   // #ifdef H5
-    //   const urlParams = new URLSearchParams(window.location.search);
-    //   const customerIdFromUrl = urlParams.get('customerId');
-    //   if (customerIdFromUrl) {
-    //     this.customerId = customerIdFromUrl;
-
-    //   }
-    //   // 也尝试从 hash 后面的参数获取
-    //   const hash = window.location.hash;
-    //   if (hash.includes('?')) {
-    //     const hashParams = new URLSearchParams(hash.split('?')[1]);
-    //     const customerIdFromHash = hashParams.get('customerId');
-    //     if (customerIdFromHash) {
-    //       this.customerId = customerIdFromHash;
-    //     }
-    //   }
-    //   // #endif
-    // }
   },
 
   options: { styleIsolation: "shared" },
-
-  computed: {},
 
   methods: {
     getMaterialsList() {
@@ -308,10 +313,7 @@ export default {
     async fetchData() {
       console.log("this.customerId", this.customerId);
       if (!this.customerId) {
-        uni.showToast({
-          title: "缺少客户ID",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "缺少客户ID" });
         return;
       }
 
@@ -344,27 +346,27 @@ export default {
           this.cacheLastProgress = this.form.progress;
           this.cacheLastTechnician = this.form.technician;
           this.progressLabel = this.progressColumns[0].find(item => item.key === this.form.progress)?.label || "";
-          this.technicianLabel = this.technicianColumns[0].find(item => item.key === this.form.technician)?.label || "";
+          this.technicianLabel = (this.technicianActions.find(item => item.key === this.form.technician) || {}).name || "";
         } else {
           console.error("获取客户详情失败:", res);
-          uni.showToast({
-            title: "获取客户信息失败",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: "获取客户信息失败" });
         }
       } catch (err) {
         console.error("请求客户详情失败:", err);
-        uni.showToast({
-          title: "加载失败",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "加载失败" });
       } finally {
         uni.hideLoading();
       }
     },
     handleUploadVideo() {
+      // #ifdef H5
+      const videoSourceType = ['album'];
+      // #endif
+      // #ifndef H5
+      const videoSourceType = ['camera', 'album'];
+      // #endif
       uni.chooseVideo({
-        sourceType: ['camera', 'album'],
+        sourceType: videoSourceType,
         maxDuration: 60,
         camera: 'back',
         success: (res) => {
@@ -373,36 +375,33 @@ export default {
         fail: (err) => {
           console.error("选择视频失败:", err);
           if (err.errMsg !== 'chooseVideo:fail cancel') {
-            uni.showToast({
-              title: "选择视频失败",
-              icon: "none"
-            });
+            this.$refs.uToast.show({ message: "选择视频失败" });
           }
         }
       });
     },
     handleUploadImage() {
+      // #ifdef H5
+      const imageSourceType = ['album'];
+      // #endif
+      // #ifndef H5
+      const imageSourceType = ['album', 'camera'];
+      // #endif
       uni.chooseImage({
         count: 1,
         sizeType: ['compressed'],
-        sourceType: ['album', 'camera'],
+        sourceType: imageSourceType,
         success: (res) => {
           if (res.tempFilePaths && res.tempFilePaths.length > 0) {
             this.uploadImageToCOS(res.tempFilePaths[0]);
           } else {
-            uni.showToast({
-              title: "未选择图片",
-              icon: "none"
-            });
+            this.$refs.uToast.show({ message: "未选择图片" });
           }
         },
         fail: (err) => {
           console.error("选择图片失败:", err);
           if (err.errMsg !== 'chooseImage:fail cancel') {
-            uni.showToast({
-              title: "选择图片失败",
-              icon: "none"
-            });
+            this.$refs.uToast.show({ message: "选择图片失败" });
           }
         }
       });
@@ -415,7 +414,8 @@ export default {
       const timestamp = Date.now();
       const fileName = `image_${timestamp}_${this.customerId || 'unknown'}.jpg`;
       uni.uploadFile({
-        url: "https://gdcasa.cn/api/upload",
+        // url: "https://gdcasa.cn/api/upload",
+        url: "http://115.159.109.106/api/upload",
         filePath: imagePath,
         name: "file",
         header: {
@@ -442,25 +442,16 @@ export default {
                 this.updateImageToDatabase(imageUrl);
               }
             } else {
-              uni.showToast({
-                title: data.message || "上传失败",
-                icon: "none"
-              });
+              this.$refs.uToast.show({ message: data.message || "上传失败" });
             }
           } else {
-            uni.showToast({
-              title: "上传失败",
-              icon: "none"
-            });
+            this.$refs.uToast.show({ message: "上传失败" });
           }
         },
         fail: (err) => {
           uni.hideLoading();
           console.error("上传图片失败:", err);
-          uni.showToast({
-            title: "上传失败",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: "上传失败" });
         }
       });
     },
@@ -472,7 +463,8 @@ export default {
       const fileName = `video_${timestamp}_${this.customerId || 'unknown'}.mp4`;
 
       uni.uploadFile({
-        url: "https://gdcasa.cn/api/upload",
+        // url: "https://gdcasa.cn/api/upload",
+        url: "http://115.159.109.106/api/upload",
         // url: "http://127.0.0.1:3006/api/upload",
         filePath: videoPath,
         name: "file",
@@ -500,25 +492,16 @@ export default {
                 this.updateVideoToDatabase(videoUrl);
               }
             } else {
-              uni.showToast({
-                title: data.message || "上传失败",
-                icon: "none"
-              });
+              this.$refs.uToast.show({ message: data.message || "上传失败" });
             }
           } else {
-            uni.showToast({
-              title: "上传失败",
-              icon: "none"
-            });
+            this.$refs.uToast.show({ message: "上传失败" });
           }
         },
         fail: (err) => {
           uni.hideLoading();
           console.error("上传视频失败:", err);
-          uni.showToast({
-            title: "上传失败",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: "上传失败" });
         }
       });
     },
@@ -537,23 +520,14 @@ export default {
         const data = this.form.type === '工厂' ? { customer_id: this.customerId, factory_mini_image: newImages } : { customer_id: this.customerId, mini_image: newImages };
         const res = await requestFn(data);
         if (res.code === 0) {
-          uni.showToast({
-            title: "上传成功",
-            icon: "success"
-          });
+          this.$refs.uToast.show({ message: "上传成功", type: "success" });
           await this.fetchData();
         } else {
-          uni.showToast({
-            title: res.message || "更新失败",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: res.message || "更新失败" });
         }
       } catch (err) {
         console.error("更新图片到数据库失败:", err);
-        uni.showToast({
-          title: "更新失败",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "更新失败" });
       }
     },
     async updateVideoToDatabase(videoUrl) {
@@ -579,23 +553,14 @@ export default {
         const res = await requestFn(data);
 
         if (res.code === 0) {
-          uni.showToast({
-            title: "上传成功",
-            icon: "success"
-          });
+          this.$refs.uToast.show({ message: "上传成功", type: "success" });
           await this.fetchData();
         } else {
-          uni.showToast({
-            title: res.message || "更新失败",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: res.message || "更新失败" });
         }
       } catch (err) {
         console.error("更新视频到数据库失败:", err);
-        uni.showToast({
-          title: "更新失败",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "更新失败" });
       }
     },
 
@@ -604,33 +569,34 @@ export default {
         const res = await this.$api.getUserList();
         if (res.code === 0 && res.re) {
           const role = type === "工厂" ? "工厂技师" : "技师";
-          const list = res.re.filter(user => user.role === role).map(user => ({ key: user.usercount, label: user.username }));
-          this.technicianColumns = [list];
+          this.technicianActions = res.re.filter(user => user.role === role).map(user => ({ name: user.username, key: user.usercount }));
         } else {
           console.error("获取用户列表失败:", res);
-          this.technicianColumns = [
-            []
-          ];
+          this.technicianActions = [];
         }
       } catch (err) {
         console.error("请求用户列表失败:", err);
-        this.technicianColumns = [
-          []
-        ];
+        this.technicianActions = [];
       }
     },
 
-    onProgressConfirm(e) {
-      const selected = e.value[0];
-      this.form.progress = selected.key;
-      this.progressLabel = selected.label;
+    onProgressSelect(item) {
+      this.form.progress = item.key;
+      this.progressLabel = item.name;
       this.showProgressPicker = false;
     },
 
-    onTechnicianConfirm(e) {
-      const selected = e.value[0];
-      this.form.technician = selected.key;
-      this.technicianLabel = selected.label;
+    openTechnicianPicker() {
+      if (!this.technicianActions || !this.technicianActions.length) {
+        this.$refs.uToast.show({ message: "技工师加载中，请稍候" });
+        return;
+      }
+      this.showTechnicianPicker = true;
+    },
+
+    onTechnicianSelect(item) {
+      this.form.technician = item.key;
+      this.technicianLabel = item.name;
       this.showTechnicianPicker = false;
     },
     goToYipan() {
@@ -661,10 +627,7 @@ export default {
 
     previewImage() {
       if (!this.form.image) {
-        uni.showToast({
-          title: "暂无图片",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "暂无图片" });
         return;
       }
       uni.previewImage({
@@ -675,18 +638,12 @@ export default {
 
     handleStart() {
       if (this.isSubmitting) {
-        uni.showToast({
-          title: "请勿重复提交",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "请勿重复提交" });
         return;
       }
 
       if (!this.form.progress) {
-        uni.showToast({
-          title: "请选择进度",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "请选择进度" });
         return;
       }
 
@@ -698,87 +655,59 @@ export default {
         return;
       }
       if (!this.form.technician) {
-        uni.showToast({
-          title: "请选择技工师",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "请选择技工师" });
         return;
       }
 
-      uni.showModal({
-        title: "确认操作",
-        content: "确定要开始操作吗？",
-        success: async (res) => {
-          if (res.confirm) {
-            if (this.isSubmitting) {
-              return;
+      this.confirmModalShow = true;
+    },
+
+    async onConfirmStart() {
+      this.confirmModalShow = false;
+      if (this.isSubmitting) return;
+      const newProgress = this.form.progress;
+      const newTechnician = this.form.technician;
+      this.isSubmitting = true;
+      const now = new Date();
+      const startTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      try {
+        const result = await this.$api.addProcessHistory({
+          customer_id: this.customerId,
+          customer_name: this.form.customer_name,
+          progress: newProgress,
+          technician: newTechnician,
+          start_time: startTime
+        });
+        uni.hideLoading();
+        if (result.code === 0) {
+          const { operation_count, duration_minutes, previous_progress, previous_technician } = result.re;
+          let message = "操作记录成功！\n";
+          message += `\n这是第 ${operation_count} 次操作`;
+          if (previous_progress && previous_technician) {
+            message += `\n上次进度：${previous_progress}`;
+            message += `\n上次技工师：${previous_technician}`;
+            if (duration_minutes !== null) {
+              const hours = Math.floor(duration_minutes / 60);
+              const minutes = duration_minutes % 60;
+              message += `\n距离上次：${hours > 0 ? hours + '小时' : ''}${minutes}分钟`;
             }
-
-            this.isSubmitting = true;
-
-            // 记录当前操作时间
-            const now = new Date();
-            const startTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-
-            try {
-              // 调用添加操作历史API
-              const result = await this.$api.addProcessHistory({
-                customer_id: this.customerId,
-                customer_name: this.form.customer_name,
-                progress: newProgress,
-                technician: newTechnician,
-                start_time: startTime
-              });
-
-
-              uni.hideLoading();
-
-              if (result.code === 0) {
-                const { operation_count, duration_minutes, previous_progress, previous_technician } = result.re;
-
-                let message = "操作记录成功！\n";
-                message += `\n这是第 ${operation_count} 次操作`;
-
-                if (previous_progress && previous_technician) {
-                  message += `\n上次进度：${previous_progress}`;
-                  message += `\n上次技工师：${previous_technician}`;
-                  if (duration_minutes !== null) {
-                    const hours = Math.floor(duration_minutes / 60);
-                    const minutes = duration_minutes % 60;
-                    message += `\n距离上次：${hours > 0 ? hours + '小时' : ''}${minutes}分钟`;
-                  }
-                } else {
-                  message += "\n这是第一次操作记录";
-                }
-
-                uni.showModal({
-                  title: "成功",
-                  content: message,
-                  showCancel: false
-                });
-
-                // 更新缓存
-                this.cacheLastProgress = newProgress;
-                this.cacheLastTechnician = newTechnician;
-              } else {
-                uni.showToast({
-                  title: result.message || "操作失败",
-                  icon: "none"
-                });
-              }
-            } catch (err) {
-              uni.hideLoading();
-              console.error("添加操作记录失败:", err);
-              uni.showToast({
-                title: "操作失败",
-                icon: "none"
-              });
-            } finally {
-              this.isSubmitting = false;
-            }
+          } else {
+            message += "\n这是第一次操作记录";
           }
+          this.successModalContent = message;
+          this.successModalShow = true;
+          this.cacheLastProgress = newProgress;
+          this.cacheLastTechnician = newTechnician;
+        } else {
+          this.$refs.uToast.show({ message: result.message || "操作失败" });
         }
-      });
+      } catch (err) {
+        uni.hideLoading();
+        console.error("添加操作记录失败:", err);
+        this.$refs.uToast.show({ message: "操作失败" });
+      } finally {
+        this.isSubmitting = false;
+      }
     }
   }
 };

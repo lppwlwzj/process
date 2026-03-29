@@ -4,7 +4,9 @@ import { ElMessage, ElMessageBox } from "element-plus"
 import { VideoPlay, Search, Refresh, Delete, Upload } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
 import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateMiniImageApi, updateTechnicianVideoApi, updateChairsideVideoApi, updateWebVideoApi, updateImageApi, uploadFileApi } from "@@/apis/process"
+import type { ProcessFormData } from "@@/apis/process/type"
 import { getUserListApi } from "@@/apis/users"
+import { updateCustomerWearTimeApi } from "@@/apis/customers"
 import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
 import ChairsideHistoryDialog from "./components/ChairsideHistoryDialog.vue"
 import type { FormInstance, FormRules } from "element-plus"
@@ -67,9 +69,12 @@ const searchFormRef = ref()
 const searchData = reactive({
   customer_name: "",
   progress: "",
+  wear_time: "",
   technician: "",
-  remark: ""
+  remark: "",
+  preparation_time: ""
 })
+
 
 const dialogVisible = ref(false)
 const dialogTitle = ref("")
@@ -116,14 +121,19 @@ const getMaterialLabel = (materialValue: string | string[]) => {
 const getTableData = async () => {
   loading.value = true
   try {
-    const res = await getProcessListApi({
+    const base = {
       currentPage: paginationData.currentPage,
       pageSize: paginationData.pageSize,
+      type: "依口" as const
+    }
+    const res = await getProcessListApi({
+      ...base,
+      wear_time: searchData.wear_time,
       customer_name: searchData.customer_name,
       progress: searchData.progress,
       technician: searchData.technician,
       remark: searchData.remark,
-      type: "依口"
+      preparation_time: searchData.preparation_time
     })
     if (res.re) {
       tableData.value = res.re.list
@@ -154,11 +164,15 @@ const handleSearch = () => {
   getTableData()
 }
 
+
+
 const resetSearch = () => {
   searchData.customer_name = ""
   searchData.progress = ""
+  searchData.wear_time = ""
   searchData.technician = ""
   searchData.remark = ""
+  searchData.preparation_time = ""
   handleSearch()
 }
 
@@ -284,25 +298,51 @@ const resetForm = () => {
   formData.daily_wear_status = undefined
 }
 
-const getProgressType = (progressKey: string): "primary" | "success" | "warning" | "info" | "danger" => {
-  const typeMap: Record<string, "primary" | "success" | "warning" | "info" | "danger"> = {
-    "not_started": "info",
-    "guan_mo": "warning",
-    "xiu_mo": "warning",
-    "cad_design": "warning",
-    "qie_xue": "warning",
-    "che_jin": "warning",
-    "shang_ci": "warning",
-    "che_ci": "warning",
-    "shang_you": "warning",
-    "completed": "success"
-  }
-  return typeMap[progressKey] || "info"
-}
-
 const getProgressLabel = (progressKey: string) => {
   const option = progressOptions.find(item => item.key === progressKey)
   return option ? option.label : progressKey
+}
+
+const savingProgressId = ref<number | null>(null)
+
+const handleProgressChange = async (row: ProcessData, newProgress: string) => {
+  const prev = row.progress
+  if (newProgress === prev) return
+  row.progress = newProgress
+  savingProgressId.value = row.id
+  try {
+    await updateProcessApi({
+      ...row,
+      progress: newProgress,
+    } as unknown as ProcessFormData)
+    ElMessage.success("进度已更新")
+  } catch {
+    row.progress = prev
+  } finally {
+    savingProgressId.value = null
+  }
+}
+
+const savingWearTimeCustomerId = ref<number | null>(null)
+
+const handleWearTimeChange = async (row: ProcessData, val: string | null) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
+  const prev = row.wear_time ?? ""
+  const next = val ?? ""
+  if (prev === next) return
+  row.wear_time = next
+  savingWearTimeCustomerId.value = row.customer_id
+  try {
+    await updateCustomerWearTimeApi({ id: row.customer_id, wear_time: next || null })
+    ElMessage.success("戴牙时间已更新")
+  } catch {
+    row.wear_time = prev
+  } finally {
+    savingWearTimeCustomerId.value = null
+  }
 }
 
 const getVideoList = (videoUrls: string): string[] => {
@@ -759,8 +799,14 @@ onMounted(() => {
           <el-select v-model="searchData.progress" placeholder="请选择进度" clearable style="width: 200px;">
             <el-option v-for="item in progressOptions" :key="item.key" :label="item.label" :value="item.key" />
           </el-select>
+          <el-date-picker v-model="searchData.wear_time" type="date" format="MM-DD" value-format="MM-DD"
+            placeholder="戴牙日期" clearable style="width: 140px" />
+          <el-date-picker v-model="searchData.preparation_time" type="date" format="MM-DD" value-format="MM-DD"
+            placeholder="备牙日期" clearable style="width: 140px" />
+
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
+
         </div>
         <div>
           <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchDelete">
@@ -770,18 +816,24 @@ onMounted(() => {
         </div>
       </div>
       <div class="table-wrapper">
-        <el-table :data="tableData" v-loading="loading" @selection-change="handleSelectionChange">
+        <el-table :data="tableData" row-key="id" v-loading="loading" @selection-change="handleSelectionChange">
           <el-table-column type="selection" width="45" align="center" fixed="left" />
           <!-- <el-table-column prop="id" label="ID" width="60" align="center" fixed="left" /> -->
           <el-table-column prop="customer_name" label="客户名称" align="center" fixed="left" />
-          <el-table-column prop="progress" label="进度" align="center" fixed="left">
+          <el-table-column prop="progress" label="进度" align="center" fixed="left" width="130">
             <template #default="{ row }">
-              <el-tag :type="getProgressType(row.progress)">{{ getProgressLabel(row.progress) }}</el-tag>
+              <el-select :model-value="row.progress" placeholder="进度" size="medium" style="width: 118px"
+                :disabled="savingProgressId === row.id" @change="(v) => handleProgressChange(row, v)">
+                <el-option v-for="item in progressOptions" :key="item.key" :label="item.label" :value="item.key" />
+              </el-select>
             </template>
           </el-table-column>
-          <el-table-column prop="wear_time" label="戴牙时间" align="center" fixed="left">
+          <el-table-column prop="wear_time" label="戴牙时间" align="center" fixed="left" width="150">
             <template #default="{ row }">
-              {{ row.wear_time ? row.wear_time : '-' }}
+              <el-date-picker :model-value="row.wear_time || null" type="date" format="MM-DD" value-format="MM-DD"
+                placeholder="日期" size="medium" clearable style="width: 100px"
+                :disabled="savingWearTimeCustomerId === row.customer_id"
+                @update:model-value="(v) => handleWearTimeChange(row, v)" />
             </template>
           </el-table-column>
           <el-table-column prop="remark" label="备注" min-width="180" align="left">
@@ -998,7 +1050,7 @@ onMounted(() => {
     margin-bottom: 20px;
     display: flex;
     justify-content: space-between;
-      align-items: center;
+    align-items: center;
   }
 
   .table-wrapper {

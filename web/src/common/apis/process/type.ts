@@ -48,7 +48,9 @@ export interface ProcessListRequest {
   pageSize: number
   customer_name?: string
   progress?: string
+  wear_time?: string
   technician?: string
   remark?: string
   type?: string
+  preparation_time?: string
 } 

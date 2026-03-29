@@ -182,6 +182,21 @@ exports.update = (req, res) => {
   });
 };
 
+exports.updateWearTime = (req, res) => {
+  const { id, wear_time } = req.body;
+  if (!id) return res.cc("缺少客户ID！");
+  const sql = `UPDATE customer SET wear_time=? WHERE id=?`;
+  db.query(sql, [wear_time || null, id], function (err, results) {
+    if (err) return res.cc(err);
+    if (results.affectedRows !== 1) return res.cc("更新戴牙时间失败！");
+    res.send({
+      code: 0,
+      message: "更新成功！",
+      re: null
+    });
+  });
+};
+
 // 删除客户
 exports.delete = (req, res) => {
   const { id } = req.body;
@@ -234,7 +249,8 @@ exports.batchDelete = (req, res) => {
 exports.generateSurveyQrCode = (req, res) => {
   const { id } = req.body;
   if (!id) return res.cc("缺少客户ID！");
-  const surveyUrl = `https://gdcasa.cn/survey/?customer_id=${id}`;
+  // const surveyUrl = `https://gdcasa.cn/survey/?customer_id=${id}`;
+  const surveyUrl = `http://115.159.109.106/survey/?customer_id=${id}`;
   QRCode.toBuffer(surveyUrl, { type: "png", width: 280 })
     .then((buffer) => {
       const fileKey = `survey-qr/${id}.png`;
@@ -252,6 +268,7 @@ exports.generateSurveyQrCode = (req, res) => {
       res.cc("生成问卷二维码失败", 1);
     });
 };
+
 
 // 获取客户详情
 exports.detail = (req, res) => {
@@ -277,3 +294,25 @@ exports.detail = (req, res) => {
   });
 };
 
+
+exports.generateQrCode = (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.cc("缺少客户ID！");
+  const url = `http://115.159.109.106/mini/#/?customer_id=${id}`;
+  QRCode.toBuffer(url, { type: "png", width: 280 })
+    .then((buffer) => {
+      const fileKey = `qrCode/${id}.png`;
+      return uploadFileToCOS(buffer, fileKey, "image/png").then((location) => `https://${location}`);
+    })
+    .then((imgUrl) => {
+      const sql = `UPDATE customer SET qr_code=? WHERE id=?`;
+      db.query(sql, [imgUrl, id], (err) => {
+        if (err) return res.cc(err);
+        res.send({ code: 0, message: "生成成功！", re: { img: imgUrl } });
+      });
+    })
+    .catch((err) => {
+      console.error("生成二维码失败", err);
+      res.cc("生成二维码失败", 1);
+    });
+};

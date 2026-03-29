@@ -8,13 +8,14 @@ const CONFIG = {
 
   development: {
     // BASE_URL: `http://${host}:3006`,
-    BASE_URL: `https://gdcasa.cn`,
+    BASE_URL: `http://115.159.109.106`,
+
 
     UPLOAD_URL: "https://receiving.shandongweipai.com/api/college/upload"
   },
   // 生产环境配置
   production: {
-    BASE_URL: "http://gdcasa.cn",
+    BASE_URL: "http://115.159.109.106",
     UPLOAD_URL: "https://receiving.shandongweipai.com/api/college/upload"
   }
 };

@@ -19,7 +19,8 @@ const fileName = 'file' // 上传的 fileName 名称
 // const updateBaseUrl = "http://127.0.0.1:3006"; // 上传到服务器地址
 // const updateBaseUrl = "http://10.172.42.116:3006"; // 上传到服务器地址
 // const updateBaseUrl = "http://192.168.4.117:3010"; // 上传到服务器地址
-const updateBaseUrl = 'https://gdcasa.cn' // 上传到服务器地址
+// const updateBaseUrl = 'https://gdcasa.cn' // 上传到服务器地址
+const updateBaseUrl = 'http://115.159.109.106' // 上传到服务器地址
 
 
 const uploadFileToCOS = require('./cosUpload')
@@ -58,8 +59,10 @@ function upload(req, res) {
   return new Promise((resolve, reject) => {
     multerUpload.single(fileName)(req, res, async function (err) {
       const file = req.file
-      // 判断文件类型
-      if (!['image/jpeg', 'image/png', 'video/mp4'].includes(file.mimetype)) {
+      if (!file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      if (!['image/jpeg', 'image/jpg', 'image/png', 'video/mp4'].includes(file.mimetype)) {
         return res.status(400).json({ error: 'Mime type not supported' });
       }
       if (err) {

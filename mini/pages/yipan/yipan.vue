@@ -57,9 +57,9 @@
       </view>
 
       <button class="full-btn" :class="{ disabled: isOperationInProgress }"
-        @click="isOperationInProgress ? null : (showDoctorPicker = true)">
+        @click="openDoctorPicker">
         <view class="btn-icon">⚕</view>
-        <view class="btn-text">医生/椅旁技师：{{ selectedDoctor }}</view>
+        <view class="btn-text">医生/椅旁技师：{{ selectedDoctorDisplay }}</view>
         <view class="arrow">›</view>
       </button>
 
@@ -84,14 +84,20 @@
       </view>
     </view>
 
-    <view class="yipan-button-container">
-      <button class="yipan-action-btn" @click="goToYipan">
-        <view class="btn-text">客户进度表</view>
-      </button>
-    </view>
+    <view class="yipan-action-btn" @click="goToYipan">客户进度表</view>
 
-    <u-picker :show="showDoctorPicker" :columns="doctorColumns" @confirm="onDoctorConfirm" keyName="label"
-      @cancel="showDoctorPicker = false" @close="showDoctorPicker = false"></u-picker>
+    <u-action-sheet :show="showDoctorPicker" :actions="doctorActions" title="选择医生/椅旁技师"
+      closeOnClickOverlay @select="onDoctorSelect" @close="showDoctorPicker = false"></u-action-sheet>
+
+    <u-modal :show="startModalShow" title="确认开始椅旁" :content="startModalContent" :showCancelButton="true"
+      @confirm="onConfirmStartChairside" @cancel="startModalShow = false" @close="startModalShow = false"></u-modal>
+
+    <u-modal :show="completeModalShow" title="确认完成椅旁" :content="completeModalContent" :showCancelButton="true"
+      @confirm="onConfirmCompleteChairside" @cancel="completeModalShow = false"
+      @close="completeModalShow = false"></u-modal>
+
+    <u-modal :show="submitModalShow" title="确认信息" :content="submitModalContent" :showCancelButton="true"
+      @confirm="onConfirmSubmit" @cancel="submitModalShow = false" @close="submitModalShow = false"></u-modal>
   </view>
 </template>
 
@@ -104,7 +110,7 @@ export default {
   },
   data() {
     return {
-      statusBarHeight: +(+uni.getSystemInfoSync().statusBarHeight + 10) + "px",
+      statusBarHeight: ((uni.getSystemInfoSync().statusBarHeight || 0) + 10) + "px",
       customerId: null,
       customerName: "",
       form: {
@@ -126,13 +132,24 @@ export default {
       occlusionStatus: "",
       colorStatus: "",
       showDoctorPicker: false,
-      doctorColumns: [
-        []
-      ],
+      doctorActions: [],
       canStartChairside: false,
       canCompleteChairside: false,
-      isOperationInProgress: false
+      isOperationInProgress: false,
+      startModalShow: false,
+      startModalContent: "",
+      completeModalShow: false,
+      completeModalContent: "",
+      submitModalShow: false,
+      submitModalContent: ""
     };
+  },
+
+  computed: {
+    selectedDoctorDisplay() {
+      const d = this.doctorActions.find(item => item.key === this.selectedDoctor);
+      return d ? d.name : this.selectedDoctor;
+    }
   },
 
   onReady() {
@@ -260,19 +277,16 @@ export default {
       try {
         const res = await this.$api.getUserList();
         if (res.code === 0 && res.re) {
-          const list = res.re.filter(user => user.role === "医生椅旁技师").map(user => ({ key: user.usercount, label: user.username }));
-          this.doctorColumns = [list];
+          this.doctorActions = res.re
+            .filter(user => user.role === "医生椅旁技师")
+            .map(user => ({ name: user.username, key: user.usercount }));
         } else {
           console.error("获取用户列表失败:", res);
-          this.doctorColumns = [
-            []
-          ];
+          this.doctorActions = [];
         }
       } catch (err) {
         console.error("请求用户列表失败:", err);
-        this.doctorColumns = [
-          []
-        ];
+        this.doctorActions = [];
       }
     },
 
@@ -356,14 +370,14 @@ export default {
         if (!this.canStartChairside) return;
         if (this.isOperationInProgress) {
           uni.showToast({
-            title: `医生${this.selectedDoctor}正在进行椅旁操作，请先完成后再开始新的椅旁`,
+            title: `医生${this.selectedDoctorDisplay}正在进行椅旁操作，请先完成后再开始新的椅旁`,
             icon: "none",
             duration: 2500
           });
           return;
         }
-
         if (!this.selectedDoctor) {
+          1
           uni.showToast({
             title: "请先选择医生/椅旁技师",
             icon: "none"
@@ -371,45 +385,8 @@ export default {
           return;
         }
 
-        uni.showModal({
-          title: "确认开始椅旁",
-          content: `医生：${this.selectedDoctor}`,
-          success: async (res) => {
-            if (res.confirm) {
-              uni.showLoading({ title: "提交中..." });
-              try {
-                const result = await this.$api.startChairside({
-                  customer_id: this.customerId,
-                  chairside_doctor: this.selectedDoctor
-                });
-
-                if (result.code === 0) {
-                  uni.showToast({
-                    title: "开始椅旁操作成功",
-                    icon: "success"
-                  });
-                  this.isOperationInProgress = true;
-                  this.currentOperation = 'start';
-                  this.updateButtonStates();
-                  await this.fetchYipanData();
-                } else {
-                  uni.showToast({
-                    title: result.message || "开始椅旁操作失败",
-                    icon: "none"
-                  });
-                }
-              } catch (err) {
-                console.error("开始椅旁操作失败:", err);
-                uni.showToast({
-                  title: err.message || "操作失败",
-                  icon: "none"
-                });
-              } finally {
-                uni.hideLoading();
-              }
-            }
-          }
-        });
+        this.startModalContent = `医生：${this.selectedDoctorDisplay}`;
+        this.startModalShow = true;
 
       } else if (type === 'complete') {
         if (!this.canCompleteChairside) return;
@@ -430,46 +407,58 @@ export default {
         // }
 
         const wearText = this.wearStatus === 'today' ? '当日戴牙' : '当日未戴牙';
+        this.completeModalContent = `医生：${this.selectedDoctorDisplay}\n状态：${wearText}`;
+        this.completeModalShow = true;
+      }
+    },
 
-        uni.showModal({
-          title: "确认完成椅旁",
-          content: `医生：${this.selectedDoctor}\n状态：${wearText}`,
-          success: async (res) => {
-            if (res.confirm) {
-              uni.showLoading({ title: "提交中..." });
-              try {
-                const result = await this.$api.completeChairside({
-                  customer_id: this.customerId
-                });
-
-                if (result.code === 0) {
-                  uni.showToast({
-                    title: "完成椅旁操作成功",
-                    icon: "success"
-                  });
-                  this.isOperationInProgress = false;
-                  this.currentOperation = '';
-                  this.updateButtonStates();
-                  this.resetForm();
-                  await this.fetchYipanData();
-                } else {
-                  uni.showToast({
-                    title: result.message || "完成椅旁操作失败",
-                    icon: "none"
-                  });
-                }
-              } catch (err) {
-                console.error("完成椅旁操作失败:", err);
-                uni.showToast({
-                  title: err.message || "操作失败",
-                  icon: "none"
-                });
-              } finally {
-                uni.hideLoading();
-              }
-            }
-          }
+    async onConfirmStartChairside() {
+      this.startModalShow = false;
+      uni.showLoading({ title: "提交中..." });
+      try {
+        const result = await this.$api.startChairside({
+          customer_id: this.customerId,
+          chairside_doctor: this.selectedDoctor
         });
+        if (result.code === 0) {
+          uni.showToast({ title: "开始椅旁操作成功", icon: "success" });
+          this.isOperationInProgress = true;
+          this.currentOperation = 'start';
+          this.updateButtonStates();
+          await this.fetchYipanData();
+        } else {
+          uni.showToast({ title: result.message || "开始椅旁操作失败", icon: "none" });
+        }
+      } catch (err) {
+        console.error("开始椅旁操作失败:", err);
+        uni.showToast({ title: err.message || "操作失败", icon: "none" });
+      } finally {
+        uni.hideLoading();
+      }
+    },
+
+    async onConfirmCompleteChairside() {
+      this.completeModalShow = false;
+      uni.showLoading({ title: "提交中..." });
+      try {
+        const result = await this.$api.completeChairside({
+          customer_id: this.customerId
+        });
+        if (result.code === 0) {
+          uni.showToast({ title: "完成椅旁操作成功", icon: "success" });
+          this.isOperationInProgress = false;
+          this.currentOperation = '';
+          this.updateButtonStates();
+          this.resetForm();
+          await this.fetchYipanData();
+        } else {
+          uni.showToast({ title: result.message || "完成椅旁操作失败", icon: "none" });
+        }
+      } catch (err) {
+        console.error("完成椅旁操作失败:", err);
+        uni.showToast({ title: err.message || "操作失败", icon: "none" });
+      } finally {
+        uni.hideLoading();
       }
     },
 
@@ -506,18 +495,27 @@ export default {
       }
     },
 
-    onDoctorConfirm(e) {
+    openDoctorPicker() {
+      if (this.isOperationInProgress) return;
+      if (!this.doctorActions || !this.doctorActions.length) {
+        uni.showToast({ title: "医生列表加载中，请稍候", icon: "none" });
+        return;
+      }
+      this.showDoctorPicker = true;
+    },
+
+    onDoctorSelect(item) {
       if (this.isOperationInProgress) {
         uni.showToast({
           title: "请先完成当前椅旁操作后再更换医生",
           icon: "none",
           duration: 2500
         });
+        this.showDoctorPicker = false;
         return;
       }
-
-      this.selectedDoctor = e.value[0].key;
-      this.form.chairside_doctor = e.value[0].key;
+      this.selectedDoctor = item.key;
+      this.form.chairside_doctor = item.key;
       this.showDoctorPicker = false;
       this.updateButtonStates();
     },
@@ -550,27 +548,19 @@ export default {
 
       this.form.customer_id = this.customerId;
       this.form.customer_name = this.customerName;
+      this.submitModalContent = `操作：${operationText}\n医生：${this.selectedDoctorDisplay}\n状态：${wearText}`;
+      this.submitModalShow = true;
+    },
 
-      uni.showModal({
-        title: "确认信息",
-        content: `操作：${operationText}\n医生：${this.selectedDoctor}\n状态：${wearText}`,
-        success: (res) => {
-          if (res.confirm) {
-            uni.showLoading({ title: "提交中..." });
-
-            console.log("提交的表单数据:", this.form);
-
-            setTimeout(() => {
-              uni.hideLoading();
-              uni.showToast({
-                title: "提交成功",
-                icon: "success"
-              });
-              this.resetForm();
-            }, 1000);
-          }
-        }
-      });
+    onConfirmSubmit() {
+      this.submitModalShow = false;
+      uni.showLoading({ title: "提交中..." });
+      console.log("提交的表单数据:", this.form);
+      setTimeout(() => {
+        uni.hideLoading();
+        uni.showToast({ title: "提交成功", icon: "success" });
+        this.resetForm();
+      }, 1000);
     },
 
     resetForm() {
@@ -626,7 +616,8 @@ export default {
       const fileName = `video_${timestamp}_${this.customerId || 'unknown'}.mp4`;
 
       uni.uploadFile({
-        url: "https://gdcasa.cn/api/upload",
+        // url: "https://gdcasa.cn/api/upload",
+        url: "http://115.159.109.106/api/upload",
         filePath: videoPath,
         name: "file",
         header: {

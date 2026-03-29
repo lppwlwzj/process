@@ -15,7 +15,7 @@ let storage = multer.diskStorage({
 
 
     // 3.1.1 允许图片上传
-    if (file.mimetype === "image/jpeg" || file.mimetype === "image/png" || file.mimetype ==='video/mp4')  {
+    if (file.mimetype === "image/jpeg" || file.mimetype === "image/jpg" || file.mimetype === "image/png" || file.mimetype ==='video/mp4')  {
       cb(null, resolve(uploadFolder));
     } else {
       // 3.1.2 限制其他文件上传类型

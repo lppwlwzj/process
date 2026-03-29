@@ -27,6 +27,14 @@ export function updateCustomerApi(data: any) {
   })
 }
 
+export function updateCustomerWearTimeApi(data: { id: number; wear_time: string | null }) {
+  return request<any>({
+    url: "customer/updateWearTime",
+    method: "post",
+    data
+  })
+}
+
 /** 删除客户 */
 export function deleteCustomerApi(id: number) {
   return request<any>({
@@ -54,10 +62,10 @@ export function getCustomerDetailApi(id: number) {
   })
 }
 
-/** 生成二维码 */
-export function generateQrCodeApi(data: { id: number; page?: string }) {
+/** 生成 H5 网页二维码（mini 进度页） */
+export function generateQrCodeApi(data: { id: number }) {
   return request<any>({
-    url: "user/getQrImg",
+    url: "customer/getQrImg",
     method: "post",
     data
   })

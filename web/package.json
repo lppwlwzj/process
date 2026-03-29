@@ -11,8 +11,9 @@
   },
   "scripts": {
     "dev": "vite",
-    "build:staging": "vue-tsc && vite build --mode staging",
-    "build": "vue-tsc && vite build",
+    "build:staging": "vite build --mode staging",
+    "build": "vite build",
+    "build:check": "vue-tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --fix",
     "prepare": "husky",

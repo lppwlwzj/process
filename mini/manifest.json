@@ -83,16 +83,21 @@
     "vueVersion" : "2",
     "h5" : {
         "devServer" : {
+            "port" : 8080,
             "proxy" : {
                 "/api" : {
-                    "target" : "https://qdh.xmshensou.com/",
-                    "changeOrigin" : true,
-                    "pathRewrite" : {
-                        "^/api" : ""
-                    }
+                    "target" : "http://115.159.109.106",
+                    "changeOrigin" : true
                 }
-            }
-        }
+            },
+            "https" : false
+        },
+        "router" : {
+            "mode" : "history",
+            "base" : "./"
+        },
+        "title" : "mini",
+        "template" : "index.html"
     },
     "locale" : "zh-Hans",
     "fallbackLocale" : "zh-Hans"

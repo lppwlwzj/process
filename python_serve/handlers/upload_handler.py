@@ -10,7 +10,7 @@ async def upload_file(file: UploadFile):
         return error_response("没有上传文件")
     
     content_type = file.content_type
-    allowed_types = ['image/jpeg', 'image/png', 'video/mp4']
+    allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'video/mp4']
     
     if content_type not in allowed_types:
         return error_response("不支持的文件类型")

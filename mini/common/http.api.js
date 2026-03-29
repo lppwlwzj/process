@@ -16,7 +16,7 @@ const install = (Vue, vm) => {
     // updateFactoryMiniImage: (data) => vm.$u.http.post("/api/process/updateFactoryMiniImage", data),
 
     // login: (data) => vm.$u.http.post("/api/user/login", data),
-    getQrImg: (data) => vm.$u.http.post("/api/user/getQrImg", data),
+    getQrImg: (data) => vm.$u.http.post("/api/customer/getQrImg", data),
 
     addCustomer: (data) => vm.$u.http.post("/api/customer/add", data),
 

@@ -1,7 +1,7 @@
 const db = require('../db/index')
 
 exports.list = (req, res) => {
-  const { customer_name, progress, technician, remark, type, currentPage = 1, pageSize = 10 } = req.body;
+  const { customer_name, progress, technician, remark, wear_time, preparation_time, type, currentPage = 1, pageSize = 10 } = req.body;
   let sql = `SELECT 
     cp.*,
     c.customer_name,
@@ -24,21 +24,29 @@ exports.list = (req, res) => {
     params.push(type);
   }
 
-  if (customer_name) {
-    sql += ` AND c.customer_name LIKE ?`;
-    params.push(`%${customer_name}%`);
-  }
-  if (progress) {
-    sql += ` AND cp.progress = ?`;
-    params.push(progress);
-  }
-  if (technician) {
-    sql += ` AND cp.technician = ?`;
-    params.push(technician);
-  }
-  if (remark) {
-    sql += ` AND (cp.remark LIKE ? OR c.remark LIKE ?)`;
-    params.push(`%${remark}%`, `%${remark}%`);
+  if (wear_time) {
+    sql += ` AND c.wear_time = ? `;
+    params.push(wear_time);
+  } else if (preparation_time) {
+    sql += ` AND c.preparation_time = ?`;
+    params.push(preparation_time);
+  } else {
+    if (customer_name) {
+      sql += ` AND c.customer_name LIKE ?`;
+      params.push(`%${customer_name}%`);
+    }
+    if (progress) {
+      sql += ` AND cp.progress = ?`;
+      params.push(progress);
+    }
+    if (technician) {
+      sql += ` AND cp.technician = ?`;
+      params.push(technician);
+    }
+    if (remark) {
+      sql += ` AND (cp.remark LIKE ? OR c.remark LIKE ?)`;
+      params.push(`%${remark}%`, `%${remark}%`);
+    }
   }
 
   const countSql = `SELECT COUNT(*) as total FROM (${sql}) as temp`;
@@ -167,18 +175,7 @@ exports.create = (req, res) => {
 exports.update = (req, res) => {
   const {
     id,
-    progress,
-    technician,
-    quantity,
-    image,
-    technician_audio,
-    technician_video,
-    chairside_audio,
-    chairside_video,
-    start_chairside_time,
-    complete_chairside_time,
-    chairside_doctor,
-    daily_wear_status
+    progress
   } = req.body;
 
   if (!id) return res.cc("缺少客户进度ID！");
@@ -186,21 +183,10 @@ exports.update = (req, res) => {
     return res.cc("客户名称和进度不能为空！");
   }
 
-  const sql = `UPDATE customer_process SET progress=?, technician=?, quantity=?, image=?, technician_audio=?, technician_video=?, chairside_audio=?, chairside_video=?, start_chairside_time=?, complete_chairside_time=?, chairside_doctor=?, daily_wear_status=? WHERE id=?`;
+  const sql = `UPDATE customer_process SET progress=? WHERE id=?`;
 
   db.query(sql, [
     progress,
-    technician || null,
-    quantity || null,
-    image || null,
-    technician_audio || null,
-    technician_video || null,
-    chairside_audio || null,
-    chairside_video || null,
-    start_chairside_time || null,
-    complete_chairside_time || null,
-    chairside_doctor || null,
-    daily_wear_status !== undefined ? daily_wear_status : null,
     id
   ], (err, results) => {
     if (err) return res.cc(err);

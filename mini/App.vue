@@ -31,4 +31,26 @@ export default {
   top: 75px !important;
   left: 28px !important;
 }
+uni-modal,
+.uni-modal,
+.uni-modal__hd,
+.uni-modal__bd,
+.uni-modal__ft,
+.uni-modal__content {
+  z-index: 999999 !important;
+}
+
+.uni-actionsheet__cell {
+  display: none !important;
+  // position: fixed !important;
+  // bottom: 0 !important;
+  // left: 0 !important;
+  // right: 0 !important;
+  // z-index: 99999 !important;
+  // transform: translateY(100%) !important;
+  // transition: transform 0.3s ease !important;
+  // &.uni-actionsheet--active {
+  //   transform: translateY(0) !important;
+  // }
+}
 </style>

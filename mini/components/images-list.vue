@@ -56,6 +56,17 @@ export default {
       })
     },
     saveImage(url) {
+      // #ifdef H5
+      const a = document.createElement('a')
+      a.href = url
+      a.download = url.split('/').pop() || 'image.jpg'
+      a.target = '_blank'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      uni.showToast({ title: '已触发下载', icon: 'success' })
+      // #endif
+      // #ifndef H5
       uni.downloadFile({
         url: url,
         success: (res) => {
@@ -84,6 +95,7 @@ export default {
           })
         }
       })
+      // #endif
     }
   }
 }

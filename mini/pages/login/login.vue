@@ -31,9 +31,11 @@
             <!-- #endif -->   
           </view>
         </u-form-item>
+        <!-- #ifndef H5 -->
         <button class="btn" open-type="getPhoneNumber" @getphonenumber="getPhoneNumber" v-show="show">
           授权手机号
         </button>
+        <!-- #endif -->
         <view class="btn" @tap="login"> 登录 </view>
         <view class="protocol-tip">
           <u-checkbox-group placement="column" v-model="protocolChecked">
@@ -97,7 +99,12 @@ export default {
       this.show = false;
       this.form = { ...user };
     } else {
+      // #ifndef H5
       this.getWxUserCode();
+      // #endif
+      // #ifdef H5
+      this.show = false;
+      // #endif
     }
   },
   methods: {
@@ -234,14 +241,24 @@ export default {
       }
     },
     goToUserAgreement() {
+      // #ifdef H5
+      uni.showToast({ title: '请在小程序内查看协议', icon: 'none' });
+      // #endif
+      // #ifndef H5
       uni.navigateTo({
         url: '/pages/agreement/user-agreement'
       });
+      // #endif
     },
     goToPrivacyPolicy() {
+      // #ifdef H5
+      uni.showToast({ title: '请在小程序内查看协议', icon: 'none' });
+      // #endif
+      // #ifndef H5
       uni.navigateTo({
         url: '/pages/agreement/privacy-policy'
       });
+      // #endif
     },
     onchange(e) {
       const arr = e.detail.value;

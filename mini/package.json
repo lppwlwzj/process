@@ -4,6 +4,8 @@
   "description": "",
   "main": "main.js",
   "scripts": {
+    "dev:h5": "uni -p h5",
+    "build:h5": "uni build -p h5",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

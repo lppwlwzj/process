@@ -8,6 +8,7 @@ page {
 }
 
 .page-title {
+  // width: 100%;
   text-align: center;
   font-size: 44rpx;
   font-weight: 700;
@@ -274,50 +275,47 @@ page {
   }
 }
 
-.yipan-button-container {
-  margin-top: 40rpx;
-}
-
 .preparation-time {
   font-size: 28rpx;
   padding: 30rpx 36rpx;
   text-align: left;
   background: #ffffff;
+  display:flex;
 }
 
 .preparation-time-text {
+  margin-top: 20px;
   font-size: 28rpx;
   color: #999;
   font-weight: 500;
 }
 
 .yipan-action-btn {
+  position: relative;
+  z-index: 1;
   width: 100%;
+  box-sizing: border-box;
+  margin-top: 40rpx;
+  overflow: hidden;
+  background: #ff758c;
   background: linear-gradient(135deg, #ff758c 0%, #dd524d63 100%);
   border: none;
   border-radius: 24rpx;
-  padding: 12rpx 40rpx;
+  padding: 20rpx 40rpx;
   box-shadow: 0 8rpx 24rpx rgba(255, 117, 140, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20rpx;
+  font-size: 32rpx;
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 2rpx;
   transition: all 0.3s;
+  -webkit-tap-highlight-color: transparent;
 
   &::after {
-    border: none;
-  }
-
-  .btn-icon {
-    font-size: 48rpx;
-    line-height: 1;
-  }
-
-  .btn-text {
-    font-size: 32rpx;
-    color: #ffffff;
-    font-weight: 600;
-    letter-spacing: 2rpx;
+    content: none;
+    display: none;
   }
 
   &:active {
@@ -326,3 +324,4 @@ page {
     box-shadow: 0 4rpx 16rpx rgba(255, 117, 140, 0.4);
   }
 }
+
