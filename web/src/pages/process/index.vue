@@ -3,12 +3,14 @@ import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { VideoPlay, Search, Refresh, Delete, Upload } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
-import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateMiniImageApi, updateTechnicianVideoApi, updateChairsideVideoApi, updateWebVideoApi, updateImageApi, uploadFileApi } from "@@/apis/process"
+import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateMiniImageApi, updateTechnicianVideoApi, updateChairsideVideoApi, updateWebVideoApi, updateImageApi, uploadFileApi, updateYipanApi } from "@@/apis/process"
 import type { ProcessFormData } from "@@/apis/process/type"
 import { getUserListApi } from "@@/apis/users"
 import { updateCustomerWearTimeApi } from "@@/apis/customers"
 import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
 import ChairsideHistoryDialog from "./components/ChairsideHistoryDialog.vue"
+import ProcessHistoryByDateDialog from "./components/ProcessHistoryByDateDialog.vue"
+import ChairsideHistoryByDateDialog from "./components/ChairsideHistoryByDateDialog.vue"
 import type { FormInstance, FormRules } from "element-plus"
 import { progressOptions, materialOptions } from "./constant"
 import ExcelJS from "exceljs"
@@ -57,6 +59,7 @@ interface ProcessData {
   type?: string
   mini_image?: string
   factory_mini_image?: string
+  yipan_image?: string
 
 }
 
@@ -234,6 +237,8 @@ const handleBatchDelete = async () => {
 
 const historyDialogVisible = ref(false)
 const chairsideHistoryDialogVisible = ref(false)
+const processHistoryByDateVisible = ref(false)
+const chairsideHistoryByDateVisible = ref(false)
 const selectedCustomer = ref<{ id: number; customer_id?: number; name: string }>({
   id: 0,
   name: ""
@@ -276,6 +281,14 @@ const handleChairsideRecord = (row: ProcessData) => {
     name: row.customer_name
   }
   chairsideHistoryDialogVisible.value = true
+}
+
+const openProcessHistoryByDate = () => {
+  processHistoryByDateVisible.value = true
+}
+
+const openChairsideHistoryByDate = () => {
+  chairsideHistoryByDateVisible.value = true
 }
 
 const resetForm = () => {
@@ -408,6 +421,36 @@ const handleDeleteMiniImage = async (row: ProcessData, imageUrl: string, index: 
       getTableData()
     } catch (error) {
       console.error("删除图片失败:", error)
+      ElMessage.error("删除图片失败")
+    } finally {
+      loading.value = false
+    }
+  })
+}
+
+const handleDeleteYipanImage = async (row: ProcessData, imageUrl: string, index: number) => {
+  if (!row.customer_id) {
+    ElMessage.error("缺少客户ID")
+    return
+  }
+  const customerId = row.customer_id
+  ElMessageBox.confirm("确认删除该图片？", "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(async () => {
+    try {
+      loading.value = true
+      const currentImages = row.yipan_image || ""
+      const updatedImages = removeVideoFromUrlList(currentImages, imageUrl, index)
+      await updateYipanApi({
+        customer_id: customerId,
+        yipan_image: updatedImages
+      })
+      ElMessage.success("删除成功")
+      getTableData()
+    } catch (error) {
+      console.error("删除椅旁图片失败:", error)
       ElMessage.error("删除图片失败")
     } finally {
       loading.value = false
@@ -806,7 +849,6 @@ onMounted(() => {
 
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
-
         </div>
         <div>
           <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleBatchDelete">
@@ -814,6 +856,10 @@ onMounted(() => {
           </el-button>
           <el-button type="primary" @click="handleExport">导出</el-button>
         </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;margin-bottom: 12px;">
+        <el-button type="primary" @click="openProcessHistoryByDate">进度记录</el-button>
+        <el-button type="primary" @click="openChairsideHistoryByDate">椅旁记录</el-button>
       </div>
       <div class="table-wrapper">
         <el-table :data="tableData" row-key="id" v-loading="loading" @selection-change="handleSelectionChange">
@@ -842,6 +888,26 @@ onMounted(() => {
               <span v-else-if="row.customer_remark" style="white-space: normal; word-break: break-word;">{{
                 row.customer_remark }}</span>
               <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="进度记录" width="100" align="center">
+            <template #default="{ row }">
+              <el-button type="primary" text size="small" @click="handleProgressRecord(row)">进度记录</el-button>
+            </template>
+          </el-table-column>
+          <el-table-column label="椅旁记录" width="100" align="center">
+            <template #default="{ row }">
+              <el-button type="primary" text size="small" @click="handleChairsideRecord(row)">椅旁记录</el-button>
+            </template>
+          </el-table-column>
+          <el-table-column prop="materials" label="材料与数量" min-width="250" align="center">
+            <template #default="{ row }">
+              <div v-if="row.materials && row.materials.length > 0">
+                <el-tag v-for="(item, index) in row.materials" :key="index" style="margin: 2px;">
+                  {{ getMaterialLabel(item.material) }}: {{ item.quantity }}颗
+                </el-tag>
+              </div>
+              <span v-else>-</span>
             </template>
           </el-table-column>
           <el-table-column prop="edge_seating" label="边缘就位" align="center" width="100">
@@ -930,8 +996,22 @@ onMounted(() => {
             </template>
           </el-table-column>
 
-
-
+          <el-table-column prop="yipan_image" label="椅旁图片" min-width="280" align="left">
+            <template #default="{ row }">
+              <div v-if="row.yipan_image"
+                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
+                <div v-for="(imageUrl, index) in getVideoList(row.yipan_image)" :key="index"
+                  style="display: flex; align-items: center; gap: 4px;">
+                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.yipan_image)"
+                    :initial-index="index" fit="cover"
+                    style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;" preview-teleported />
+                  <el-button type="danger" size="small" :icon="Delete" circle
+                    @click="handleDeleteYipanImage(row, imageUrl, index)" style="padding: 4px;" />
+                </div>
+              </div>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
 
           <el-table-column prop="preparation_time" label="备牙时间" align="center">
             <template #default="{ row }">
@@ -941,16 +1021,7 @@ onMounted(() => {
 
           <el-table-column prop="technician" label="技工师" align="center" />
           <el-table-column prop="chairside_doctor" label="椅旁医生" align="center" />
-          <el-table-column prop="materials" label="材料与数量" min-width="250" align="center">
-            <template #default="{ row }">
-              <div v-if="row.materials && row.materials.length > 0">
-                <el-tag v-for="(item, index) in row.materials" :key="index" style="margin: 2px;">
-                  {{ getMaterialLabel(item.material) }}: {{ item.quantity }}颗
-                </el-tag>
-              </div>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
+
 
           <el-table-column prop="image" label="图片" min-width="260  " align="left">
             <template #default="{ row }">
@@ -989,11 +1060,11 @@ onMounted(() => {
             </template>
           </el-table-column>
 
-          <el-table-column label="操作" width="480" align="center">
+
+
+          <el-table-column label="操作" width="320" align="center">
             <template #default="{ row }">
               <div style="display: flex; flex-direction: row;  align-items: center;">
-                <el-button type="primary" text size="small" @click="handleProgressRecord(row)">进度记录</el-button>
-                <el-button type="primary" text size="small" @click="handleChairsideRecord(row)">椅旁记录</el-button>
                 <el-upload :show-file-list="false"
                   :before-upload="(file) => { handleUploadTechnicianVideo(row, file); return false; }"
                   accept="video/mp4" style="display: inline-block;">
@@ -1025,8 +1096,11 @@ onMounted(() => {
     <ProcessHistoryDialog v-model:visible="historyDialogVisible" :customer-id="selectedCustomer.customer_id!"
       :customer-name="selectedCustomer.name" :user-map="userMap" />
 
-    <ChairsideHistoryDialog v-model:visible="chairsideHistoryDialogVisible" :customer-id="selectedCustomer.id"
+    <ChairsideHistoryDialog v-model:visible="chairsideHistoryDialogVisible" :customer-id="selectedCustomer.customer_id!"
       :customer-name="selectedCustomer.name" :user-map="userMap" />
+
+    <ProcessHistoryByDateDialog v-model:visible="processHistoryByDateVisible" :user-map="userMap" />
+    <ChairsideHistoryByDateDialog v-model:visible="chairsideHistoryByDateVisible" :user-map="userMap" />
 
     <el-dialog v-model="videoDialogVisible" title="视频播放" width="800px" @close="videoDialogVisible = false">
       <div style="display: flex; justify-content: center; align-items: center; min-height: 400px;">

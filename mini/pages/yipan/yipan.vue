@@ -84,6 +84,21 @@
       </view>
     </view>
 
+    <!-- <view class="btn-row  full-width-card" style="min-height: 0;padding:36rpx" @click="handleUploadImage">
+      <view class="card-content">
+        <view class="card-text">
+          <text class="card-label">上传图片</text>
+        </view>
+      </view>
+    </view> -->
+
+    <view class="btn-row">
+      <button class="icon-btn upload-btn" @click="handleUploadImage">
+        <!-- <view class="btn-icon">▶</view> -->
+        <view class="btn-text">上传图片</view>
+      </button>
+    </view>
+
     <view class="yipan-action-btn" @click="goToYipan">客户进度表</view>
 
     <u-action-sheet :show="showDoctorPicker" :actions="doctorActions" title="选择医生/椅旁技师"
@@ -98,6 +113,8 @@
 
     <u-modal :show="submitModalShow" title="确认信息" :content="submitModalContent" :showCancelButton="true"
       @confirm="onConfirmSubmit" @cancel="submitModalShow = false" @close="submitModalShow = false"></u-modal>
+
+    <u-toast ref="uToast"></u-toast>
   </view>
 </template>
 
@@ -122,6 +139,7 @@ export default {
         occlusion_status: null,
         chairside_audio: "",
         chairside_video: "",
+        yipan_image: "",
         start_time: null,
         color_status: null
       },
@@ -194,17 +212,11 @@ export default {
           console.log("边缘就位状态更新成功");
         } else {
           console.error("边缘就位状态更新失败:", res);
-          uni.showToast({
-            title: "更新失败",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: "更新失败" });
         }
       } catch (err) {
         console.error("更新边缘就位状态失败:", err);
-        uni.showToast({
-          title: "更新失败",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "更新失败" });
       }
     },
     async handleColorStatusSelect(status) {
@@ -220,23 +232,14 @@ export default {
           color_status: this.form.color_status
         });
         if (res.code === 0) {
-          uni.showToast({
-            title: "颜色质地更新成功",
-            icon: "success"
-          });
+          this.$refs.uToast.show({ message: "颜色质地更新成功", type: "success" });
         } else {
           console.error("颜色质地状态更新失败:", res);
-          uni.showToast({
-            title: "更新失败",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: "更新失败" });
         }
       } catch (err) {
         console.error("更新颜色质地状态失败:", err);
-        uni.showToast({
-          title: "更新失败",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "更新失败" });
       }
     },
 
@@ -259,17 +262,11 @@ export default {
           console.log("咬合状态更新成功");
         } else {
           console.error("咬合状态更新失败:", res);
-          uni.showToast({
-            title: "更新失败",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: "更新失败" });
         }
       } catch (err) {
         console.error("更新咬合状态失败:", err);
-        uni.showToast({
-          title: "更新失败",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "更新失败" });
       }
     },
 
@@ -333,6 +330,7 @@ export default {
             occlusion_status: data.occlusion_status,
             chairside_audio: data.chairside_audio || "",
             chairside_video: data.chairside_video || "",
+            yipan_image: data.yipan_image || "",
             start_time: data.start_time
           };
 
@@ -346,10 +344,7 @@ export default {
         }
       } catch (err) {
         console.error("获取椅旁数据失败:", err);
-        uni.showToast({
-          title: "加载失败",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "加载失败" });
       } finally {
         uni.hideLoading();
       }
@@ -369,19 +364,14 @@ export default {
       if (type === 'start') {
         if (!this.canStartChairside) return;
         if (this.isOperationInProgress) {
-          uni.showToast({
-            title: `医生${this.selectedDoctorDisplay}正在进行椅旁操作，请先完成后再开始新的椅旁`,
-            icon: "none",
+          this.$refs.uToast.show({
+            message: `医生${this.selectedDoctorDisplay}正在进行椅旁操作，请先完成后再开始新的椅旁`,
             duration: 2500
           });
           return;
         }
         if (!this.selectedDoctor) {
-          1
-          uni.showToast({
-            title: "请先选择医生/椅旁技师",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: "请先选择医生/椅旁技师" });
           return;
         }
 
@@ -391,18 +381,12 @@ export default {
       } else if (type === 'complete') {
         if (!this.canCompleteChairside) return;
         if (!this.isOperationInProgress) {
-          uni.showToast({
-            title: "尚未开始椅旁操作，无法完成",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: "尚未开始椅旁操作，无法完成" });
           return;
         }
 
         // if (!this.wearStatus) {
-        //   uni.showToast({
-        //     title: "请先选择当日戴牙状态",
-        //     icon: "none"
-        //   });
+        //   this.$refs.uToast.show({ message: "请先选择当日戴牙状态" });
         //   return;
         // }
 
@@ -421,17 +405,17 @@ export default {
           chairside_doctor: this.selectedDoctor
         });
         if (result.code === 0) {
-          uni.showToast({ title: "开始椅旁操作成功", icon: "success" });
+          this.$refs.uToast.show({ message: "开始椅旁操作成功", type: "success" });
           this.isOperationInProgress = true;
           this.currentOperation = 'start';
           this.updateButtonStates();
           await this.fetchYipanData();
         } else {
-          uni.showToast({ title: result.message || "开始椅旁操作失败", icon: "none" });
+          this.$refs.uToast.show({ message: result.message || "开始椅旁操作失败" });
         }
       } catch (err) {
         console.error("开始椅旁操作失败:", err);
-        uni.showToast({ title: err.message || "操作失败", icon: "none" });
+        this.$refs.uToast.show({ message: err.message || "操作失败" });
       } finally {
         uni.hideLoading();
       }
@@ -445,18 +429,18 @@ export default {
           customer_id: this.customerId
         });
         if (result.code === 0) {
-          uni.showToast({ title: "完成椅旁操作成功", icon: "success" });
+          this.$refs.uToast.show({ message: "完成椅旁操作成功", type: "success" });
           this.isOperationInProgress = false;
           this.currentOperation = '';
           this.updateButtonStates();
           this.resetForm();
           await this.fetchYipanData();
         } else {
-          uni.showToast({ title: result.message || "完成椅旁操作失败", icon: "none" });
+          this.$refs.uToast.show({ message: result.message || "完成椅旁操作失败" });
         }
       } catch (err) {
         console.error("完成椅旁操作失败:", err);
-        uni.showToast({ title: err.message || "操作失败", icon: "none" });
+        this.$refs.uToast.show({ message: err.message || "操作失败" });
       } finally {
         uni.hideLoading();
       }
@@ -481,24 +465,18 @@ export default {
           console.log("戴牙状态更新成功");
         } else {
           console.error("戴牙状态更新失败:", res);
-          uni.showToast({
-            title: "更新失败",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: "更新失败" });
         }
       } catch (err) {
         console.error("更新戴牙状态失败:", err);
-        uni.showToast({
-          title: "更新失败",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "更新失败" });
       }
     },
 
     openDoctorPicker() {
       if (this.isOperationInProgress) return;
       if (!this.doctorActions || !this.doctorActions.length) {
-        uni.showToast({ title: "医生列表加载中，请稍候", icon: "none" });
+        this.$refs.uToast.show({ message: "医生列表加载中，请稍候" });
         return;
       }
       this.showDoctorPicker = true;
@@ -506,9 +484,8 @@ export default {
 
     onDoctorSelect(item) {
       if (this.isOperationInProgress) {
-        uni.showToast({
-          title: "请先完成当前椅旁操作后再更换医生",
-          icon: "none",
+        this.$refs.uToast.show({
+          message: "请先完成当前椅旁操作后再更换医生",
           duration: 2500
         });
         this.showDoctorPicker = false;
@@ -522,24 +499,15 @@ export default {
 
     handleSubmit() {
       if (!this.currentOperation) {
-        uni.showToast({
-          title: "请选择操作类型",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "请选择操作类型" });
         return;
       }
       if (!this.selectedDoctor) {
-        uni.showToast({
-          title: "请选择医生",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "请选择医生" });
         return;
       }
       if (!this.wearStatus) {
-        uni.showToast({
-          title: "请选择戴牙状态",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "请选择戴牙状态" });
         return;
       }
 
@@ -558,7 +526,7 @@ export default {
       console.log("提交的表单数据:", this.form);
       setTimeout(() => {
         uni.hideLoading();
-        uni.showToast({ title: "提交成功", icon: "success" });
+        this.$refs.uToast.show({ message: "提交成功", type: "success" });
         this.resetForm();
       }, 1000);
     },
@@ -578,17 +546,109 @@ export default {
         occlusion_status: null,
         chairside_audio: "",
         chairside_video: "",
+        yipan_image: "",
         start_time: null
       };
     },
 
     handleUploadAudio() {
-      uni.showToast({
-        title: "上传录音功能",
-        icon: "none"
-      });
+      this.$refs.uToast.show({ message: "上传录音功能" });
     },
 
+    handleUploadImage() {
+      let imageSourceType = ['album', 'camera'];
+      // #ifdef H5
+      imageSourceType = ['album'];
+      // #endif
+      uni.chooseImage({
+        count: 1,
+        sizeType: ['compressed'],
+        sourceType: imageSourceType,
+        success: (res) => {
+          if (res.tempFilePaths && res.tempFilePaths.length > 0) {
+            this.uploadImageToCOS(res.tempFilePaths[0]);
+          } else {
+            this.$refs.uToast.show({ message: "未选择图片" });
+          }
+        },
+        fail: (err) => {
+          console.error("选择图片失败:", err);
+          if (err.errMsg !== 'chooseImage:fail cancel') {
+            this.$refs.uToast.show({ message: "选择图片失败" });
+          }
+        }
+      });
+    },
+    uploadImageToCOS(imagePath) {
+      uni.showLoading({ title: "上传中..." });
+
+      const userInfo = uni.getStorageSync("userInfo");
+      const timestamp = Date.now();
+      const fileName = `image_${timestamp}_${this.customerId || 'unknown'}.jpg`;
+      uni.uploadFile({
+        url: "http://115.159.109.106/api/upload",
+        filePath: imagePath,
+        name: "file",
+        header: {
+          Authorization: userInfo?.token || ""
+        },
+        formData: {
+          id: this.customerId || "",
+          name: fileName
+        },
+        success: (res) => {
+          uni.hideLoading();
+          if (res?.statusCode === 401) {
+            uni.removeStorageSync("userInfo");
+            uni.redirectTo({
+              url: "/pages/login/login"
+            });
+          } else if (res?.statusCode === 200) {
+            const data = JSON.parse(res.data);
+            if (data.code === 0) {
+              const imageUrl = data.re?.img_url;
+
+              if (imageUrl && this.customerId) {
+                this.updateImageToDatabase(imageUrl);
+              }
+            } else {
+              this.$refs.uToast.show({ message: data.message || "上传失败" });
+            }
+          } else {
+            this.$refs.uToast.show({ message: "上传失败" });
+          }
+        },
+        fail: (err) => {
+          uni.hideLoading();
+          console.error("上传图片失败:", err);
+          this.$refs.uToast.show({ message: "上传失败" });
+        }
+      });
+    },
+    async updateImageToDatabase(imageUrl) {
+      try {
+        const currentImages = this.form.yipan_image || '';
+        let newImages = '';
+        if (currentImages) {
+          newImages = currentImages + ',' + imageUrl;
+        } else {
+          newImages = imageUrl;
+        }
+        const res = await this.$api.updateYipan({
+          customer_id: this.customerId,
+          yipan_image: newImages
+        });
+        if (res.code === 0) {
+          this.$refs.uToast.show({ message: "上传成功", type: "success" });
+          await this.fetchYipanData();
+        } else {
+          this.$refs.uToast.show({ message: res.message || "更新失败" });
+        }
+      } catch (err) {
+        console.error("更新图片到数据库失败:", err);
+        this.$refs.uToast.show({ message: "更新失败" });
+      }
+    },
     handleUploadVideo() {
       uni.chooseVideo({
         sourceType: ['camera', 'album'],
@@ -600,10 +660,7 @@ export default {
         fail: (err) => {
           console.error("选择视频失败:", err);
           if (err.errMsg !== 'chooseVideo:fail cancel') {
-            uni.showToast({
-              title: "选择视频失败",
-              icon: "none"
-            });
+            this.$refs.uToast.show({ message: "选择视频失败" });
           }
         }
       });
@@ -643,25 +700,16 @@ export default {
                 this.updateVideoToDatabase(videoUrl);
               }
             } else {
-              uni.showToast({
-                title: data.message || "上传失败",
-                icon: "none"
-              });
+              this.$refs.uToast.show({ message: data.message || "上传失败" });
             }
           } else {
-            uni.showToast({
-              title: "上传失败",
-              icon: "none"
-            });
+            this.$refs.uToast.show({ message: "上传失败" });
           }
         },
         fail: (err) => {
           uni.hideLoading();
           console.error("上传视频失败:", err);
-          uni.showToast({
-            title: "上传失败",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: "上传失败" });
         }
       });
     },
@@ -690,23 +738,14 @@ export default {
         });
 
         if (res.code === 0) {
-          uni.showToast({
-            title: "上传成功",
-            icon: "success"
-          });
+          this.$refs.uToast.show({ message: "上传成功", type: "success" });
           await this.fetchYipanData();
         } else {
-          uni.showToast({
-            title: res.message || "更新失败",
-            icon: "none"
-          });
+          this.$refs.uToast.show({ message: res.message || "更新失败" });
         }
       } catch (err) {
         console.error("更新视频到数据库失败:", err);
-        uni.showToast({
-          title: "更新失败",
-          icon: "none"
-        });
+        this.$refs.uToast.show({ message: "更新失败" });
       }
     }
   }

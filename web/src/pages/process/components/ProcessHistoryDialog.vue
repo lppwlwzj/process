@@ -4,6 +4,7 @@ import { ElMessage } from "element-plus"
 import * as XLSX from "xlsx"
 import { getProcessHistoryApi } from "@@/apis/process_history"
 import { progressOptions } from "../constant"
+import { sortProcessHistoryRows } from "../utils/sortProcessHistory"
 import dayjs from "dayjs"
 
 interface HistoryRecord {
@@ -55,7 +56,7 @@ const loadHistoryData = async () => {
   try {
     const res = await getProcessHistoryApi({ customer_id: props.customerId }) as ApiResponseData<HistoryRecord[]>
     if (res.code === 0 && res.re) {
-      tableData.value = res.re
+      tableData.value = sortProcessHistoryRows(res.re)
     }
   } catch (error) {
     console.error("获取操作历史失败:", error)

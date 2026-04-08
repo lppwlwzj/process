@@ -139,3 +139,11 @@ export function updateMiniImageApi(data: { customer_id: number; mini_image?: str
     data
   })
 }
+
+export function updateYipanApi(data: { customer_id: number; yipan_image: string }) {
+  return request<ApiResponseData<null>>({
+    url: "yipan/update",
+    method: "post",
+    data
+  })
+}

@@ -13,7 +13,8 @@ exports.list = (req, res) => {
     y.edge_seating,
     y.occlusion_status,
     y.chairside_video,
-    y.color_status
+    y.color_status,
+    y.yipan_image
     FROM customer_process cp
     LEFT JOIN customer c ON cp.customer_id = c.id
     LEFT JOIN yipan y ON cp.customer_id = y.customer_id

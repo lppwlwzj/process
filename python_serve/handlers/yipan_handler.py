@@ -4,6 +4,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.connection import db
 from common.response import success_response, error_response
+from common.utils import parse_materials
 
 def add_yipan(data):
     yipan_info = {k: v for k, v in data.items()}
@@ -74,9 +75,10 @@ def complete_chairside(data):
     if not customer_id:
         return error_response("客户ID不能为空")
     
-    check_sql = """SELECT y.*, cp.progress 
+    check_sql = """SELECT y.*, cp.progress, c.customer_name AS customer_name_from_customer
         FROM yipan y 
         LEFT JOIN customer_process cp ON y.customer_id = cp.customer_id 
+        LEFT JOIN customer c ON c.id = y.customer_id
         WHERE y.customer_id = %s"""
     try:
         results = db.query(check_sql, (customer_id,))
@@ -102,9 +104,14 @@ def complete_chairside(data):
             (customer_id, customer_name, progress, chairside_doctor, start_time, end_time, duration_minutes) 
             VALUES (%s, %s, %s, %s, %s, %s, %s)"""
         
+        customer_name_for_history = (
+            yipan_record.get('customer_name_from_customer')
+            or yipan_record.get('customer_name')
+            or ''
+        )
         history_params = (
             customer_id,
-            yipan_record.get('customer_name'),
+            customer_name_for_history,
             yipan_record.get('progress') or '未知',
             yipan_record.get('chairside_doctor'),
             start_time,
@@ -207,18 +214,58 @@ def update_chairside_video(data):
 
 def get_yipan_history(data):
     customer_id = data.get('customer_id')
-    
-    sql = "SELECT * FROM yipan_history"
+    date_str = data.get('date')
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    chairside_doctor = data.get('chairside_doctor')
+
+    conditions = []
     params = []
-    
+
     if customer_id:
-        sql += " WHERE customer_id = %s"
+        conditions.append("h.customer_id = %s")
         params.append(customer_id)
-    
-    sql += " ORDER BY start_time DESC"
-    
+    if start_date and end_date:
+        conditions.append("DATE(h.start_time) >= %s AND DATE(h.start_time) <= %s")
+        params.extend([start_date, end_date])
+    elif date_str:
+        conditions.append("DATE(h.start_time) = %s")
+        params.append(date_str)
+    if chairside_doctor:
+        conditions.append("h.chairside_doctor = %s")
+        params.append(chairside_doctor)
+
+    def attach_materials(rows):
+        out = []
+        for row in rows or []:
+            r = dict(row)
+            r["materials"] = parse_materials(r.get("materials"))
+            out.append(r)
+        return out
+
+    if not conditions:
+        sql = (
+            "SELECT h.*, c.materials AS materials FROM yipan_history h "
+            "LEFT JOIN customer c ON h.customer_id = c.id ORDER BY h.start_time DESC"
+        )
+        try:
+            results = db.query(sql, None)
+            return success_response(attach_materials(results), "获取椅旁历史记录成功")
+        except Exception as e:
+            return error_response(str(e))
+
+    if not customer_id and not date_str and not (start_date and end_date):
+        return error_response("缺少客户ID或日期！")
+
+    sql = (
+        "SELECT h.*, c.materials AS materials FROM yipan_history h "
+        "LEFT JOIN customer c ON h.customer_id = c.id WHERE "
+        + " AND ".join(conditions)
+        + " ORDER BY h.start_time DESC"
+    )
+
     try:
-        results = db.query(sql, tuple(params) if params else None)
-        return success_response(results, "获取椅旁历史记录成功")
+        results = db.query(sql, tuple(params))
+        return success_response(attach_materials(results), "获取椅旁历史记录成功")
     except Exception as e:
         return error_response(str(e))

@@ -4,6 +4,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.connection import db
 from common.response import success_response, error_response
+from common.utils import parse_materials
 
 def add_history(data):
     customer_id = data.get('customer_id')
@@ -77,14 +78,46 @@ def add_history(data):
 
 def get_history(data):
     customer_id = data.get('customer_id')
-    
-    if not customer_id:
-        return error_response("缺少客户ID！")
-    
-    sql = "SELECT * FROM customer_process_history WHERE customer_id=%s ORDER BY start_time DESC"
-    
+    date_str = data.get('date')
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    technician = data.get('technician')
+
+    parts = []
+    params = []
+
+    if customer_id:
+        parts.append("h.customer_id = %s")
+        params.append(customer_id)
+    if start_date and end_date:
+        parts.append("DATE(h.start_time) >= %s AND DATE(h.start_time) <= %s")
+        params.extend([start_date, end_date])
+    elif date_str:
+        parts.append("DATE(h.start_time) = %s")
+        params.append(date_str)
+    if technician:
+        parts.append("h.technician = %s")
+        params.append(technician)
+
+    if not parts:
+        return error_response("缺少查询条件！")
+    if not customer_id and not date_str and not (start_date and end_date):
+        return error_response("缺少客户ID或日期！")
+
     try:
-        results = db.query(sql, (customer_id,))
-        return success_response(results, "获取操作历史成功！")
+        sql = (
+            "SELECT h.*, c.materials AS materials FROM customer_process_history h "
+            "LEFT JOIN customer c ON h.customer_id = c.id WHERE "
+            + " AND ".join(parts)
+            + " ORDER BY h.start_time DESC"
+        )
+        results = db.query(sql, tuple(params))
+        parsed = []
+        for row in results or []:
+            materials = parse_materials(row.get("materials"))
+            row = dict(row)
+            row["materials"] = materials
+            parsed.append(row)
+        return success_response(parsed, "获取操作历史成功！")
     except Exception as e:
         return error_response(str(e))

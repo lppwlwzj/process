@@ -92,9 +92,10 @@ exports.completeChairside = (req, res) => {
   }
   
   const checkSql = `
-    SELECT y.*, cp.progress 
+    SELECT y.*, cp.progress, c.customer_name
     FROM yipan y 
     LEFT JOIN customer_process cp ON y.customer_id = cp.customer_id 
+    LEFT JOIN customer c ON c.id = y.customer_id
     WHERE y.customer_id = ?
   `;
   
@@ -117,14 +118,13 @@ exports.completeChairside = (req, res) => {
     
     const insertHistorySql = `
       INSERT INTO yipan_history 
-      (customer_id, customer_name, progress, chairside_doctor, start_time, end_time, duration_minutes) 
+      (customer_id,customer_name, progress, chairside_doctor, start_time, end_time, duration_minutes) 
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
-    
     const historyParams = [
       customer_id,
-      yipanRecord.customer_name,
-      yipanRecord.progress || '未知',
+      yipanRecord.customer_name ,
+      yipanRecord.progress || "未知",
       yipanRecord.chairside_doctor,
       yipanRecord.start_time,
       endTime,
@@ -251,24 +251,62 @@ exports.updateChairsideVideo = (req, res) => {
 };
 
 exports.getHistory = (req, res) => {
-  const { customer_id } = req.body;
-  
-  let sql = `SELECT * FROM yipan_history`;
-  let params = [];
-  
+  const { customer_id, date, start_date, end_date, chairside_doctor } = req.body;
+
+  const conditions = [];
+  const params = [];
+
   if (customer_id) {
-    sql += ` WHERE customer_id = ?`;
+    conditions.push(`h.customer_id = ?`);
     params.push(customer_id);
   }
-  
-  sql += ` ORDER BY start_time DESC`;
-  
+  if (start_date && end_date) {
+    conditions.push(`DATE(h.start_time) >= ? AND DATE(h.start_time) <= ?`);
+    params.push(start_date, end_date);
+  } else if (date) {
+    conditions.push(`DATE(h.start_time) = ?`);
+    params.push(date);
+  }
+  if (chairside_doctor) {
+    conditions.push(`h.chairside_doctor = ?`);
+    params.push(chairside_doctor);
+  }
+
+  const mapMaterials = (results) =>
+    (results || []).map((row) => {
+      let m = row.materials;
+      if (m == null || m === "") {
+        return { ...row, materials: [] };
+      }
+      if (typeof m === "string") {
+        try {
+          m = JSON.parse(m);
+        } catch {
+          m = [];
+        }
+      }
+      return { ...row, materials: Array.isArray(m) ? m : [] };
+    });
+
+  if (conditions.length === 0) {
+    const sql = `SELECT h.*, c.materials AS materials FROM yipan_history h LEFT JOIN customer c ON h.customer_id = c.id ORDER BY h.start_time DESC`;
+    return db.query(sql, [], function (err, results) {
+      if (err) return res.cc(err);
+      res.send({ code: 0, message: "获取椅旁历史记录成功", re: mapMaterials(results) });
+    });
+  }
+  if (!customer_id && !date && !(start_date && end_date)) {
+    return res.cc("缺少客户ID或日期！");
+  }
+
+  const sql = `SELECT h.*, c.materials AS materials FROM yipan_history h LEFT JOIN customer c ON h.customer_id = c.id WHERE ${conditions.join(" AND ")} ORDER BY h.start_time DESC`;
+
   db.query(sql, params, function (err, results) {
     if (err) return res.cc(err);
     res.send({
       code: 0,
       message: "获取椅旁历史记录成功",
-      re: results
+      re: mapMaterials(results)
     });
   });
 };

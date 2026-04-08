@@ -22,7 +22,8 @@ def list_processes(data):
         c.remark as customer_remark,
         y.edge_seating,
         y.occlusion_status,
-        y.chairside_video
+        y.chairside_video,
+        y.yipan_image
         FROM customer_process cp
         LEFT JOIN customer c ON cp.customer_id = c.id
         LEFT JOIN yipan y ON cp.customer_id = y.customer_id

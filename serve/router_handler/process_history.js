@@ -107,23 +107,60 @@ exports.addHistory = (req, res) => {
   });
 };
 
-// 获取客户的操作历史列表
+// 获取操作历史：可选 customer_id、单日 date、日期范围 start_date+end_date、技工 technician（usercount）
 exports.getHistory = (req, res) => {
-  const { customer_id } = req.body;
-  
-  if (!customer_id) {
-    return res.cc("缺少客户ID！");
+  const { customer_id, date, start_date, end_date, technician } = req.body;
+
+  const parts = [];
+  const params = [];
+
+  if (customer_id) {
+    parts.push("h.customer_id = ?");
+    params.push(customer_id);
   }
-  
-  const sql = `SELECT * FROM customer_process_history WHERE customer_id=? ORDER BY start_time DESC`;
-  
-  db.query(sql, customer_id, (err, results) => {
+  if (start_date && end_date) {
+    parts.push("DATE(h.start_time) >= ? AND DATE(h.start_time) <= ?");
+    params.push(start_date, end_date);
+  } else if (date) {
+    parts.push("DATE(h.start_time) = ?");
+    params.push(date);
+  }
+  if (technician) {
+    parts.push("h.technician = ?");
+    params.push(technician);
+  }
+
+  if (parts.length === 0) {
+    return res.cc("缺少查询条件！");
+  }
+  if (!customer_id && !date && !(start_date && end_date)) {
+    return res.cc("缺少客户ID或日期！");
+  }
+
+  const sql = `SELECT h.*, c.materials AS materials FROM customer_process_history h LEFT JOIN customer c ON h.customer_id = c.id WHERE ${parts.join(" AND ")} ORDER BY h.start_time DESC`;
+
+  db.query(sql, params, (err, results) => {
     if (err) return res.cc(err);
-    
+
+    const rows = (results || []).map((row) => {
+      let m = row.materials;
+      if (m == null || m === "") {
+        return { ...row, materials: [] };
+      }
+      if (typeof m === "string") {
+        try {
+          m = JSON.parse(m);
+        } catch {
+          m = [];
+        }
+      }
+      return { ...row, materials: Array.isArray(m) ? m : [] };
+    });
+
     res.send({
       code: 0,
       message: "获取操作历史成功！",
-      re: results
+      re: rows
     });
   });
 };
