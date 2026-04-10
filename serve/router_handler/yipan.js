@@ -23,7 +23,12 @@ exports.detail = (req, res) => {
     return res.cc("客户ID不能为空");
   }
   
-  const sql = `SELECT * FROM yipan WHERE customer_id = ? ORDER BY updated_at DESC LIMIT 1`;
+  const sql = `
+    SELECT y.*, cp.laxing_technician
+    FROM yipan y
+    LEFT JOIN customer_process cp ON y.customer_id = cp.customer_id
+    WHERE y.customer_id = ? ORDER BY y.updated_at DESC LIMIT 1
+  `;
   
   db.query(sql, [customer_id], function (err, results) {
     if (err) return res.cc(err);
@@ -39,7 +44,7 @@ exports.detail = (req, res) => {
     res.send({
       code: 0,
       message: "获取椅旁记录成功",
-      re: results[0]
+      re: results.length > 0 ? results[0] : null
     });
   });
 };
@@ -123,7 +128,7 @@ exports.completeChairside = (req, res) => {
     `;
     const historyParams = [
       customer_id,
-      yipanRecord.customer_name ,
+      yipanRecord.customer_name || "",
       yipanRecord.progress || "未知",
       yipanRecord.chairside_doctor,
       yipanRecord.start_time,
@@ -214,11 +219,10 @@ exports.updateChairsideVideo = (req, res) => {
   if (!customer_id) return res.cc("缺少客户ID！");
   if (chairside_video === undefined || chairside_video === null) return res.cc("缺少视频URL！");
   
-  const checkSql = `SELECT id, customer_name FROM yipan WHERE customer_id=? LIMIT 1`;
-  
+  const checkSql = `SELECT id FROM yipan WHERE customer_id=? LIMIT 1`;
+
   db.query(checkSql, [customer_id], (err, results) => {
     if (err) return res.cc(err);
-    
     if (results.length > 0) {
       const updateSql = `UPDATE yipan SET chairside_video=? WHERE customer_id=?`;
       db.query(updateSql, [chairside_video, customer_id], (err, updateResults) => {
@@ -230,14 +234,13 @@ exports.updateChairsideVideo = (req, res) => {
         });
       });
     } else {
-      const getCustomerSql = `SELECT customer_name FROM customer WHERE id=? LIMIT 1`;
+      const getCustomerSql = `SELECT id FROM customer WHERE id=? LIMIT 1`;
       db.query(getCustomerSql, [customer_id], (err, customerResults) => {
         if (err) return res.cc(err);
         if (customerResults.length === 0) return res.cc("客户不存在！");
-        
-        const customer_name = customerResults[0].customer_name;
-        const insertSql = `INSERT INTO yipan (customer_id, customer_name, chairside_video) VALUES (?, ?, ?)`;
-        db.query(insertSql, [customer_id, customer_name, chairside_video], (err, insertResults) => {
+
+        const insertSql = `INSERT INTO yipan (customer_id, chairside_video) VALUES (?, ?)`;
+        db.query(insertSql, [customer_id, chairside_video], (err, insertResults) => {
           if (err) return res.cc(err);
           res.send({
             code: 0,
@@ -307,6 +310,79 @@ exports.getHistory = (req, res) => {
       code: 0,
       message: "获取椅旁历史记录成功",
       re: mapMaterials(results)
+    });
+  });
+};
+
+exports.addLaxingRecord = (req, res) => {
+  const { customer_id, technician, prev_technician } = req.body;
+
+  if (!customer_id) return res.cc("客户ID不能为空");
+  if (!technician) return res.cc("技师不能为空");
+
+  // 同步更新 customer_process 表的 laxing_technician 字段
+  const updateYipanSql = `UPDATE customer_process SET laxing_technician = ? WHERE customer_id = ?`;
+
+  db.query(updateYipanSql, [technician, customer_id], function (err, updateResults) {
+    if (err) return res.cc(err);
+
+    // 插入切换记录
+    const insertSql = `INSERT INTO laxing_history (customer_id, technician, prev_technician) VALUES (?, ?, ?)`;
+
+    db.query(insertSql, [customer_id, technician, prev_technician || null], function (err, insertResults) {
+      if (err) return res.cc(err);
+
+      res.send({
+        code: 0,
+        message: "蜡型技师更新成功",
+        re: { id: insertResults.insertId }
+      });
+    });
+  });
+};
+
+exports.getLaxingRecordList = (req, res) => {
+  const { customer_id, technician, start_date, end_date } = req.body;
+
+  const conditions = [];
+  const params = [];
+
+  if (customer_id) {
+    conditions.push(`lh.customer_id = ?`);
+    params.push(customer_id);
+  }
+  if (technician) {
+    conditions.push(`lh.technician = ?`);
+    params.push(technician);
+  }
+  if (start_date && end_date) {
+    conditions.push(`DATE(lh.created_at) >= ? AND DATE(lh.created_at) <= ?`);
+    params.push(start_date, end_date);
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const sql = `
+    SELECT
+      lh.*,
+      c.customer_name,
+      cp.progress,
+      cp.technician AS cp_technician,
+      cp.laxing_technician
+    FROM laxing_history lh
+    LEFT JOIN customer c ON lh.customer_id = c.id
+    LEFT JOIN customer_process cp ON lh.customer_id = cp.customer_id
+    ${where}
+    ORDER BY lh.created_at DESC
+  `;
+
+  db.query(sql, params, function (err, results) {
+    if (err) return res.cc(err);
+
+    res.send({
+      code: 0,
+      message: "获取蜡型记录成功",
+      re: results
     });
   });
 };

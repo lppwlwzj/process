@@ -11,6 +11,7 @@ import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
 import ChairsideHistoryDialog from "./components/ChairsideHistoryDialog.vue"
 import ProcessHistoryByDateDialog from "./components/ProcessHistoryByDateDialog.vue"
 import ChairsideHistoryByDateDialog from "./components/ChairsideHistoryByDateDialog.vue"
+import LaxingRecordDialog from "./components/LaxingRecordDialog.vue"
 import type { FormInstance, FormRules } from "element-plus"
 import { progressOptions, materialOptions } from "./constant"
 import ExcelJS from "exceljs"
@@ -239,6 +240,7 @@ const historyDialogVisible = ref(false)
 const chairsideHistoryDialogVisible = ref(false)
 const processHistoryByDateVisible = ref(false)
 const chairsideHistoryByDateVisible = ref(false)
+const laxingRecordDialogVisible = ref(false)
 const selectedCustomer = ref<{ id: number; customer_id?: number; name: string }>({
   id: 0,
   name: ""
@@ -289,6 +291,10 @@ const openProcessHistoryByDate = () => {
 
 const openChairsideHistoryByDate = () => {
   chairsideHistoryByDateVisible.value = true
+}
+
+const openLaxingRecord = () => {
+  laxingRecordDialogVisible.value = true
 }
 
 const resetForm = () => {
@@ -860,6 +866,7 @@ onMounted(() => {
       <div style="display: flex; align-items: center; gap: 12px;margin-bottom: 12px;">
         <el-button type="primary" @click="openProcessHistoryByDate">进度记录</el-button>
         <el-button type="primary" @click="openChairsideHistoryByDate">椅旁记录</el-button>
+        <el-button type="primary" @click="openLaxingRecord">蜡型记录</el-button>
       </div>
       <div class="table-wrapper">
         <el-table :data="tableData" row-key="id" v-loading="loading" @selection-change="handleSelectionChange">
@@ -908,6 +915,14 @@ onMounted(() => {
                 </el-tag>
               </div>
               <span v-else>-</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="laxing_technician" label="蜡型设计师" align="center" width="120">
+            <template #default="{ row }">
+              <span v-if="row.laxing_technician">{{ userMap.get(row.laxing_technician) || row.laxing_technician
+                }}</span>
+              <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
           <el-table-column prop="edge_seating" label="边缘就位" align="center" width="100">
@@ -1101,6 +1116,7 @@ onMounted(() => {
 
     <ProcessHistoryByDateDialog v-model:visible="processHistoryByDateVisible" :user-map="userMap" />
     <ChairsideHistoryByDateDialog v-model:visible="chairsideHistoryByDateVisible" :user-map="userMap" />
+    <LaxingRecordDialog v-model:visible="laxingRecordDialogVisible" :user-map="userMap" />
 
     <el-dialog v-model="videoDialogVisible" title="视频播放" width="800px" @close="videoDialogVisible = false">
       <div style="display: flex; justify-content: center; align-items: center; min-height: 400px;">

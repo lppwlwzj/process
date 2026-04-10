@@ -55,6 +55,10 @@ const install = (Vue, vm) => {
     completeChairside: (data) => vm.$u.http.post("/api/yipan/complete", data),
     getYipanHistory: (data) => vm.$u.http.post("/api/yipan/history", data),
     updateChairsideVideo: (data) => vm.$u.http.post("/api/yipan/updateChairsideVideo", data),
+
+    // 蜡型记录
+    addLaxingRecord: (data) => vm.$u.http.post("/api/yipan/addLaxingRecord", data),
+    getLaxingRecordList: (data) => vm.$u.http.post("/api/yipan/getLaxingRecordList", data),
   };
 };
 

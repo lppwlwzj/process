@@ -5,6 +5,7 @@ CREATE TABLE `customer_process` (
   `customer_id` int(11) NOT NULL COMMENT '客户ID',
   `progress` varchar(50) DEFAULT NULL COMMENT '进度（未开始、进行中、已完成）',
   `technician` varchar(50) DEFAULT NULL COMMENT '技工师',
+  `laxing_technician` varchar(50) DEFAULT NULL COMMENT '蜡型技师',
   `image` TEXT DEFAULT NULL COMMENT '图片URL',
   `mini_image` TEXT DEFAULT NULL COMMENT '小程序图片URL',
   `factory_mini_image` TEXT DEFAULT NULL COMMENT '小程序图片URL',

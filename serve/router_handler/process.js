@@ -267,6 +267,7 @@ exports.detail = (req, res) => {
       cp.updated_at as process_updated_at,
       cp.mini_image,
       cp.factory_mini_image,
+      cp.laxing_technician,
       y.edge_seating,
       y.occlusion_status
     FROM customer c

@@ -92,6 +92,15 @@
           </view>
         </view>
 
+        <view class="action-card  full-width-card" style="min-height: 0;padding:36rpx" @click="openLaxingTechnicianPicker">
+          <view class="card-content">
+            <view class="card-text">
+              <text class="card-label">蜡型设计师：{{ laxingTechnicianLabel || '请选择' }}</text>
+            </view>
+            <text class="card-arrow">›</text>
+          </view>
+        </view>
+
         <view class="action-card  full-width-card" style="min-height: 0;padding:36rpx" @click="handleUploadImage">
           <view class="card-content">
             <view class="card-text">
@@ -157,6 +166,9 @@
 
     <u-action-sheet :show="showTechnicianPicker" :actions="technicianActions" title="选择技工师"
       closeOnClickOverlay @select="onTechnicianSelect" @close="showTechnicianPicker = false"></u-action-sheet>
+
+    <u-action-sheet :show="showLaxingTechnicianPicker" :actions="laxingTechnicianActions" title="选择蜡型设计师"
+      closeOnClickOverlay @select="onLaxingTechnicianSelect" @close="showLaxingTechnicianPicker = false"></u-action-sheet>
 
     <u-modal :show="confirmModalShow" title="确认操作" content="确定要开始操作吗？" :showCancelButton="true"
       @confirm="onConfirmStart" @cancel="confirmModalShow = false" @close="confirmModalShow = false"></u-modal>
@@ -224,7 +236,8 @@ export default {
         process_updated_at: "",
 
         edge_seating: null,
-        occlusion_status: null
+        occlusion_status: null,
+        laxing_technician: ""
       },
       progressLabel: "",
       technicianLabel: "",
@@ -248,7 +261,10 @@ export default {
           { key: "completed", label: "戴牙结束" }
         ]
       ],
-      technicianActions: []
+      technicianActions: [],
+      laxingTechnicianLabel: "",
+      showLaxingTechnicianPicker: false,
+      laxingTechnicianActions: []
     };
   },
 
@@ -343,10 +359,12 @@ export default {
             materials: materials
           }
           await this.fetchTechnicians(this.form.type);
+          await this.fetchLaxingTechnicians();
           this.cacheLastProgress = this.form.progress;
           this.cacheLastTechnician = this.form.technician;
           this.progressLabel = this.progressColumns[0].find(item => item.key === this.form.progress)?.label || "";
           this.technicianLabel = (this.technicianActions.find(item => item.key === this.form.technician) || {}).name || "";
+          this.laxingTechnicianLabel = (this.laxingTechnicianActions.find(item => item.key === this.form.laxing_technician) || {}).name || this.form.laxing_technician || "";
         } else {
           console.error("获取客户详情失败:", res);
           this.$refs.uToast.show({ message: "获取客户信息失败" });
@@ -577,6 +595,62 @@ export default {
       } catch (err) {
         console.error("请求用户列表失败:", err);
         this.technicianActions = [];
+      }
+    },
+
+    async fetchLaxingTechnicians() {
+      try {
+        const res = await this.$api.getUserList();
+        if (res.code === 0 && res.re) {
+          this.laxingTechnicianActions = res.re
+            .filter(user => user.role === "技师")
+            .map(user => ({ name: user.username, key: user.usercount }));
+        } else {
+          this.laxingTechnicianActions = [];
+        }
+      } catch (err) {
+        console.error("请求蜡型技师列表失败:", err);
+        this.laxingTechnicianActions = [];
+      }
+    },
+
+    openLaxingTechnicianPicker() {
+      if (!this.laxingTechnicianActions || !this.laxingTechnicianActions.length) {
+        this.$refs.uToast.show({ message: "技师列表加载中，请稍候" });
+        return;
+      }
+      this.showLaxingTechnicianPicker = true;
+    },
+
+    async onLaxingTechnicianSelect(item) {
+      this.showLaxingTechnicianPicker = false;
+      const prevTechnician = this.form.laxing_technician;
+      this.form.laxing_technician = item.key;
+      this.laxingTechnicianLabel = item.name;
+
+      if (!this.customerId) return;
+
+      uni.showLoading({ title: "提交中..." });
+      try {
+        const res = await this.$api.addLaxingRecord({
+          customer_id: this.customerId,
+          technician: item.key,
+          prev_technician: prevTechnician || null
+        });
+        if (res.code === 0) {
+          this.$refs.uToast.show({ message: "蜡型设计师已更新", type: "success" });
+        } else {
+          this.$refs.uToast.show({ message: res.message || "更新失败" });
+          this.form.laxing_technician = prevTechnician;
+          this.laxingTechnicianLabel = (this.laxingTechnicianActions.find(item => item.key === prevTechnician) || {}).name || "";
+        }
+      } catch (err) {
+        console.error("更新蜡型设计师失败:", err);
+        this.$refs.uToast.show({ message: "更新失败" });
+        this.form.laxing_technician = prevTechnician;
+        this.laxingTechnicianLabel = (this.laxingTechnicianActions.find(item => item.key === prevTechnician) || {}).name || "";
+      } finally {
+        uni.hideLoading();
       }
     },
 
