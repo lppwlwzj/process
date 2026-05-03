@@ -7,8 +7,8 @@ const CONFIG = {
   // 开发环境配置
 
   development: {
-    BASE_URL: `http://${host}:3006`,
-    // BASE_URL: `http://115.159.109.106`,
+    // BASE_URL: `http://${host}:3006`,
+    BASE_URL: `http://115.159.109.106`,
 
 
     UPLOAD_URL: "https://receiving.shandongweipai.com/api/college/upload"

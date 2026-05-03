@@ -920,8 +920,8 @@ onMounted(() => {
 
           <el-table-column prop="laxing_technician" label="蜡型设计师" align="center" width="120">
             <template #default="{ row }">
-              <span v-if="row.laxing_technician">{{ userMap.get(row.laxing_technician) || row.laxing_technician
-                }}</span>
+              <span v-if="row.laxing_technician">{{ row.laxing_technician
+  == "herui" ? "何锐" : row.laxing_technician == "sunhanyu" ? "孙韩宇" : row.laxing_technician }}</span>
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
@@ -1116,7 +1116,7 @@ onMounted(() => {
 
     <ProcessHistoryByDateDialog v-model:visible="processHistoryByDateVisible" :user-map="userMap" />
     <ChairsideHistoryByDateDialog v-model:visible="chairsideHistoryByDateVisible" :user-map="userMap" />
-    <LaxingRecordDialog v-model:visible="laxingRecordDialogVisible" :user-map="userMap" />
+    <LaxingRecordDialog v-model:visible="laxingRecordDialogVisible" />
 
     <el-dialog v-model="videoDialogVisible" title="视频播放" width="800px" @close="videoDialogVisible = false">
       <div style="display: flex; justify-content: center; align-items: center; min-height: 400px;">

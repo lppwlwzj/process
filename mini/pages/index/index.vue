@@ -264,7 +264,16 @@ export default {
       technicianActions: [],
       laxingTechnicianLabel: "",
       showLaxingTechnicianPicker: false,
-      laxingTechnicianActions: []
+      laxingTechnicianActions: [
+        {
+          name: "何锐",
+          key: "herui"
+        },
+        {
+          name: "孙韩宇",
+          key: "sunhanyu"
+        }
+      ]
     };
   },
 
@@ -359,7 +368,7 @@ export default {
             materials: materials
           }
           await this.fetchTechnicians(this.form.type);
-          await this.fetchLaxingTechnicians();
+          // await this.fetchLaxingTechnicians();
           this.cacheLastProgress = this.form.progress;
           this.cacheLastTechnician = this.form.technician;
           this.progressLabel = this.progressColumns[0].find(item => item.key === this.form.progress)?.label || "";

@@ -103,6 +103,9 @@ app.use("/api/user", userRouter);
 const downloadRouter = require("./router/download");
 app.use("/api/download", downloadRouter);
 
+const ysdRouter = require("./router/ysd");
+app.use("/api/ysd", ysdRouter);
+app.use("/api/ysdMng", ysdRouter);
 
 const uploadController = require("./router/upload");
 app.use("/api/upload", uploadController.upload);
@@ -142,6 +145,7 @@ app.use("/api/ai-schedule", aiScheduleRouter);
 
 const surveyRouter = require("./router/survey");
 app.use("/api/survey", surveyRouter);
+
 
 const { initializeAgent } = require("./ai-schedule/handlers/chat-handler");
 initializeAgent().catch(err => {

@@ -26,7 +26,6 @@ interface LaxingRecord {
 
 const props = defineProps<{
   visible: boolean
-  userMap: Map<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -35,7 +34,16 @@ const emit = defineEmits<{
 
 const queryDateRange = ref<[string, string] | null>(null)
 const technicianFilter = ref("")
-const technicianOptions = ref<{ label: string; value: string }[]>([])
+const technicianOptions = ref<{ label: string; value: string }[]>([
+  {
+    label: "何锐",
+    value: "herui"
+  },
+  {
+    label: "孙韩宇",
+    value: "sunhanyu"
+  }
+])
 const loading = ref(false)
 const tableData = ref<LaxingRecord[]>([])
 
@@ -43,7 +51,8 @@ const handleClose = () => emit("update:visible", false)
 
 const getTechnicianName = (usercount: string | null | undefined) => {
   if (!usercount) return "-"
-  return props.userMap.get(usercount) || usercount
+  const opt = technicianOptions.value.find(o => o.value === usercount)
+  return opt?.label ?? usercount
 }
 
 const getProgressLabel = (key: string | null) => {
@@ -135,7 +144,7 @@ watch(
       queryDateRange.value = [t, t]
       technicianFilter.value = ""
       tableData.value = []
-      if (!technicianOptions.value.length) loadTechnicianOptions()
+      void loadTechnicianOptions()
     }
   }
 )
