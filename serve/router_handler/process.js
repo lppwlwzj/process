@@ -1,8 +1,6 @@
 const db = require('../db/index')
 
-exports.list = (req, res) => {
-  const { customer_name, progress, technician, remark, wear_time, preparation_time, type, currentPage = 1, pageSize = 10 } = req.body;
-  let sql = `SELECT 
+const PROCESS_LIST_SELECT = `SELECT 
     cp.*,
     c.customer_name,
     c.type,
@@ -10,48 +8,19 @@ exports.list = (req, res) => {
     c.wear_time,
     c.preparation_time,
     c.remark,
+    c.remark AS customer_note,
     y.edge_seating,
     y.occlusion_status,
     y.chairside_video,
     y.color_status,
-    y.yipan_image
+    y.yipan_image,
+    y.chairside_note
     FROM customer_process cp
     LEFT JOIN customer c ON cp.customer_id = c.id
     LEFT JOIN yipan y ON cp.customer_id = y.customer_id
     WHERE 1=1`;
-  const params = [];
-  if(type) {
-    sql += ` AND c.type = ?`;
-    params.push(type);
-  }
 
-  if (wear_time) {
-    sql += ` AND c.wear_time = ? `;
-    params.push(wear_time);
-  } else if (preparation_time) {
-    sql += ` AND c.preparation_time = ?`;
-    params.push(preparation_time);
-  } else {
-    if (customer_name) {
-      sql += ` AND c.customer_name LIKE ?`;
-      params.push(`%${customer_name}%`);
-    }
-    if (progress) {
-      sql += ` AND cp.progress = ?`;
-      params.push(progress);
-    }
-    if (technician) {
-      sql += ` AND cp.technician = ?`;
-      params.push(technician);
-    }
-    if (remark) {
-      sql += ` AND (cp.remark LIKE ? OR c.remark LIKE ?)`;
-      params.push(`%${remark}%`, `%${remark}%`);
-    }
-  }
-
-  const countSql = `SELECT COUNT(*) as total FROM (${sql}) as temp`;
-  const orderBySql = ` ORDER BY 
+const PROCESS_LIST_ORDER_BY = ` ORDER BY 
     CASE
       WHEN cp.progress != 'completed' AND c.wear_time IS NOT NULL AND c.wear_time < DATE_FORMAT(CURDATE(), '%m-%d') THEN 1
       WHEN c.wear_time = DATE_FORMAT(CURDATE(), '%m-%d') THEN 2
@@ -70,49 +39,131 @@ exports.list = (req, res) => {
       ELSE NULL
     END DESC`;
 
+const CUSTOMER_PROBLEM_MEDIA_WHERE = ` AND (
+    (cp.technician_video IS NOT NULL AND cp.technician_video != '')
+    OR (cp.mini_image IS NOT NULL AND cp.mini_image != '')
+    OR (y.chairside_video IS NOT NULL AND y.chairside_video != '')
+    OR (y.yipan_image IS NOT NULL AND y.yipan_image != '')
+    OR (cp.progress_note IS NOT NULL AND cp.progress_note != '')
+    OR (y.chairside_note IS NOT NULL AND y.chairside_note != '')
+  )`;
+
+function buildProcessListWhere(body) {
+  const {
+    customer_name,
+    progress,
+    technician,
+    remark,
+    wear_time,
+    wear_time_start,
+    wear_time_end,
+    preparation_time,
+    preparation_time_start,
+    preparation_time_end,
+    type
+  } = body;
+
+  let sql = '';
+  const params = [];
+
+  if (type) {
+    sql += ` AND c.type = ?`;
+    params.push(type);
+  }
+
+  if (customer_name) {
+    sql += ` AND c.customer_name LIKE ?`;
+    params.push(`%${customer_name}%`);
+  }
+  if (progress) {
+    sql += ` AND cp.progress = ?`;
+    params.push(progress);
+  }
+  if (technician) {
+    sql += ` AND cp.technician = ?`;
+    params.push(technician);
+  }
+  if (remark) {
+    sql += ` AND (cp.progress_note LIKE ? OR c.remark LIKE ?)`;
+    params.push(`%${remark}%`, `%${remark}%`);
+  }
+
+  if (wear_time_start && wear_time_end) {
+    let ws = wear_time_start;
+    let we = wear_time_end;
+    if (ws > we) [ws, we] = [we, ws];
+    sql += ` AND c.wear_time IS NOT NULL AND c.wear_time >= ? AND c.wear_time <= ?`;
+    params.push(ws, we);
+  } else if (wear_time) {
+    sql += ` AND c.wear_time = ?`;
+    params.push(wear_time);
+  }
+
+  if (preparation_time_start && preparation_time_end) {
+    let ps = preparation_time_start;
+    let pe = preparation_time_end;
+    if (ps > pe) [ps, pe] = [pe, ps];
+    sql += ` AND c.preparation_time IS NOT NULL AND c.preparation_time >= ? AND c.preparation_time <= ?`;
+    params.push(ps, pe);
+  } else if (preparation_time) {
+    sql += ` AND c.preparation_time = ?`;
+    params.push(preparation_time);
+  }
+
+  return { sql, params };
+}
+
+function parseProcessListMaterials(results) {
+  return results.map(item => {
+    let materials = [];
+    if (item.materials) {
+      try {
+        materials = typeof item.materials === 'string'
+          ? JSON.parse(item.materials)
+          : item.materials;
+        if (!Array.isArray(materials)) {
+          materials = [];
+        }
+      } catch (e) {
+        console.error("解析 materials JSON 失败:", e);
+        materials = [];
+      }
+    }
+    return {
+      ...item,
+      materials: materials
+    };
+  });
+}
+
+function sendProcessListResponse(body, res, options = {}) {
+  const { extraWhereSql = '', successMessage = '获取客户进度列表成功！' } = options;
+  const { currentPage = 1, pageSize = 10 } = body;
+
+  const { sql: whereSql, params } = buildProcessListWhere(body);
+  const sql = PROCESS_LIST_SELECT + whereSql + extraWhereSql;
+
+  const countSql = `SELECT COUNT(*) as total FROM (${sql}) as temp`;
+  const allDataSql = sql + PROCESS_LIST_ORDER_BY;
+  const paginatedSql = sql + PROCESS_LIST_ORDER_BY + ` LIMIT ?, ?`;
+  const paginatedParams = [...params, (currentPage - 1) * pageSize, pageSize];
+
   db.query(countSql, params, (err, countResults) => {
     if (err) return res.cc(err);
     const total = countResults[0].total;
 
-    const allDataSql = sql + orderBySql;
-    const paginatedSql = sql + orderBySql + ` LIMIT ?, ?`;
-    const paginatedParams = [...params, (currentPage - 1) * pageSize, pageSize];
-
-    const parseMaterials = (results) => {
-      return results.map(item => {
-        let materials = [];
-        if (item.materials) {
-          try {
-            materials = typeof item.materials === 'string' 
-              ? JSON.parse(item.materials) 
-              : item.materials;
-            if (!Array.isArray(materials)) {
-              materials = [];
-            }
-          } catch (e) {
-            console.error("解析 materials JSON 失败:", e);
-            materials = [];
-          }
-        }
-        return {
-          ...item,
-          materials: materials
-        };
-      });
-    };
-
     db.query(allDataSql, params, (err, allResults) => {
       if (err) return res.cc(err);
-      
+
       db.query(paginatedSql, paginatedParams, (err, paginatedResults) => {
         if (err) return res.cc(err);
-        
-        const allParsedResults = parseMaterials(allResults);
-        const paginatedParsedResults = parseMaterials(paginatedResults);
-        
+
+        const allParsedResults = parseProcessListMaterials(allResults);
+        const paginatedParsedResults = parseProcessListMaterials(paginatedResults);
+
         res.send({
           code: 0,
-          message: "获取客户进度列表成功！",
+          message: successMessage,
           re: {
             list: paginatedParsedResults,
             allList: allParsedResults,
@@ -123,6 +174,17 @@ exports.list = (req, res) => {
         });
       });
     });
+  });
+}
+
+exports.list = (req, res) => {
+  sendProcessListResponse(req.body, res, {});
+};
+
+exports.problemList = (req, res) => {
+  sendProcessListResponse(req.body, res, {
+    extraWhereSql: CUSTOMER_PROBLEM_MEDIA_WHERE,
+    successMessage: '获取客户问题列表成功！'
   });
 };
 
@@ -253,9 +315,11 @@ exports.detail = (req, res) => {
       c.materials,
       c.qr_code,
       c.remark,
+      c.remark AS customer_note,
       c.type,
       cp.id as process_id,
       cp.progress,
+      cp.progress_note,
       cp.technician,
       cp.image,
       cp.web_video,
@@ -268,8 +332,10 @@ exports.detail = (req, res) => {
       cp.mini_image,
       cp.factory_mini_image,
       cp.laxing_technician,
+      cp.intraoral_adjuster,
       y.edge_seating,
-      y.occlusion_status
+      y.occlusion_status,
+      y.chairside_note
     FROM customer c
     LEFT JOIN customer_process cp ON c.id = cp.customer_id
     LEFT JOIN yipan y ON c.id = y.customer_id
@@ -575,6 +641,74 @@ exports.updateMiniImage = (req, res) => {
         res.send({
           code: 0,
           message: "保存图片成功！",
+          re: null
+        });
+      });
+    }
+  });
+};
+
+exports.updateProgressNote = (req, res) => {
+  const { customer_id, progress_note } = req.body;
+  if (!customer_id) return res.cc("缺少客户ID！");
+  if (progress_note === undefined || progress_note === null) return res.cc("缺少进度问题描述！");
+
+  const progressNote = String(progress_note);
+  const checkSql = `SELECT id FROM customer_process WHERE customer_id=? LIMIT 1`;
+
+  db.query(checkSql, [customer_id], (err, results) => {
+    if (err) return res.cc(err);
+    if (results.length > 0) {
+      const updateSql = `UPDATE customer_process SET progress_note=?, updated_at=NOW() WHERE customer_id=?`;
+      db.query(updateSql, [progressNote, customer_id], (updateErr) => {
+        if (updateErr) return res.cc(updateErr);
+        res.send({
+          code: 0,
+          message: "更新进度问题描述成功！",
+          re: null
+        });
+      });
+    } else {
+      const insertSql = `INSERT INTO customer_process (customer_id, progress_note) VALUES (?, ?)`;
+      db.query(insertSql, [customer_id, progressNote], (insertErr) => {
+        if (insertErr) return res.cc(insertErr);
+        res.send({
+          code: 0,
+          message: "保存进度问题描述成功！",
+          re: null
+        });
+      });
+    }
+  });
+};
+
+exports.updateIntraoralAdjuster = (req, res) => {
+  const { customer_id, intraoral_adjuster } = req.body;
+  if (!customer_id) return res.cc("缺少客户ID！");
+  if (intraoral_adjuster === undefined || intraoral_adjuster === null) return res.cc("缺少口内调改师！");
+
+  const adjuster = String(intraoral_adjuster);
+  const checkSql = `SELECT id FROM customer_process WHERE customer_id=? LIMIT 1`;
+
+  db.query(checkSql, [customer_id], (err, results) => {
+    if (err) return res.cc(err);
+    if (results.length > 0) {
+      const updateSql = `UPDATE customer_process SET intraoral_adjuster=?, updated_at=NOW() WHERE customer_id=?`;
+      db.query(updateSql, [adjuster, customer_id], (updateErr) => {
+        if (updateErr) return res.cc(updateErr);
+        res.send({
+          code: 0,
+          message: "更新口内调改师成功！",
+          re: null
+        });
+      });
+    } else {
+      const insertSql = `INSERT INTO customer_process (customer_id, intraoral_adjuster) VALUES (?, ?)`;
+      db.query(insertSql, [customer_id, adjuster], (insertErr) => {
+        if (insertErr) return res.cc(insertErr);
+        res.send({
+          code: 0,
+          message: "保存口内调改师成功！",
           re: null
         });
       });

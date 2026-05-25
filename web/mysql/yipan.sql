@@ -3,6 +3,7 @@ DROP TABLE IF EXISTS `yipan`;
 CREATE TABLE `yipan` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `customer_id` int(11) NOT NULL COMMENT '客户ID，关联 customer.id；客户姓名查 customer.customer_name',
+  `shape_quality_inspector` varchar(50) DEFAULT NULL COMMENT '形态质检师',
   `chairside_doctor` varchar(50) DEFAULT NULL COMMENT '椅旁医生/椅旁技师',
   `quality_check_status` tinyint(1) DEFAULT NULL COMMENT '质检是否成功（0-未成功，1-成功）',
   `daily_wear_status` tinyint(1) DEFAULT NULL COMMENT '当日是否戴牙（0-未戴牙，1-已戴牙）',
@@ -12,11 +13,13 @@ CREATE TABLE `yipan` (
   `chairside_audio` varchar(255) DEFAULT NULL COMMENT '椅旁录音URL',
   `chairside_video` TEXT DEFAULT NULL COMMENT '椅旁视频URL',
   `yipan_image` TEXT DEFAULT NULL COMMENT '椅旁上传图片URL（逗号分隔）',
+  `chairside_note` text DEFAULT NULL COMMENT '椅旁问题描述',
   `start_time` datetime DEFAULT NULL COMMENT '开始椅旁时间（有值表示正在进行椅旁操作）',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_customer_id` (`customer_id`),
+  KEY `idx_shape_quality_inspector` (`shape_quality_inspector`),
   KEY `idx_chairside_doctor` (`chairside_doctor`),
   KEY `idx_start_time` (`start_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='椅旁操作当前状态表';

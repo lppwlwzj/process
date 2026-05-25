@@ -11,6 +11,14 @@ export function getProcessListApi(params: ProcessListRequest) {
   })
 }
 
+export function getProcessProblemListApi(params: ProcessListRequest) {
+  return request<ApiResponseData<{ list: ProcessData[]; allList: ProcessData[]; total: number }>>({
+    url: "process/problemList",
+    method: "post",
+    data: params
+  })
+}
+
 export function createProcessApi(data: ProcessFormData) {
   return request<ApiResponseData<null>>({
     url: "process/create",

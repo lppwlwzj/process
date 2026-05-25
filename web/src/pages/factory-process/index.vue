@@ -33,6 +33,7 @@ interface ProcessData {
   customer_name: string
   wear_time: string
   progress: string
+  progress_note?: string
   technician: string
   materials?: MaterialItem[]
   material?: string
@@ -41,6 +42,7 @@ interface ProcessData {
   remark?: string
   type?: string
   customer_remark?: string
+  customer_note?: string
   technician_audio?: string
   technician_video?: string
   chairside_audio?: string
@@ -62,6 +64,7 @@ interface ProcessData {
   mini_image?: string
   factory_mini_image?: string
   yipan_image?: string
+  chairside_note?: string
 }
 
 const loading = ref(false)
@@ -983,6 +986,12 @@ onMounted(() => {
             </template>
           </el-table-column>
 
+          <el-table-column prop="progress_note" label="进度问题描述" min-width="180" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span>{{ row.progress_note || '-' }}</span>
+            </template>
+          </el-table-column>
+
 
 
           <el-table-column prop="factory_mini_image" label="进度图片" min-width="280" align="left">
@@ -999,6 +1008,12 @@ onMounted(() => {
                 </div>
               </div>
               <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="chairside_note" label="椅旁问题描述" min-width="180" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span>{{ row.chairside_note || '-' }}</span>
             </template>
           </el-table-column>
 

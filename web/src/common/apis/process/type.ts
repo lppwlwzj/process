@@ -3,6 +3,7 @@ export interface ProcessData {
   customer_name: string
   wear_time: string
   progress: string
+  progress_note?: string
   technician: string
   material?: string
   image?: string
@@ -29,6 +30,7 @@ export interface ProcessData {
     customer_name: string
     wear_time: string
     progress: string
+  progress_note?: string
     technician: string
   material?: string
   image?: string
@@ -49,8 +51,12 @@ export interface ProcessListRequest {
   customer_name?: string
   progress?: string
   wear_time?: string
+  wear_time_start?: string
+  wear_time_end?: string
   technician?: string
   remark?: string
   type?: string
   preparation_time?: string
+  preparation_time_start?: string
+  preparation_time_end?: string
 } 

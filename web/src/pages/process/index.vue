@@ -3,8 +3,8 @@ import { ref, reactive, onMounted } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { VideoPlay, Search, Refresh, Delete, Upload } from "@element-plus/icons-vue"
 import { usePagination } from "@@/composables/usePagination"
-import { getProcessListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateMiniImageApi, updateTechnicianVideoApi, updateChairsideVideoApi, updateWebVideoApi, updateImageApi, uploadFileApi, updateYipanApi } from "@@/apis/process"
-import type { ProcessFormData } from "@@/apis/process/type"
+import { getProcessListApi, getProcessProblemListApi, createProcessApi, updateProcessApi, deleteProcessApi, getProcessDetailApi, batchDeleteProcessApi, updateMiniImageApi, updateTechnicianVideoApi, updateChairsideVideoApi, updateWebVideoApi, updateImageApi, uploadFileApi, updateYipanApi } from "@@/apis/process"
+import type { ProcessFormData, ProcessListRequest } from "@@/apis/process/type"
 import { getUserListApi } from "@@/apis/users"
 import { updateCustomerWearTimeApi } from "@@/apis/customers"
 import ProcessHistoryDialog from "./components/ProcessHistoryDialog.vue"
@@ -35,6 +35,7 @@ interface ProcessData {
   customer_name: string
   wear_time: string
   progress: string
+  progress_note?: string
   technician: string
   materials?: MaterialItem[]
   material?: string
@@ -42,6 +43,7 @@ interface ProcessData {
   image?: string
   remark?: string
   customer_remark?: string
+  customer_note?: string
   technician_audio?: string
   technician_video?: string
   chairside_audio?: string
@@ -61,6 +63,7 @@ interface ProcessData {
   mini_image?: string
   factory_mini_image?: string
   yipan_image?: string
+  chairside_note?: string
 
 }
 
@@ -73,11 +76,12 @@ const searchFormRef = ref()
 const searchData = reactive({
   customer_name: "",
   progress: "",
-  wear_time: "",
+  wear_time_range: null as [string, string] | null,
   technician: "",
   remark: "",
-  preparation_time: ""
+  preparation_time_range: null as [string, string] | null
 })
+const customerProblemMode = ref(false)
 
 
 const dialogVisible = ref(false)
@@ -122,23 +126,39 @@ const getMaterialLabel = (materialValue: string | string[]) => {
   return labels.join(', ')
 }
 
+const buildProcessListParams = (): ProcessListRequest => {
+  const base = {
+    currentPage: paginationData.currentPage,
+    pageSize: paginationData.pageSize,
+    type: "依口" as const
+  }
+  const listParams: ProcessListRequest = {
+    ...base,
+    customer_name: searchData.customer_name,
+    progress: searchData.progress,
+    technician: searchData.technician,
+    remark: searchData.remark
+  }
+  const wr = searchData.wear_time_range
+  if (wr && wr[0] && wr[1]) {
+    listParams.wear_time_start = wr[0]
+    listParams.wear_time_end = wr[1]
+  }
+  const pr = searchData.preparation_time_range
+  if (pr && pr[0] && pr[1]) {
+    listParams.preparation_time_start = pr[0]
+    listParams.preparation_time_end = pr[1]
+  }
+  return listParams
+}
+
 const getTableData = async () => {
   loading.value = true
   try {
-    const base = {
-      currentPage: paginationData.currentPage,
-      pageSize: paginationData.pageSize,
-      type: "依口" as const
-    }
-    const res = await getProcessListApi({
-      ...base,
-      wear_time: searchData.wear_time,
-      customer_name: searchData.customer_name,
-      progress: searchData.progress,
-      technician: searchData.technician,
-      remark: searchData.remark,
-      preparation_time: searchData.preparation_time
-    })
+    const listParams = buildProcessListParams()
+    const res = customerProblemMode.value
+      ? await getProcessProblemListApi(listParams)
+      : await getProcessListApi(listParams)
     if (res.re) {
       tableData.value = res.re.list
       const allData = res.re.allList
@@ -147,10 +167,16 @@ const getTableData = async () => {
     }
   } catch (error) {
     console.error("获取依口客户进度列表失败:", error)
-    ElMessage.error("获取依口客户进度列表失败")
+    ElMessage.error(customerProblemMode.value ? "获取客户问题列表失败" : "获取依口客户进度列表失败")
   } finally {
     loading.value = false
   }
+}
+
+const handleCustomerProblem = () => {
+  customerProblemMode.value = true
+  paginationData.currentPage = 1
+  getTableData()
 }
 
 const handleCurrentChange = (value: number) => {
@@ -164,6 +190,7 @@ const handleSizeChange = (value: number) => {
 }
 
 const handleSearch = () => {
+  customerProblemMode.value = false
   paginationData.currentPage = 1
   getTableData()
 }
@@ -171,12 +198,13 @@ const handleSearch = () => {
 
 
 const resetSearch = () => {
+  customerProblemMode.value = false
   searchData.customer_name = ""
   searchData.progress = ""
-  searchData.wear_time = ""
+  searchData.wear_time_range = null
   searchData.technician = ""
   searchData.remark = ""
-  searchData.preparation_time = ""
+  searchData.preparation_time_range = null
   handleSearch()
 }
 
@@ -848,10 +876,11 @@ onMounted(() => {
           <el-select v-model="searchData.progress" placeholder="请选择进度" clearable style="width: 200px;">
             <el-option v-for="item in progressOptions" :key="item.key" :label="item.label" :value="item.key" />
           </el-select>
-          <el-date-picker v-model="searchData.wear_time" type="date" format="MM-DD" value-format="MM-DD"
-            placeholder="戴牙日期" clearable style="width: 140px" />
-          <el-date-picker v-model="searchData.preparation_time" type="date" format="MM-DD" value-format="MM-DD"
-            placeholder="备牙日期" clearable style="width: 140px" />
+          <el-date-picker v-model="searchData.wear_time_range" type="daterange" format="MM-DD" value-format="MM-DD"
+            range-separator="至" start-placeholder="戴牙起" end-placeholder="戴牙止" clearable style="width: 220px" />
+          <el-date-picker v-model="searchData.preparation_time_range" type="daterange" format="MM-DD"
+            value-format="MM-DD" range-separator="至" start-placeholder="备牙起" end-placeholder="备牙止" clearable
+            style="width: 220px" />
 
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
           <el-button :icon="Refresh" @click="resetSearch">重置</el-button>
@@ -867,6 +896,8 @@ onMounted(() => {
         <el-button type="primary" @click="openProcessHistoryByDate">进度记录</el-button>
         <el-button type="primary" @click="openChairsideHistoryByDate">椅旁记录</el-button>
         <el-button type="primary" @click="openLaxingRecord">蜡型记录</el-button>
+        <el-button type="primary" @click="handleCustomerProblem">客户问题</el-button>
+
       </div>
       <div class="table-wrapper">
         <el-table :data="tableData" row-key="id" v-loading="loading" @selection-change="handleSelectionChange">
@@ -917,63 +948,37 @@ onMounted(() => {
               <span v-else>-</span>
             </template>
           </el-table-column>
+          <el-table-column prop="customer_note" label="蜡型修改问题描述" min-width="180" align="left" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span>{{ row.progress_note || '-' }}</span>
+            </template>
+          </el-table-column>
 
-          <el-table-column prop="laxing_technician" label="蜡型设计师" align="center" width="120">
+
+          <el-table-column prop="progress_note" label="进度问题描述" min-width="180" align="left" show-overflow-tooltip>
             <template #default="{ row }">
-              <span v-if="row.laxing_technician">{{ row.laxing_technician
-  == "herui" ? "何锐" : row.laxing_technician == "sunhanyu" ? "孙韩宇" : row.laxing_technician }}</span>
-              <span v-else style="color: #999;">-</span>
+              <span>{{ row.customer_note || '-' }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="edge_seating" label="边缘就位" align="center" width="100">
+
+          <el-table-column prop="mini_image" label="进度图片" min-width="180" align="left">
             <template #default="{ row }">
-              <el-tag v-if="row.edge_seating === 1" type="success">已就位</el-tag>
-              <el-tag v-else-if="row.edge_seating === 0" type="warning">未就位</el-tag>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="color_status" label="颜色质地" align="center" width="100">
-            <template #default="{ row }">
-              <el-tag v-if="row.color_status === 1" type="success">正常</el-tag>
-              <el-tag v-else-if="row.color_status === 0" type="danger">不正常</el-tag>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="occlusion_status" label="咬合状态" align="center" width="100">
-            <template #default="{ row }">
-              <el-tag v-if="row.occlusion_status === 1" type="success">正常</el-tag>
-              <el-tag v-else-if="row.occlusion_status === 0" type="danger">不正常</el-tag>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="daily_wear_status" label="当日戴牙" align="center">
-            <template #default="{ row }">
-              <el-tag v-if="row.daily_wear_status === 1" type="success">已戴牙</el-tag>
-              <el-tag v-else-if="row.daily_wear_status === 0" type="warning">未戴牙</el-tag>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="web_video" label="视频" min-width="280" align="left">
-            <template #default="{ row }">
-              <div v-if="row.web_video"
+              <div v-if="row.mini_image"
                 style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
-                <div v-for="(videoUrl, index) in getVideoList(row.web_video)" :key="index"
+                <div v-for="(imageUrl, index) in getVideoList(row.mini_image)" :key="index"
                   style="display: flex; align-items: center; gap: 4px;">
-                  <el-button type="primary" size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
-                    <el-icon style="margin-right: 0px;">
-                      <VideoPlay />
-                    </el-icon>
-                    {{ index + 1 }}
-                  </el-button>
+                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.mini_image)" :initial-index="index"
+                    fit="cover" style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;"
+                    preview-teleported />
                   <el-button type="danger" size="small" :icon="Delete" circle
-                    @click="handleDeleteWebVideo(row, videoUrl, index)" style="padding: 4px;" />
+                    @click="handleDeleteMiniImage(row, imageUrl, index)" style="padding: 4px;" />
                 </div>
               </div>
               <span v-else style="color: #999;">-</span>
             </template>
           </el-table-column>
 
-          <el-table-column prop="technician_video" label="进度视频" min-width="280" align="left">
+          <el-table-column prop="technician_video" label="进度视频" min-width="180" align="left">
             <template #default="{ row }">
               <div v-if="row.technician_video"
                 style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
@@ -994,61 +999,24 @@ onMounted(() => {
           </el-table-column>
 
 
-          <el-table-column prop="mini_image" label="进度图片" min-width="280" align="left">
+
+          <el-table-column prop="chairside_note" label="椅旁问题描述" min-width="180" align="left" show-overflow-tooltip>
             <template #default="{ row }">
-              <div v-if="row.mini_image"
-                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
-                <div v-for="(imageUrl, index) in getVideoList(row.mini_image)" :key="index"
-                  style="display: flex; align-items: center; gap: 4px;">
-                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.mini_image)" :initial-index="index"
-                    fit="cover" style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;"
-                    preview-teleported />
-                  <el-button type="danger" size="small" :icon="Delete" circle
-                    @click="handleDeleteMiniImage(row, imageUrl, index)" style="padding: 4px;" />
-                </div>
-              </div>
-              <span v-else style="color: #999;">-</span>
+              <span>{{ row.chairside_note || '-' }}</span>
             </template>
           </el-table-column>
 
-          <el-table-column prop="yipan_image" label="椅旁图片" min-width="280" align="left">
+          <el-table-column prop="yipan_image" label="椅旁图片" min-width="180" align="left">
             <template #default="{ row }">
               <div v-if="row.yipan_image"
                 style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
                 <div v-for="(imageUrl, index) in getVideoList(row.yipan_image)" :key="index"
                   style="display: flex; align-items: center; gap: 4px;">
-                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.yipan_image)"
-                    :initial-index="index" fit="cover"
-                    style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;" preview-teleported />
-                  <el-button type="danger" size="small" :icon="Delete" circle
-                    @click="handleDeleteYipanImage(row, imageUrl, index)" style="padding: 4px;" />
-                </div>
-              </div>
-              <span v-else style="color: #999;">-</span>
-            </template>
-          </el-table-column>
-
-          <el-table-column prop="preparation_time" label="备牙时间" align="center">
-            <template #default="{ row }">
-              {{ row.preparation_time ? row.preparation_time : '-' }}
-            </template>
-          </el-table-column>
-
-          <el-table-column prop="technician" label="技工师" align="center" />
-          <el-table-column prop="chairside_doctor" label="椅旁医生" align="center" />
-
-
-          <el-table-column prop="image" label="图片" min-width="260  " align="left">
-            <template #default="{ row }">
-              <div v-if="row.image"
-                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
-                <div v-for="(imageUrl, index) in getVideoList(row.image)" :key="index"
-                  style="display: flex; align-items: center; gap: 4px;">
-                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.image)" :initial-index="index"
+                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.yipan_image)" :initial-index="index"
                     fit="cover" style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;"
                     preview-teleported />
                   <el-button type="danger" size="small" :icon="Delete" circle
-                    @click="handleDeleteImage(row, imageUrl, index)" />
+                    @click="handleDeleteYipanImage(row, imageUrl, index)" style="padding: 4px;" />
                 </div>
               </div>
               <span v-else style="color: #999;">-</span>
@@ -1077,6 +1045,94 @@ onMounted(() => {
 
 
 
+
+          <el-table-column prop="laxing_technician" label="蜡型设计师" align="center" width="120">
+            <template #default="{ row }">
+              <span v-if="row.laxing_technician">{{ row.laxing_technician
+                == "herui" ? "何锐" : row.laxing_technician == "sunhanyu" ? "孙韩宇" : row.laxing_technician }}</span>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+
+
+          <el-table-column prop="edge_seating" label="边缘就位" align="center" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.edge_seating === 1" type="success">已就位</el-tag>
+              <el-tag v-else-if="row.edge_seating === 0" type="warning">未就位</el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="color_status" label="颜色质地" align="center" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.color_status === 1" type="success">正常</el-tag>
+              <el-tag v-else-if="row.color_status === 0" type="danger">不正常</el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="occlusion_status" label="咬合状态" align="center" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.occlusion_status === 1" type="success">正常</el-tag>
+              <el-tag v-else-if="row.occlusion_status === 0" type="danger">不正常</el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="daily_wear_status" label="当日戴牙" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.daily_wear_status === 1" type="success">已戴牙</el-tag>
+              <el-tag v-else-if="row.daily_wear_status === 0" type="warning">未戴牙</el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+
+
+          <el-table-column prop="preparation_time" label="备牙时间" align="center">
+            <template #default="{ row }">
+              {{ row.preparation_time ? row.preparation_time : '-' }}
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="technician" label="技工师" align="center" />
+          <el-table-column prop="chairside_doctor" label="椅旁医生" align="center" />
+
+
+          <el-table-column prop="image" label="图片" min-width="260  " align="left">
+            <template #default="{ row }">
+              <div v-if="row.image"
+                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
+                <div v-for="(imageUrl, index) in getVideoList(row.image)" :key="index"
+                  style="display: flex; align-items: center; gap: 4px;">
+                  <el-image :src="imageUrl" :preview-src-list="getVideoList(row.image)" :initial-index="index"
+                    fit="cover" style="width: 40px; height: 40px; cursor: pointer; border-radius: 4px;"
+                    preview-teleported />
+                  <el-button type="danger" size="small" :icon="Delete" circle
+                    @click="handleDeleteImage(row, imageUrl, index)" />
+                </div>
+              </div>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+
+
+
+          <el-table-column prop="web_video" label="视频" min-width="180" align="left">
+            <template #default="{ row }">
+              <div v-if="row.web_video"
+                style="display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; align-items: flex-start;">
+                <div v-for="(videoUrl, index) in getVideoList(row.web_video)" :key="index"
+                  style="display: flex; align-items: center; gap: 4px;">
+                  <el-button type="primary" size="small" @click="handlePlayVideo(videoUrl)" style="padding: 4px 8px;">
+                    <el-icon style="margin-right: 0px;">
+                      <VideoPlay />
+                    </el-icon>
+                    {{ index + 1 }}
+                  </el-button>
+                  <el-button type="danger" size="small" :icon="Delete" circle
+                    @click="handleDeleteWebVideo(row, videoUrl, index)" style="padding: 4px;" />
+                </div>
+              </div>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="320" align="center">
             <template #default="{ row }">
               <div style="display: flex; flex-direction: row;  align-items: center;">

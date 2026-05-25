@@ -21,6 +21,7 @@ interface LaxingRecord {
   prev_technician: string | null
   progress: string | null
   laxing_technician: string | null
+  intraoral_adjuster?: string | null
   created_at: string
 }
 
@@ -34,6 +35,7 @@ const emit = defineEmits<{
 
 const queryDateRange = ref<[string, string] | null>(null)
 const technicianFilter = ref("")
+const intraoralAdjusterFilter = ref("")
 const technicianOptions = ref<{ label: string; value: string }[]>([
   {
     label: "何锐",
@@ -44,6 +46,9 @@ const technicianOptions = ref<{ label: string; value: string }[]>([
     value: "sunhanyu"
   }
 ])
+
+const allTechnicianOptions = ref<{ label: string; value: string }[]>([])
+
 const loading = ref(false)
 const tableData = ref<LaxingRecord[]>([])
 
@@ -65,8 +70,8 @@ const loadTechnicianOptions = async () => {
     const res = (await getUserListApi()) as ApiResponseData<UserRow[]>
     if (res.code === 0 && res.re) {
       technicianOptions.value = res.re
-        .filter(u => u.role === "技师")
-        .map(u => ({ label: u.username, value: u.usercount }))
+        .filter(u => u.role === "医生椅旁技师")
+        .map(u => ({ label: u.username, value: u.usercount })).concat([...technicianOptions.value])
     }
   } catch (e) {
     console.error("获取技师列表失败:", e)
@@ -84,7 +89,8 @@ const handleSearch = async () => {
     const res = (await getLaxingRecordListApi({
       start_date: start,
       end_date: end,
-      ...(technicianFilter.value ? { technician: technicianFilter.value } : {})
+      ...(technicianFilter.value ? { technician: technicianFilter.value } : {}),
+      ...(intraoralAdjusterFilter.value ? { intraoral_adjuster: intraoralAdjusterFilter.value } : {})
     })) as ApiResponseData<LaxingRecord[]>
     tableData.value = res.code === 0 && res.re ? res.re : []
   } catch (e) {
@@ -113,6 +119,7 @@ const handleExport = () => {
       上一技师: getTechnicianName(row.prev_technician),
       客户进度: getProgressLabel(row.progress),
       蜡型设计师: getTechnicianName(row.laxing_technician),
+      口内调改师: getTechnicianName(row.intraoral_adjuster),
       切换时间: row.created_at ? dayjs(row.created_at).format("MM-DD HH:mm:ss") : "-"
     }))
     const wb = XLSX.utils.book_new()
@@ -123,6 +130,7 @@ const handleExport = () => {
       { wch: 12 },
       { wch: 12 },
       { wch: 14 },
+      { wch: 12 },
       { wch: 12 },
       { wch: 18 }
     ]
@@ -143,6 +151,7 @@ watch(
       const t = dayjs().format("YYYY-MM-DD")
       queryDateRange.value = [t, t]
       technicianFilter.value = ""
+      intraoralAdjusterFilter.value = ""
       tableData.value = []
       void loadTechnicianOptions()
     }
@@ -165,6 +174,10 @@ watch(
       />
       <span>技师</span>
       <el-select v-model="technicianFilter" clearable placeholder="全部" filterable style="width: 160px">
+        <el-option v-for="opt in technicianOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+      </el-select>
+      <span>口内调改师</span>
+      <el-select v-model="intraoralAdjusterFilter" clearable placeholder="全部" filterable style="width: 160px">
         <el-option v-for="opt in technicianOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
       </el-select>
       <el-button type="primary" @click="handleSearch">搜索</el-button>
@@ -193,6 +206,11 @@ watch(
         <el-table-column prop="laxing_technician" label="蜡型设计师" width="130" align="center">
           <template #default="{ row }">
             {{ getTechnicianName(row.laxing_technician) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="intraoral_adjuster" label="口内调改师" width="130" align="center">
+          <template #default="{ row }">
+            {{ getTechnicianName(row.intraoral_adjuster) }}
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="切换时间" width="180" align="center">

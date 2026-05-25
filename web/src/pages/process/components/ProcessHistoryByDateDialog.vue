@@ -45,7 +45,17 @@ const emit = defineEmits<{
 
 const queryDateRange = ref<[string, string] | null>(null)
 const technicianFilter = ref("")
-const technicianOptions = ref<{ label: string; value: string }[]>([])
+const materialFilter = ref("")
+const technicianOptions = ref<{ label: string; value: string }[]>([{
+  label: "何锐",
+  value: "herui"
+},
+{
+  label: "孙韩宇",
+  value: "sunhanyu"
+}])
+
+// const allTechnicianOptions = ref<{ label: string; value: string }[]>([])
 const loading = ref(false)
 const tableData = ref<HistoryRecord[]>([])
 
@@ -109,7 +119,8 @@ const loadByDate = async () => {
     const res = (await getProcessHistoryApi({
       start_date: start,
       end_date: end,
-      ...(technicianFilter.value ? { technician: technicianFilter.value } : {})
+      ...(technicianFilter.value ? { technician: technicianFilter.value } : {}),
+      ...(materialFilter.value ? { material: materialFilter.value } : {})
     })) as ApiResponseData<HistoryRecord[]>
     if (res.code === 0 && res.re) {
       tableData.value = sortProcessHistoryRows(res.re)
@@ -175,10 +186,9 @@ watch(
       const t = dayjs().format("YYYY-MM-DD")
       queryDateRange.value = [t, t]
       technicianFilter.value = ""
+      materialFilter.value = ""
       tableData.value = []
-      if (!technicianOptions.value.length) {
-        loadTechnicianOptions()
-      }
+      loadTechnicianOptions()
     }
   }
 )
@@ -188,18 +198,15 @@ watch(
   <el-dialog :model-value="props.visible" title="按日期查询进度记录" width="1000px" @close="handleClose">
     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap">
       <span>日期范围</span>
-      <el-date-picker
-        v-model="queryDateRange"
-        type="daterange"
-        range-separator="至"
-        start-placeholder="开始日期"
-        end-placeholder="结束日期"
-        value-format="YYYY-MM-DD"
-        style="width: 280px"
-      />
+      <el-date-picker v-model="queryDateRange" type="daterange" range-separator="至" start-placeholder="开始日期"
+        end-placeholder="结束日期" value-format="YYYY-MM-DD" style="width: 280px" />
       <span>技师</span>
       <el-select v-model="technicianFilter" clearable placeholder="全部" filterable style="width: 160px">
         <el-option v-for="opt in technicianOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+      </el-select>
+      <span>材料</span>
+      <el-select v-model="materialFilter" clearable placeholder="全部" filterable style="width: 200px">
+        <el-option v-for="opt in materialOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
       </el-select>
       <el-button type="primary" @click="loadByDate">确定</el-button>
       <el-button type="primary" :disabled="tableData.length === 0" @click="handleExcelDownload">进度记录excel下载</el-button>

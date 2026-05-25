@@ -46,6 +46,8 @@ const install = (Vue, vm) => {
     
     // 更新技工视频
     updateTechnicianVideo: (data) => vm.$u.http.post("/api/process/updateTechnicianVideo", data),
+    updateProgressNote: (data) => vm.$u.http.post("/api/process/updateProgressNote", data),
+    updateIntraoralAdjuster: (data) => vm.$u.http.post("/api/process/updateIntraoralAdjuster", data),
     
     // 椅旁操作
     addYipan: (data) => vm.$u.http.post("/api/yipan/add", data),

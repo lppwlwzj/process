@@ -200,22 +200,45 @@ page {
 .action-card {
   background: #ffffff;
   border-radius: 24rpx;
-  padding: 30rpx;
+  padding: 16rpx 30rpx;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   box-shadow: 0 4rpx 16rpx rgba(255, 117, 140, 0.08);
   transition: all 0.3s;
   position: relative;
+  min-height: 200rpx;
 }
 
 .card-content {
   display: flex;
+  align-items: center;
   width: 100%;
+  justify-content: space-between;
   position: relative;
 }
 
+.card-label {
+  font-size: 32rpx;
+  color: #1a1a1a;
+  font-weight: 500;
+  text-align: center;
+  transition: color 0.3s;
+}
+
 .note-card {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 0;
+  align-items: stretch;
+  justify-content: flex-start;
+
   .note-content {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     flex-direction: column;
     align-items: flex-start;
     justify-content: flex-start;
@@ -243,6 +266,65 @@ page {
     &.note-empty {
       color: #ccc;
     }
+  }
+
+  .progress-note-input {
+    display: block;
+    align-self: stretch;
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 140rpx;
+    height: 160rpx;
+    box-sizing: border-box;
+    padding: 18rpx 20rpx;
+    border-radius: 16rpx;
+    background: #fff8fa;
+    border: none !important;
+    outline: none;
+    font-size: 28rpx;
+    line-height: 1.5;
+    color: #1a1a1a;
+  }
+
+  .progress-note-input ::v-deep .uni-textarea-wrapper {
+    width: 100% !important;
+    min-height: 140rpx;
+    box-sizing: border-box;
+    border: none !important;
+    border-radius: 16rpx;
+    background: #fff8fa;
+  }
+
+  .progress-note-input ::v-deep .uni-textarea-textarea {
+    width: 100% !important;
+    min-height: 124rpx;
+    box-sizing: border-box;
+    border: none !important;
+    outline: none;
+    background: transparent;
+  }
+
+  .progress-note-input ::v-deep .uni-textarea-compute {
+    position: absolute !important;
+    visibility: hidden !important;
+    z-index: -1 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+  }
+
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 140rpx;
+    padding: 18rpx 20rpx;
+    font-size: 28rpx;
+    line-height: 1.5;
+    color: #1a1a1a;
+    background: transparent;
+    border: none;
+    outline: none;
   }
 }
 

@@ -4,8 +4,10 @@ CREATE TABLE `customer_process` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `customer_id` int(11) NOT NULL COMMENT '客户ID',
   `progress` varchar(50) DEFAULT NULL COMMENT '进度（未开始、进行中、已完成）',
+  `progress_note` text DEFAULT NULL COMMENT '进度问题描述',
   `technician` varchar(50) DEFAULT NULL COMMENT '技工师',
   `laxing_technician` varchar(50) DEFAULT NULL COMMENT '蜡型技师',
+  `intraoral_adjuster` varchar(50) DEFAULT NULL COMMENT '口内调改师',
   `image` TEXT DEFAULT NULL COMMENT '图片URL',
   `mini_image` TEXT DEFAULT NULL COMMENT '小程序图片URL',
   `factory_mini_image` TEXT DEFAULT NULL COMMENT '小程序图片URL',
@@ -20,7 +22,8 @@ CREATE TABLE `customer_process` (
   PRIMARY KEY (`id`),
   KEY `idx_customer_id` (`customer_id`),
   KEY `idx_progress` (`progress`),
-  KEY `idx_technician` (`technician`)
+  KEY `idx_technician` (`technician`),
+  KEY `idx_intraoral_adjuster` (`intraoral_adjuster`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='客户进度表';
 
 INSERT INTO `customer_process`

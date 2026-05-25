@@ -123,13 +123,14 @@ exports.completeChairside = (req, res) => {
     
     const insertHistorySql = `
       INSERT INTO yipan_history 
-      (customer_id,customer_name, progress, chairside_doctor, start_time, end_time, duration_minutes) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (customer_id,customer_name, progress, shape_quality_inspector, chairside_doctor, start_time, end_time, duration_minutes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const historyParams = [
       customer_id,
       yipanRecord.customer_name || "",
       yipanRecord.progress || "未知",
+      yipanRecord.shape_quality_inspector || null,
       yipanRecord.chairside_doctor,
       yipanRecord.start_time,
       endTime,
@@ -149,6 +150,7 @@ exports.completeChairside = (req, res) => {
           message: "完成椅旁操作成功",
           re: {
             history_id: historyResults.insertId,
+            shape_quality_inspector: yipanRecord.shape_quality_inspector,
             chairside_doctor: yipanRecord.chairside_doctor,
             start_time: yipanRecord.start_time,
             end_time: endTime,
@@ -254,7 +256,7 @@ exports.updateChairsideVideo = (req, res) => {
 };
 
 exports.getHistory = (req, res) => {
-  const { customer_id, date, start_date, end_date, chairside_doctor } = req.body;
+  const { customer_id, date, start_date, end_date, chairside_doctor, shape_quality_inspector } = req.body;
 
   const conditions = [];
   const params = [];
@@ -274,6 +276,10 @@ exports.getHistory = (req, res) => {
     conditions.push(`h.chairside_doctor = ?`);
     params.push(chairside_doctor);
   }
+  if (shape_quality_inspector) {
+    conditions.push(`h.shape_quality_inspector = ?`);
+    params.push(shape_quality_inspector);
+  }
 
   const mapMaterials = (results) =>
     (results || []).map((row) => {
@@ -290,26 +296,34 @@ exports.getHistory = (req, res) => {
       }
       return { ...row, materials: Array.isArray(m) ? m : [] };
     });
+  const getLatestByCustomerId = (results) => {
+    const seenCustomerIds = new Set();
+    return (results || []).filter((row) => {
+      if (seenCustomerIds.has(row.customer_id)) return false;
+      seenCustomerIds.add(row.customer_id);
+      return true;
+    });
+  };
 
   if (conditions.length === 0) {
-    const sql = `SELECT h.*, c.materials AS materials FROM yipan_history h LEFT JOIN customer c ON h.customer_id = c.id ORDER BY h.start_time DESC`;
+    const sql = `SELECT h.*, c.materials AS materials FROM yipan_history h LEFT JOIN customer c ON h.customer_id = c.id ORDER BY h.start_time DESC, h.id DESC`;
     return db.query(sql, [], function (err, results) {
       if (err) return res.cc(err);
-      res.send({ code: 0, message: "获取椅旁历史记录成功", re: mapMaterials(results) });
+      res.send({ code: 0, message: "获取椅旁历史记录成功", re: mapMaterials(getLatestByCustomerId(results)) });
     });
   }
   if (!customer_id && !date && !(start_date && end_date)) {
     return res.cc("缺少客户ID或日期！");
   }
 
-  const sql = `SELECT h.*, c.materials AS materials FROM yipan_history h LEFT JOIN customer c ON h.customer_id = c.id WHERE ${conditions.join(" AND ")} ORDER BY h.start_time DESC`;
+  const sql = `SELECT h.*, c.materials AS materials FROM yipan_history h LEFT JOIN customer c ON h.customer_id = c.id WHERE ${conditions.join(" AND ")} ORDER BY h.start_time DESC, h.id DESC`;
 
   db.query(sql, params, function (err, results) {
     if (err) return res.cc(err);
     res.send({
       code: 0,
       message: "获取椅旁历史记录成功",
-      re: mapMaterials(results)
+      re: mapMaterials(getLatestByCustomerId(results))
     });
   });
 };
@@ -342,7 +356,7 @@ exports.addLaxingRecord = (req, res) => {
 };
 
 exports.getLaxingRecordList = (req, res) => {
-  const { customer_id, technician, start_date, end_date } = req.body;
+  const { customer_id, technician, intraoral_adjuster, start_date, end_date } = req.body;
 
   const conditions = [];
   const params = [];
@@ -354,6 +368,10 @@ exports.getLaxingRecordList = (req, res) => {
   if (technician) {
     conditions.push(`lh.technician = ?`);
     params.push(technician);
+  }
+  if (intraoral_adjuster) {
+    conditions.push(`cp.intraoral_adjuster = ?`);
+    params.push(intraoral_adjuster);
   }
   if (start_date && end_date) {
     conditions.push(`DATE(lh.created_at) >= ? AND DATE(lh.created_at) <= ?`);
@@ -368,21 +386,28 @@ exports.getLaxingRecordList = (req, res) => {
       c.customer_name,
       cp.progress,
       cp.technician AS cp_technician,
-      cp.laxing_technician
+      cp.laxing_technician,
+      cp.intraoral_adjuster
     FROM laxing_history lh
     LEFT JOIN customer c ON lh.customer_id = c.id
     LEFT JOIN customer_process cp ON lh.customer_id = cp.customer_id
     ${where}
-    ORDER BY lh.created_at DESC
+    ORDER BY lh.created_at DESC, lh.id DESC
   `;
 
   db.query(sql, params, function (err, results) {
     if (err) return res.cc(err);
+    const seenCustomerIds = new Set();
+    const dedupedResults = (results || []).filter((item) => {
+      if (seenCustomerIds.has(item.customer_id)) return false;
+      seenCustomerIds.add(item.customer_id);
+      return true;
+    });
 
     res.send({
       code: 0,
       message: "获取蜡型记录成功",
-      re: results
+      re: dedupedResults
     });
   });
 };

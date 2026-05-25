@@ -6,6 +6,7 @@ export interface ProcessHistoryParams {
   start_date?: string
   end_date?: string
   technician?: string
+  material?: string
 }
 
 export function getProcessHistoryApi(data: ProcessHistoryParams) {

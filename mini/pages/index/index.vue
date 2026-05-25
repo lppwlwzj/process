@@ -92,10 +92,21 @@
           </view>
         </view>
 
-        <view class="action-card  full-width-card" style="min-height: 0;padding:36rpx" @click="openLaxingTechnicianPicker">
+        <view class="action-card  full-width-card" style="min-height: 0;padding:36rpx"
+          @click="openLaxingTechnicianPicker">
           <view class="card-content">
             <view class="card-text">
               <text class="card-label">蜡型设计师：{{ laxingTechnicianLabel || '请选择' }}</text>
+            </view>
+            <text class="card-arrow">›</text>
+          </view>
+        </view>
+
+        <view class="action-card  full-width-card" style="min-height: 0;padding:36rpx"
+          @click="openIntraoralAdjusterPicker">
+          <view class="card-content">
+            <view class="card-text">
+              <text class="card-label">口内调改师：{{ intraoralAdjusterLabel || '请选择' }}</text>
             </view>
             <text class="card-arrow">›</text>
           </view>
@@ -108,16 +119,24 @@
             </view>
           </view>
         </view>
-
+        <view class="action-card note-card full-width-card">
+          <view class="card-content note-content">
+            <text class="card-label note-label"> 蜡型修改问题描述</text>
+            <textarea v-model="progressNoteInput" id="progress_note" name="progress_note" class="progress-note-input"
+              @input="handleProgressNoteInput"></textarea>
+          </view>
+        </view>
 
         <view class="action-card note-card full-width-card">
           <view class="card-content note-content">
-            <text class="card-label note-label">文字备注</text>
+            <text class="card-label note-label">进度问题描述</text>
             <text class="note-value" :class="{ 'note-empty': !form.customer_note }">{{ form.customer_note || '暂无备注'
               }}</text>
           </view>
-
         </view>
+
+
+
         <view class="action-card note-card full-width-card">
           <view class="card-content note-content">
             <video-list label="视频备注"
@@ -142,7 +161,7 @@
           </view>
         </view> -->
 
-        <!-- <view class="action-card">
+        <!-- <view class="actppion-card">
           <view class="card-icon-wrapper">
             <text class="card-icon">🎙</text>
           </view>
@@ -161,14 +180,19 @@
 
     </view>
 
-    <u-action-sheet :show="showProgressPicker" :actions="progressActions" title="选择进度"
-      closeOnClickOverlay @select="onProgressSelect" @close="showProgressPicker = false"></u-action-sheet>
+    <u-action-sheet :show="showProgressPicker" :actions="progressActions" title="选择进度" closeOnClickOverlay
+      @select="onProgressSelect" @close="showProgressPicker = false"></u-action-sheet>
 
-    <u-action-sheet :show="showTechnicianPicker" :actions="technicianActions" title="选择技工师"
-      closeOnClickOverlay @select="onTechnicianSelect" @close="showTechnicianPicker = false"></u-action-sheet>
+    <u-action-sheet :show="showTechnicianPicker" :actions="technicianActions" title="选择技工师" closeOnClickOverlay
+      @select="onTechnicianSelect" @close="showTechnicianPicker = false"></u-action-sheet>
 
     <u-action-sheet :show="showLaxingTechnicianPicker" :actions="laxingTechnicianActions" title="选择蜡型设计师"
-      closeOnClickOverlay @select="onLaxingTechnicianSelect" @close="showLaxingTechnicianPicker = false"></u-action-sheet>
+      closeOnClickOverlay @select="onLaxingTechnicianSelect"
+      @close="showLaxingTechnicianPicker = false"></u-action-sheet>
+
+    <u-action-sheet :show="showIntraoralAdjusterPicker" :actions="intraoralAdjusterActions" title="选择口内调改师"
+      closeOnClickOverlay @select="onIntraoralAdjusterSelect"
+      @close="showIntraoralAdjusterPicker = false"></u-action-sheet>
 
     <u-modal :show="confirmModalShow" title="确认操作" content="确定要开始操作吗？" :showCancelButton="true"
       @confirm="onConfirmStart" @cancel="confirmModalShow = false" @close="confirmModalShow = false"></u-modal>
@@ -225,6 +249,7 @@ export default {
         web_video: "",
         preparation_time: "",
         progress: "",
+        progress_note: "",
         technician: "",
         materials: [],
         remark: "",
@@ -237,12 +262,15 @@ export default {
 
         edge_seating: null,
         occlusion_status: null,
-        laxing_technician: ""
+        laxing_technician: "",
+        intraoral_adjuster: ""
       },
       progressLabel: "",
       technicianLabel: "",
       showProgressPicker: false,
       showTechnicianPicker: false,
+      progressNoteInput: "",
+      progressNoteDebounceTimer: null,
       isSubmitting: false,
       confirmModalShow: false,
       successModalShow: false,
@@ -264,6 +292,9 @@ export default {
       technicianActions: [],
       laxingTechnicianLabel: "",
       showLaxingTechnicianPicker: false,
+      intraoralAdjusterLabel: "",
+      showIntraoralAdjusterPicker: false,
+      intraoralAdjusterActions: [],
       laxingTechnicianActions: [
         {
           name: "何锐",
@@ -314,9 +345,42 @@ export default {
     }
   },
 
+  onUnload() {
+    this.clearProgressNoteDebounce();
+  },
+
   options: { styleIsolation: "shared" },
 
   methods: {
+    clearProgressNoteDebounce() {
+      if (this.progressNoteDebounceTimer) {
+        clearTimeout(this.progressNoteDebounceTimer);
+        this.progressNoteDebounceTimer = null;
+      }
+    },
+    handleProgressNoteInput() {
+      this.clearProgressNoteDebounce();
+      this.progressNoteDebounceTimer = setTimeout(() => {
+        this.form.progress_note = this.progressNoteInput || "";
+        this.updateProgressNoteToDatabase();
+        this.progressNoteDebounceTimer = null;
+      }, 300);
+    },
+    syncProgressNoteImmediately() {
+      this.clearProgressNoteDebounce();
+      this.form.progress_note = this.progressNoteInput || "";
+    },
+    async updateProgressNoteToDatabase() {
+      if (!this.customerId) return;
+      try {
+        await this.$api.updateProgressNote({
+          customer_id: this.customerId,
+          progress_note: this.form.progress_note || ""
+        });
+      } catch (err) {
+        console.error("更新进度问题描述失败:", err);
+      }
+    },
     getMaterialsList() {
       if (!this.form.materials || !Array.isArray(this.form.materials) || this.form.materials.length === 0) {
         // 如果没有 materials，返回一个空数组（不显示任何卡片）
@@ -367,13 +431,16 @@ export default {
             ...res.re,
             materials: materials
           }
+          this.progressNoteInput = this.form.progress_note || "";
           await this.fetchTechnicians(this.form.type);
+          await this.fetchIntraoralAdjusters();
           // await this.fetchLaxingTechnicians();
           this.cacheLastProgress = this.form.progress;
           this.cacheLastTechnician = this.form.technician;
           this.progressLabel = this.progressColumns[0].find(item => item.key === this.form.progress)?.label || "";
           this.technicianLabel = (this.technicianActions.find(item => item.key === this.form.technician) || {}).name || "";
           this.laxingTechnicianLabel = (this.laxingTechnicianActions.find(item => item.key === this.form.laxing_technician) || {}).name || this.form.laxing_technician || "";
+          this.intraoralAdjusterLabel = (this.intraoralAdjusterActions.find(item => item.key === this.form.intraoral_adjuster) || {}).name || this.form.intraoral_adjuster || "";
         } else {
           console.error("获取客户详情失败:", res);
           this.$refs.uToast.show({ message: "获取客户信息失败" });
@@ -623,12 +690,36 @@ export default {
       }
     },
 
+    async fetchIntraoralAdjusters() {
+      try {
+        const res = await this.$api.getUserList();
+        if (res.code === 0 && res.re) {
+          this.intraoralAdjusterActions = res.re
+            .filter(user => user.role === "医生椅旁技师")
+            .map(user => ({ name: user.username, key: user.usercount }));
+        } else {
+          this.intraoralAdjusterActions = [];
+        }
+      } catch (err) {
+        console.error("请求口内调改师列表失败:", err);
+        this.intraoralAdjusterActions = [];
+      }
+    },
+
     openLaxingTechnicianPicker() {
       if (!this.laxingTechnicianActions || !this.laxingTechnicianActions.length) {
         this.$refs.uToast.show({ message: "技师列表加载中，请稍候" });
         return;
       }
       this.showLaxingTechnicianPicker = true;
+    },
+
+    openIntraoralAdjusterPicker() {
+      if (!this.intraoralAdjusterActions || !this.intraoralAdjusterActions.length) {
+        this.$refs.uToast.show({ message: "口内调改师列表加载中，请稍候" });
+        return;
+      }
+      this.showIntraoralAdjusterPicker = true;
     },
 
     async onLaxingTechnicianSelect(item) {
@@ -658,6 +749,37 @@ export default {
         this.$refs.uToast.show({ message: "更新失败" });
         this.form.laxing_technician = prevTechnician;
         this.laxingTechnicianLabel = (this.laxingTechnicianActions.find(item => item.key === prevTechnician) || {}).name || "";
+      } finally {
+        uni.hideLoading();
+      }
+    },
+
+    async onIntraoralAdjusterSelect(item) {
+      this.showIntraoralAdjusterPicker = false;
+      const prevAdjuster = this.form.intraoral_adjuster;
+      this.form.intraoral_adjuster = item.key;
+      this.intraoralAdjusterLabel = item.name;
+
+      if (!this.customerId) return;
+
+      uni.showLoading({ title: "提交中..." });
+      try {
+        const res = await this.$api.updateIntraoralAdjuster({
+          customer_id: this.customerId,
+          intraoral_adjuster: item.key
+        });
+        if (res.code === 0) {
+          this.$refs.uToast.show({ message: "口内调改师已更新", type: "success" });
+        } else {
+          this.$refs.uToast.show({ message: res.message || "更新失败" });
+          this.form.intraoral_adjuster = prevAdjuster;
+          this.intraoralAdjusterLabel = (this.intraoralAdjusterActions.find(item => item.key === prevAdjuster) || {}).name || "";
+        }
+      } catch (err) {
+        console.error("更新口内调改师失败:", err);
+        this.$refs.uToast.show({ message: "更新失败" });
+        this.form.intraoral_adjuster = prevAdjuster;
+        this.intraoralAdjusterLabel = (this.intraoralAdjusterActions.find(item => item.key === prevAdjuster) || {}).name || "";
       } finally {
         uni.hideLoading();
       }
@@ -748,6 +870,7 @@ export default {
     async onConfirmStart() {
       this.confirmModalShow = false;
       if (this.isSubmitting) return;
+      this.syncProgressNoteImmediately();
       const newProgress = this.form.progress;
       const newTechnician = this.form.technician;
       this.isSubmitting = true;
@@ -759,6 +882,7 @@ export default {
           customer_name: this.form.customer_name,
           progress: newProgress,
           technician: newTechnician,
+          progress_note: this.form.progress_note,
           start_time: startTime
         });
         uni.hideLoading();

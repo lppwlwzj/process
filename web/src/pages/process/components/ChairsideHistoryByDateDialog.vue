@@ -23,6 +23,7 @@ interface ChairsideHistoryRecord {
   customer_id: number
   customer_name: string
   progress: string | null
+  shape_quality_inspector?: string | null
   chairside_doctor: string
   start_time: string
   end_time: string
@@ -42,6 +43,7 @@ const emit = defineEmits<{
 
 const queryDateRange = ref<[string, string] | null>(null)
 const chairsideFilter = ref("")
+const shapeInspectorFilter = ref("")
 const chairsideOptions = ref<{ label: string; value: string }[]>([])
 const loading = ref(false)
 const tableData = ref<ChairsideHistoryRecord[]>([])
@@ -107,7 +109,8 @@ const loadByDate = async () => {
     const res = (await getYipanHistoryApi({
       start_date: start,
       end_date: end,
-      ...(chairsideFilter.value ? { chairside_doctor: chairsideFilter.value } : {})
+      ...(chairsideFilter.value ? { chairside_doctor: chairsideFilter.value } : {}),
+      ...(shapeInspectorFilter.value ? { shape_quality_inspector: shapeInspectorFilter.value } : {})
     })) as ApiResponseData<ChairsideHistoryRecord[]>
     if (res.code === 0 && res.re) {
       tableData.value = res.re
@@ -134,6 +137,7 @@ const handleExcelDownload = () => {
       客户名称: row.customer_name || "-",
       材料与数量: formatMaterialsText(row.materials),
       序号: index + 1,
+      形态质检师: getDoctorName(row.shape_quality_inspector),
       椅旁医生技师: getDoctorName(row.chairside_doctor),
       进度: getProgressLabel(row.progress),
       开始时间: row.start_time ? dayjs(row.start_time).format("MM-DD HH:mm:ss") : "-",
@@ -147,6 +151,7 @@ const handleExcelDownload = () => {
       { wch: 14 },
       { wch: 28 },
       { wch: 8 },
+      { wch: 15 },
       { wch: 15 },
       { wch: 12 },
       { wch: 20 },
@@ -171,6 +176,7 @@ watch(
       const t = dayjs().format("YYYY-MM-DD")
       queryDateRange.value = [t, t]
       chairsideFilter.value = ""
+      shapeInspectorFilter.value = ""
       tableData.value = []
       if (!chairsideOptions.value.length) {
         loadChairsideOptions()
@@ -197,6 +203,11 @@ watch(
       <el-select v-model="chairsideFilter" clearable placeholder="全部" filterable style="width: 160px">
         <el-option v-for="opt in chairsideOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
       </el-select>
+      <span>形态质检师</span>
+      <el-select v-model="shapeInspectorFilter" clearable placeholder="全部" filterable style="width: 160px">
+        <el-option v-for="opt in chairsideOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+      </el-select>
+      
       <el-button type="primary" @click="loadByDate">确定</el-button>
       <el-button type="primary" :disabled="tableData.length === 0" @click="handleExcelDownload">椅旁记录excel下载</el-button>
     </div>
@@ -214,6 +225,11 @@ watch(
           </template>
         </el-table-column>
         <el-table-column type="index" label="序号" width="60" align="center" />
+        <el-table-column prop="shape_quality_inspector" label="形态质检师" width="150" align="center">
+          <template #default="{ row }">
+            {{ getDoctorName(row.shape_quality_inspector) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="chairside_doctor" label="椅旁医生/技师" width="150" align="center">
           <template #default="{ row }">
             {{ getDoctorName(row.chairside_doctor) }}

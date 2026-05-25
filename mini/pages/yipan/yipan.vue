@@ -1,6 +1,13 @@
 <template>
   <view class="content" :style="{ paddingTop: statusBarHeight }">
     <view class="page-title">贴面质检</view>
+
+    <button class="full-btn" :class="{ disabled: isOperationInProgress }" @click="openShapeInspectorPicker">
+      <view class="btn-icon">⚕</view>
+      <view class="btn-text">形态质检师：{{ selectedShapeInspectorDisplay || '请选择' }}</view>
+      <view class="arrow">›</view>
+    </button>
+
     <view class="form-container">
       <view class="btn-row">
         <button class="icon-btn status-btn" :class="{ active: edgeSeating === 'seated' }"
@@ -56,8 +63,7 @@
         </button>
       </view>
 
-      <button class="full-btn" :class="{ disabled: isOperationInProgress }"
-        @click="openDoctorPicker">
+      <button class="full-btn" :class="{ disabled: isOperationInProgress }" @click="openDoctorPicker">
         <view class="btn-icon">⚕</view>
         <view class="btn-text">医生/椅旁技师：{{ selectedDoctorDisplay }}</view>
         <view class="arrow">›</view>
@@ -74,6 +80,14 @@
           <view class="btn-icon error">✕</view>
           <view class="btn-text">当日未戴牙</view>
         </button>
+      </view>
+
+      <view class="action-card note-card full-width-card">
+        <view class="card-content note-content">
+          <text class="card-label note-label">椅旁问题描述</text>
+          <textarea class="progress-note-input" v-model="form.chairside_note" maxlength="1000"
+            @blur="handleChairsideNoteBlur"></textarea>
+        </view>
       </view>
 
       <view class="btn-row">
@@ -101,8 +115,10 @@
 
     <view class="yipan-action-btn" @click="goToYipan">客户进度表</view>
 
-    <u-action-sheet :show="showDoctorPicker" :actions="doctorActions" title="选择医生/椅旁技师"
-      closeOnClickOverlay @select="onDoctorSelect" @close="showDoctorPicker = false"></u-action-sheet>
+    <u-action-sheet :show="showDoctorPicker" :actions="doctorActions" title="选择医生/椅旁技师" closeOnClickOverlay
+      @select="onDoctorSelect" @close="showDoctorPicker = false"></u-action-sheet>
+    <u-action-sheet :show="showShapeInspectorPicker" :actions="doctorActions" title="选择形态质检师" closeOnClickOverlay
+      @select="onShapeInspectorSelect" @close="showShapeInspectorPicker = false"></u-action-sheet>
 
     <u-modal :show="startModalShow" title="确认开始椅旁" :content="startModalContent" :showCancelButton="true"
       @confirm="onConfirmStartChairside" @cancel="startModalShow = false" @close="startModalShow = false"></u-modal>
@@ -133,6 +149,7 @@ export default {
       form: {
         customer_id: null,
         customer_name: "",
+        shape_quality_inspector: "",
         chairside_doctor: "",
         daily_wear_status: null,
         edge_seating: null,
@@ -140,16 +157,19 @@ export default {
         chairside_audio: "",
         chairside_video: "",
         yipan_image: "",
+        chairside_note: "",
         start_time: null,
         color_status: null
       },
       currentOperation: "",
+      selectedShapeInspector: "",
       selectedDoctor: "",
       wearStatus: "",
       edgeSeating: "",
       occlusionStatus: "",
       colorStatus: "",
       showDoctorPicker: false,
+      showShapeInspectorPicker: false,
       doctorActions: [],
       canStartChairside: false,
       canCompleteChairside: false,
@@ -164,6 +184,10 @@ export default {
   },
 
   computed: {
+    selectedShapeInspectorDisplay() {
+      const d = this.doctorActions.find(item => item.key === this.selectedShapeInspector);
+      return d ? d.name : this.selectedShapeInspector;
+    },
     selectedDoctorDisplay() {
       const d = this.doctorActions.find(item => item.key === this.selectedDoctor);
       return d ? d.name : this.selectedDoctor;
@@ -301,6 +325,7 @@ export default {
         if (res.code === 0 && res.re) {
           const data = res.re;
 
+          this.selectedShapeInspector = data.shape_quality_inspector || "";
           this.selectedDoctor = data.chairside_doctor || "";
           this.isOperationInProgress = !!data.start_time;
 
@@ -324,6 +349,7 @@ export default {
             ...this.form,
             customer_id: this.customerId,
             customer_name: this.customerName,
+            shape_quality_inspector: data.shape_quality_inspector || "",
             chairside_doctor: data.chairside_doctor || "",
             daily_wear_status: data.daily_wear_status,
             edge_seating: data.edge_seating,
@@ -331,7 +357,9 @@ export default {
             chairside_audio: data.chairside_audio || "",
             chairside_video: data.chairside_video || "",
             yipan_image: data.yipan_image || "",
-            start_time: data.start_time
+            chairside_note: data.chairside_note || "",
+            start_time: data.start_time,
+            color_status: data.color_status
           };
 
           this.updateButtonStates();
@@ -482,6 +510,43 @@ export default {
       this.showDoctorPicker = true;
     },
 
+    openShapeInspectorPicker() {
+      if (this.isOperationInProgress) return;
+      if (!this.doctorActions || !this.doctorActions.length) {
+        this.$refs.uToast.show({ message: "医生列表加载中，请稍候" });
+        return;
+      }
+      this.showShapeInspectorPicker = true;
+    },
+
+    async onShapeInspectorSelect(item) {
+      if (this.isOperationInProgress) {
+        this.$refs.uToast.show({
+          message: "请先完成当前椅旁操作后再更换形态质检师",
+          duration: 2500
+        });
+        this.showShapeInspectorPicker = false;
+        return;
+      }
+      this.selectedShapeInspector = item.key;
+      this.form.shape_quality_inspector = item.key;
+      this.showShapeInspectorPicker = false;
+
+      if (!this.customerId) return;
+      try {
+        const res = await this.$api.updateYipan({
+          customer_id: this.customerId,
+          shape_quality_inspector: item.key
+        });
+        if (res.code !== 0) {
+          this.$refs.uToast.show({ message: res.message || "更新失败" });
+        }
+      } catch (err) {
+        console.error("更新形态质检师失败:", err);
+        this.$refs.uToast.show({ message: "更新失败" });
+      }
+    },
+
     onDoctorSelect(item) {
       if (this.isOperationInProgress) {
         this.$refs.uToast.show({
@@ -532,6 +597,7 @@ export default {
     },
 
     resetForm() {
+      const chairsideNote = this.form.chairside_note;
       this.currentOperation = "";
       this.wearStatus = "";
       this.edgeSeating = "";
@@ -540,6 +606,7 @@ export default {
       this.form = {
         customer_id: this.customerId,
         customer_name: this.customerName,
+        shape_quality_inspector: this.selectedShapeInspector,
         chairside_doctor: this.selectedDoctor,
         daily_wear_status: null,
         edge_seating: null,
@@ -547,8 +614,30 @@ export default {
         chairside_audio: "",
         chairside_video: "",
         yipan_image: "",
-        start_time: null
+        chairside_note: chairsideNote,
+        start_time: null,
+        color_status: null
       };
+    },
+
+    async handleChairsideNoteBlur() {
+      if (!this.customerId) {
+        return;
+      }
+
+      try {
+        const res = await this.$api.updateYipan({
+          customer_id: this.customerId,
+          chairside_note: this.form.chairside_note || ""
+        });
+
+        if (res.code !== 0) {
+          this.$refs.uToast.show({ message: "椅旁问题描述保存失败" });
+        }
+      } catch (err) {
+        console.error("保存椅旁问题描述失败:", err);
+        this.$refs.uToast.show({ message: "椅旁问题描述保存失败" });
+      }
     },
 
     handleUploadAudio() {

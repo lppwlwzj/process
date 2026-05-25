@@ -3,6 +3,7 @@ const router = express.Router()
 const process_handler = require('../router_handler/process')
 
 router.post('/list', process_handler.list)
+router.post('/problemList', process_handler.problemList)
 router.post('/create', process_handler.create)
 router.post('/update', process_handler.update)
 router.post('/delete', process_handler.delete)
@@ -15,5 +16,7 @@ router.post('/updateFactoryTechnicianVideo', process_handler.updateFactoryTechni
 router.post('/updateFactoryWebVideo', process_handler.updateFactoryWebVideo)
 router.post('/updateFactoryImage', process_handler.updateFactoryImage)
 router.post('/updateMiniImage', process_handler.updateMiniImage)
+router.post('/updateProgressNote', process_handler.updateProgressNote)
+router.post('/updateIntraoralAdjuster', process_handler.updateIntraoralAdjuster)
 module.exports = router
 

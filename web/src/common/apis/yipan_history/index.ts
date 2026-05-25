@@ -6,6 +6,7 @@ export interface YipanHistoryParams {
   start_date?: string
   end_date?: string
   chairside_doctor?: string
+  shape_quality_inspector?: string
 }
 
 export function getYipanHistoryApi(data: YipanHistoryParams) {
